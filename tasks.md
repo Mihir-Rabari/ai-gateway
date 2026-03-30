@@ -1,0 +1,270 @@
+# AI Gateway — MVP Task List
+> **Total Agents:** 10 | **Target:** Full Working MVP | **Tracking:** Each task has an owner agent
+
+---
+
+## 🧭 How to Use This File
+
+- Each section corresponds to one agent's ownership area
+- Tasks are ordered by priority within each agent
+- Status: `[ ]` = pending, `[/]` = in progress, `[x]` = done, `[!]` = blocked
+- Agents must not modify code owned by other agents without coordination
+- All agents read `docs/agents/general.md` + their task doc before starting
+
+---
+
+## Agent 1 — Infrastructure & DevOps
+
+**Doc:** `docs/agents/tasks/01-infra.md`
+**Owns:** `docker-compose.yml`, `infra/`, `.env.example`, `turbo.json`
+
+- [x] Docker Compose with Postgres, Redis, Kafka, ClickHouse
+- [x] PostgreSQL schema (users, subscriptions, credit_transactions, registered_apps, dev_wallets)
+- [x] ClickHouse schema (request_logs, credit_events, revenue_events)
+- [x] Kafka topic auto-creation config
+- [x] Dockerfiles for all 8 services
+- [ ] Health check scripts (`scripts/healthcheck.sh`)
+- [ ] Docker Compose override file for development (`docker-compose.dev.yml`)
+- [ ] Makefile with common commands (`make up`, `make down`, `make migrate`, `make logs`)
+- [ ] Verify all containers start and are healthy
+- [ ] Kafka topic creation verification script
+- [ ] Database seed script (`infra/db/seed.sql` — test data for development)
+- [ ] ClickHouse schema initialization via HTTP API (not file mount — CH doesn't use initdb.d for SQL)
+- [ ] Fix docker-compose Kafka `KAFKA_ADVERTISED_LISTENERS` for host access
+
+---
+
+## Agent 2 — Auth Service
+
+**Doc:** `docs/agents/tasks/02-auth-service.md`
+**Owns:** `apps/auth-service/`
+
+- [x] Signup endpoint (POST /auth/signup)
+- [x] Login endpoint (POST /auth/login)
+- [x] Refresh token endpoint (POST /auth/refresh)
+- [x] Logout endpoint (POST /auth/logout)
+- [x] Token validation endpoint (POST /internal/auth/validate)
+- [x] JWT access + refresh tokens with Redis storage
+- [x] Bcrypt password hashing
+- [x] Kafka event publishing (user.created, user.login, user.logout)
+- [ ] User repository with PostgreSQL queries
+- [ ] Rate limiting on login (5 attempts per minute per IP)
+- [ ] Email validation + normalization on signup
+- [ ] Password strength validation
+- [ ] GET /auth/me endpoint (return current user from token)
+- [ ] GET /users/:id endpoint (internal — for gateway use)
+- [ ] Auth events consumer (listen to auth.events for audit log)
+- [ ] Unit tests for authService (mock Redis + Postgres)
+- [ ] Integration test for full signup → login → refresh flow
+
+---
+
+## Agent 3 — Credit Service
+
+**Doc:** `docs/agents/tasks/03-credit-service.md`
+**Owns:** `apps/credit-service/`
+
+- [x] GET /credits/balance?userId=
+- [x] POST /credits/check (check if sufficient)
+- [x] POST /credits/lock (atomic Redis reservation)
+- [x] POST /credits/confirm (PostgreSQL deduction)
+- [x] POST /credits/release (release lock on failure)
+- [x] POST /credits/add (add credits — for billing webhooks)
+- [ ] GET /credits/transactions?userId=&limit=&offset= (transaction history)
+- [ ] Credit lock uses proper atomic SETNX with Lua eval for race condition safety
+- [ ] Credit lock TTL is configurable via env (`CREDIT_LOCK_TTL_SECONDS`)
+- [ ] Low credit alert event publish to Kafka (when balance < 10)
+- [ ] User repository using the shared DB pool
+- [ ] Full unit tests for CreditService (lock → confirm → release flow)
+- [ ] Integration test with real Redis (testcontainers or separate Redis)
+- [ ] Idempotency: confirm/release use requestId deduplication
+
+---
+
+## Agent 4 — Gateway Service (AI Request Engine)
+
+**Doc:** `docs/agents/tasks/04-gateway-service.md`
+**Owns:** `apps/gateway/`
+
+- [x] POST /gateway/request (main AI request endpoint)
+- [x] GET /gateway/models (list available models)
+- [x] Token validation via auth-service (internal HTTP call)
+- [x] Credit lock → confirm → release flow
+- [x] Kafka usage event publishing
+- [ ] App API key validation (validate `x-app-id` header against registered_apps table)
+- [ ] Request ID generation + response headers
+- [ ] Streaming response support (SSE or chunked transfer)
+- [ ] Request timeout handling (30s timeout, release credits on timeout)
+- [ ] Retry logic for transient provider errors (via `withRetry` from utils)
+- [ ] Full gateway plugin setup (postgres, redis, kafka)
+- [ ] Rate limiting per user per minute
+- [ ] GET /gateway/status endpoint (health + provider availability)
+- [ ] Unit tests for GatewayService mocking all external calls
+- [ ] Integration test: mock auth + credit, real routing call
+
+---
+
+## Agent 5 — Routing Service
+
+**Doc:** `docs/agents/tasks/05-routing-service.md`
+**Owns:** `apps/routing-service/`
+
+- [x] POST /internal/routing/route (main routing endpoint)
+- [x] GET /internal/routing/providers (list provider health)
+- [x] OpenAI integration (chat completions)
+- [x] Anthropic integration (messages API)
+- [x] Automatic fallback on provider failure
+- [ ] Google Gemini integration (via `@google/generative-ai`)
+- [ ] Provider health tracking (Redis-backed — mark unhealthy for 60s on failure)
+- [ ] Streaming support (pass through SSE from provider)
+- [ ] Model-to-provider mapping with proper fallback chain
+- [ ] Provider latency tracking (publish latency to Kafka)
+- [ ] Circuit breaker pattern (stop routing to provider after 5 consecutive failures)
+- [ ] Unit tests for RoutingService (mock OpenAI + Anthropic clients)
+- [ ] Integration test: real OpenAI call (with test API key)
+
+---
+
+## Agent 6 — Billing Service
+
+**Doc:** `docs/agents/tasks/06-billing-service.md`
+**Owns:** `apps/billing-service/`
+
+- [x] GET /billing/plans
+- [x] POST /billing/subscribe (create Razorpay subscription)
+- [x] POST /billing/webhooks/razorpay (handle subscription events)
+- [ ] Razorpay webhook signature verification (HMAC SHA256)
+- [ ] Handle `subscription.activated` → upgrade plan + add credits
+- [ ] Handle `subscription.charged` → add monthly credits
+- [ ] Handle `subscription.cancelled` → downgrade to free plan
+- [ ] Handle `payment.failed` → notify user (Kafka event)
+- [ ] GET /billing/subscription?userId= (current subscription status)
+- [ ] POST /billing/cancel (cancel current subscription)
+- [ ] Credit addition calls credit-service HTTP API (not direct DB)
+- [ ] Webhook idempotency (store processed event IDs in Redis)
+- [ ] Unit tests for BillingService (mock Razorpay + credit-service)
+- [ ] Webhook test with Razorpay test events
+
+---
+
+## Agent 7 — Analytics Service + Worker
+
+**Doc:** `docs/agents/tasks/07-analytics-worker.md`
+**Owns:** `apps/analytics-service/`, `apps/worker/`
+
+- [x] Kafka consumer for `usage.events`
+- [x] ClickHouse batch insertion (100 events or 1s interval)
+- [x] GET /analytics/usage/me?userId= (monthly stats)
+- [x] Worker: revenue split (20% to developer wallet)
+- [ ] GET /analytics/usage/app?appId= (per-app usage for devs)
+- [ ] GET /analytics/dashboard?userId= (dashboard summary — requests, tokens, credits, models used)
+- [ ] GET /analytics/models (global model usage breakdown)
+- [ ] ClickHouse schema initialization fix (use HTTP API on startup, not file mount)
+- [ ] Worker: handle `billing.events` (subscription lifecycle tracking)
+- [ ] Worker: handle `auth.events` (user creation tracking)
+- [ ] Error handling for bad Kafka messages (dead letter logging)
+- [ ] Analytics service graceful shutdown (flush batch before exit)
+- [ ] Unit tests for batch flush logic
+
+---
+
+## Agent 8 — API Aggregation Layer
+
+**Doc:** `docs/agents/tasks/08-api-service.md`
+**Owns:** `apps/api/`
+
+- [x] Placeholder src/index.ts
+- [ ] Implement the full API aggregation service
+- [ ] Unified CORS + rate limiting middleware
+- [ ] POST /api/v1/chat (proxy to gateway-service)
+- [ ] GET /api/v1/me (proxy to auth-service)
+- [ ] GET /api/v1/credits (proxy to credit-service)
+- [ ] GET /api/v1/usage (proxy to analytics-service)
+- [ ] GET /api/v1/models (list available models)
+- [ ] POST /api/v1/apps (register developer app — proxy to DB)
+- [ ] GET /api/v1/apps (list developer's apps)
+- [ ] DELETE /api/v1/apps/:id
+- [ ] POST /api/v1/apps/:id/keys (generate API key)
+- [ ] OpenAPI/Swagger spec auto-generation (`@fastify/swagger`)
+- [ ] Request logging middleware (log requestId, userId, latency)
+- [ ] Proper auth middleware (validate JWT on all protected routes)
+
+---
+
+## Agent 9 — Frontend (Web App)
+
+**Doc:** `docs/agents/tasks/09-frontend.md`
+**Owns:** `apps/web/`
+
+- [x] Next.js bootstrapped with Tailwind v4
+- [x] Landing page (hero, how it works, pricing, developer section)
+- [x] Login page
+- [x] Signup page
+- [x] Dashboard layout (sidebar navigation)
+- [x] Dashboard overview (credits, stats, quick actions)
+- [x] Playground page (AI model chat)
+- [x] Usage page (monthly stats + credit bars)
+- [x] Billing page (plan comparison + Razorpay CTAs)
+- [x] Settings page (profile + API key + SDK quickstart)
+- [ ] **FIX: Rebuild landing page using shadcn/ui components** (current has Tailwind issues)
+- [ ] Install shadcn/ui in `apps/web` (latest — v2+)
+- [ ] Migrate all dashboard pages to use shadcn components (Card, Button, Input, Badge, etc.)
+- [ ] Auth popup page (`/auth/popup`) — minimal login form in iframe
+- [ ] Developer portal (`/dev`) — app registration, API key management
+- [ ] Developer earnings page (`/dev/earnings`) — wallet balance + transaction history
+- [ ] Real-time credit balance update (poll every 30s or SSE)
+- [ ] Toast notifications (login success, credit low warning)
+- [ ] Mobile responsive sidebar (hamburger menu)
+- [ ] Dark mode enforced (already dark — just ensure no light mode fallback)
+- [ ] Error boundary components
+- [ ] Loading skeleton states
+
+---
+
+## Agent 10 — SDK + Auth Widget
+
+**Doc:** `docs/agents/tasks/10-sdk-auth-widget.md`
+**Owns:** `packages/sdk-js/`, auth widget frontend JS
+
+- [ ] Finish SDK implementation (`packages/sdk-js/src/index.ts`)
+- [ ] `ai.chat()` method — full request flow
+- [ ] `ai.stream()` method — streaming response
+- [ ] `ai.credits()` — get current balance
+- [ ] `AIGateway.signIn()` — opens auth popup window (`/auth/popup`)
+- [ ] Popup `postMessage` protocol (send token back to parent)
+- [ ] SDK TypeScript types + JSDoc
+- [ ] SDK README with full usage examples
+- [ ] `npm publish` ready (proper package.json exports)
+- [ ] Browser-compatible build (ESM + CJS)
+- [ ] SDK integration test (mock gateway, verify request shape)
+- [ ] Standalone auth widget JS file (`packages/sdk-js/dist/widget.js`)
+- [ ] CDN-ready bundle for `<script>` tag usage
+
+---
+
+## 🔴 Critical Blockers (Must Fix for MVP)
+
+- [ ] **Docker Desktop must be running** → `docker-compose up -d`
+- [ ] **ClickHouse init** — doesn't use `initdb.d` — needs HTTP API schema creation
+- [ ] **Kafka listener fix** — `KAFKA_ADVERTISED_LISTENERS` needs `PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092`
+- [ ] **Landing page rebuild** — current Tailwind v4 has syntax issues, migrate to shadcn
+- [ ] **.env real values** — `OPENAI_API_KEY`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` must be set
+
+---
+
+## 📊 Progress Overview
+
+| Agent | Module | Status | % Done |
+|-------|--------|--------|--------|
+| 1 | Infra | Partial | 70% |
+| 2 | Auth Service | Partial | 80% |
+| 3 | Credit Service | Partial | 85% |
+| 4 | Gateway | Partial | 75% |
+| 5 | Routing | Partial | 70% |
+| 6 | Billing | Partial | 60% |
+| 7 | Analytics + Worker | Partial | 65% |
+| 8 | API Layer | Not Started | 5% |
+| 9 | Frontend | Partial | 55% |
+| 10 | SDK + Auth Widget | Not Started | 10% |
+
+**Overall MVP Progress: ~60%**

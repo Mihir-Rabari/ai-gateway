@@ -1,0 +1,58 @@
+{
+  "topics": [
+    {
+      "name": "auth.events",
+      "partitions": 3,
+      "replicationFactor": 1,
+      "config": {
+        "retention.ms": "604800000",
+        "cleanup.policy": "delete"
+      }
+    },
+    {
+      "name": "credit.events",
+      "partitions": 6,
+      "replicationFactor": 1,
+      "config": {
+        "retention.ms": "2592000000",
+        "cleanup.policy": "delete"
+      }
+    },
+    {
+      "name": "billing.events",
+      "partitions": 3,
+      "replicationFactor": 1,
+      "config": {
+        "retention.ms": "2592000000",
+        "cleanup.policy": "delete"
+      }
+    },
+    {
+      "name": "usage.events",
+      "partitions": 12,
+      "replicationFactor": 1,
+      "config": {
+        "retention.ms": "604800000",
+        "cleanup.policy": "delete"
+      }
+    },
+    {
+      "name": "routing.events",
+      "partitions": 6,
+      "replicationFactor": 1,
+      "config": {
+        "retention.ms": "86400000",
+        "cleanup.policy": "delete"
+      }
+    },
+    {
+      "name": "analytics.events",
+      "partitions": 6,
+      "replicationFactor": 1,
+      "config": {
+        "retention.ms": "604800000",
+        "cleanup.policy": "delete"
+      }
+    }
+  ]
+}

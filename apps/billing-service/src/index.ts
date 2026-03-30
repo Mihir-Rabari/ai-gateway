@@ -1,0 +1,34 @@
+import Fastify from 'fastify';
+import cors from '@fastify/cors';
+import { getBillingConfig } from '@ai-gateway/config';
+import { createLogger } from '@ai-gateway/utils';
+import { postgresPlugin } from './plugins/postgres.js';
+import { redisPlugin } from './plugins/redis.js';
+import { kafkaPlugin } from './plugins/kafka.js';
+import { billingRoutes } from './routes/billingRoutes.js';
+
+const logger = createLogger('billing-service');
+const config = getBillingConfig();
+const app = Fastify({ logger: false });
+
+async function bootstrap() {
+  await app.register(cors);
+  await app.register(postgresPlugin);
+  await app.register(redisPlugin);
+  await app.register(kafkaPlugin);
+  await app.register(billingRoutes, { prefix: '/billing' });
+  app.get('/health', async () => ({ status: 'ok', service: 'billing-service' }));
+
+  app.setErrorHandler((error, _req, reply) => {
+    const statusCode = (error as { statusCode?: number }).statusCode ?? 500;
+    reply.status(statusCode).send({ success: false, error: { code: 'INTERNAL', message: error.message, statusCode } });
+  });
+
+  await app.listen({ port: config.BILLING_SERVICE_PORT, host: '0.0.0.0' });
+  logger.info(`💳 Billing service running on port ${config.BILLING_SERVICE_PORT}`);
+}
+
+bootstrap().catch((err) => {
+  logger.error(err, 'Failed to start billing service');
+  process.exit(1);
+});
