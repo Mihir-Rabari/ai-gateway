@@ -41,7 +41,16 @@ export async function authRoutes(fastify: FastifyInstance) {
   fastify.post('/signup', { schema: signupSchema }, controller.signup.bind(controller));
 
   // POST /auth/login
-  fastify.post('/login', { schema: loginSchema }, controller.login.bind(controller));
+  fastify.post('/login', {
+    schema: loginSchema,
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '1 minute',
+        keyGenerator: (req) => req.ip,
+      },
+    },
+  }, controller.login.bind(controller));
 
   // POST /auth/refresh
   fastify.post('/refresh', { schema: refreshSchema }, controller.refresh.bind(controller));

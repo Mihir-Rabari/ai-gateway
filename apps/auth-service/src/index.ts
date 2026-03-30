@@ -28,15 +28,15 @@ async function bootstrap() {
     origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000'],
   });
 
-  await app.register(rateLimit, {
-    max: config.RATE_LIMIT_MAX,
-    timeWindow: config.RATE_LIMIT_WINDOW_MS,
-    redis: undefined, // will be set after redis plugin
-  });
-
   await app.register(postgresPlugin);
   await app.register(redisPlugin);
   await app.register(kafkaPlugin);
+
+  await app.register(rateLimit, {
+    max: config.RATE_LIMIT_MAX,
+    timeWindow: config.RATE_LIMIT_WINDOW_MS,
+    redis: app.redis,
+  });
 
   // ─── Routes ────────────────────────────────────
   await app.register(authRoutes, { prefix: '/auth' });

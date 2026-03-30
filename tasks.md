@@ -47,14 +47,14 @@
 - [x] JWT access + refresh tokens with Redis storage
 - [x] Bcrypt password hashing
 - [x] Kafka event publishing (user.created, user.login, user.logout)
-- [ ] User repository with PostgreSQL queries
-- [ ] Rate limiting on login (5 attempts per minute per IP)
-- [ ] Email validation + normalization on signup
-- [ ] Password strength validation
-- [ ] GET /auth/me endpoint (return current user from token)
+- [x] User repository with PostgreSQL queries
+- [x] Rate limiting on login (5 attempts per minute per IP)
+- [x] Email validation + normalization on signup
+- [x] Password strength validation
+- [x] GET /auth/me endpoint (return current user from token)
 - [ ] GET /users/:id endpoint (internal — for gateway use)
 - [ ] Auth events consumer (listen to auth.events for audit log)
-- [ ] Unit tests for authService (mock Redis + Postgres)
+- [x] Unit tests for authService (mock Redis + Postgres)
 - [ ] Integration test for full signup → login → refresh flow
 
 ---
