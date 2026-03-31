@@ -1,19 +1,16 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import Razorpay from 'razorpay';
 import { createHmac, timingSafeEqual } from 'crypto';
-import { fetch } from 'undici';
-import { ok, createLogger, generateId } from '@ai-gateway/utils';
-import { PLANS, KAFKA_TOPICS } from '@ai-gateway/config';
-import type { BillingEvent } from '@ai-gateway/types';
+import { ok, fail, Errors, createLogger } from '@ai-gateway/utils';
+import { PLANS } from '@ai-gateway/config';
+import { BillingRepository } from '../repositories/BillingRepository.js';
+import { BillingService } from '../services/BillingService.js';
 
 const logger = createLogger('billing-routes');
 
-const razorpay = new Razorpay({
-  key_id: process.env['RAZORPAY_KEY_ID'] ?? '',
-  key_secret: process.env['RAZORPAY_KEY_SECRET'] ?? '',
-});
-
 export async function billingRoutes(fastify: FastifyInstance) {
+  const repo = new BillingRepository(fastify.pg);
+  const service = new BillingService(repo, fastify);
+
   // GET /billing/plans
   fastify.get('/plans', async (_req, reply) => {
     return reply.send(ok({ plans: Object.values(PLANS) }));
@@ -36,25 +33,11 @@ export async function billingRoutes(fastify: FastifyInstance) {
     },
     async (req: FastifyRequest<{ Body: { userId: string; planId: 'pro' | 'max' } }>, reply: FastifyReply) => {
       try {
-        const subscription = await razorpay.subscriptions.create({
-          plan_id: req.body.planId,
-          total_count: 12,
-          quantity: 1,
-          customer_notify: 1,
-        });
-
-        await fastify.pg.query(
-          `INSERT INTO subscriptions (id, user_id, plan_id, status, razorpay_subscription_id)
-           VALUES ($1, $2, $3, 'pending', $4)
-           ON CONFLICT (user_id) DO UPDATE
-           SET plan_id = $3, status = 'pending', razorpay_subscription_id = $4, updated_at = NOW()`,
-          [generateId(), req.body.userId, req.body.planId, subscription.id],
-        );
-
-        return reply.send(ok({ subscriptionId: subscription.id, planId: req.body.planId }));
+        const result = await service.createSubscription(req.body.userId, req.body.planId);
+        return reply.send(ok(result));
       } catch (err) {
         logger.error(err, 'Subscribe failed');
-        return reply.status(500).send({ success: false, error: { code: 'INTERNAL', message: String(err), statusCode: 500 } });
+        return reply.status(500).send(fail(Errors.INTERNAL()));
       }
     },
   );
@@ -83,61 +66,65 @@ export async function billingRoutes(fastify: FastifyInstance) {
           return reply.status(400).send({ error: 'Invalid signature' });
         }
 
+        const razorpayEventId = req.headers['x-razorpay-event-id'] as string | undefined;
+        if (!razorpayEventId) {
+          return reply.status(400).send({ error: 'Missing event ID' });
+        }
+
         const event = req.body as {
           event: string;
           payload: {
-            subscription: { entity: { id: string } };
+            subscription?: { entity: { id: string } };
             payment?: { entity: { amount: number } };
           };
         };
 
         logger.info({ event: event.event }, 'Razorpay webhook received');
 
-        if (event.event === 'subscription.activated' || event.event === 'subscription.charged') {
-          const subId = event.payload.subscription.entity.id;
-
-          const result = await fastify.pg.query<{ user_id: string; plan_id: string }>(
-            'SELECT user_id, plan_id FROM subscriptions WHERE razorpay_subscription_id = $1',
-            [subId],
-          );
-
-          const row = result.rows[0];
-          if (row) {
-            const { user_id, plan_id } = row;
-            const plan = PLANS[plan_id as keyof typeof PLANS];
-            const planCredits = plan?.credits ?? 100;
-
-            await fastify.pg.query(
-              'UPDATE users SET plan_id = $1, updated_at = NOW() WHERE id = $2',
-              [plan_id, user_id],
-            );
-
-            await fetch(`${process.env['CREDIT_SERVICE_URL'] ?? 'http://localhost:3005'}/credits/add`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userId: user_id, amount: planCredits, reason: 'subscription' }),
-            });
-
-            const billingEvent: BillingEvent = {
-              eventId: generateId(),
-              topic: 'billing.events',
-              type: event.event === 'subscription.activated'
-                ? 'billing.subscription.created'
-                : 'billing.subscription.renewed',
-              userId: user_id,
-              planId: plan_id as BillingEvent['planId'],
-              amountPaise: event.payload.payment?.entity.amount ?? 0,
-              timestamp: new Date().toISOString(),
-              version: '1.0',
-            };
-            void fastify.kafka.publish(KAFKA_TOPICS.BILLING, billingEvent);
-          }
-        }
-
-        return reply.send({ received: true });
+        const result = await service.processWebhook(razorpayEventId, event.event, event.payload);
+        return reply.send(result);
       } catch (err) {
         logger.error(err, 'Webhook processing failed');
         return reply.status(500).send({ error: 'Webhook failed' });
+      }
+    },
+  );
+
+  // GET /billing/subscription?userId=
+  fastify.get('/subscription', async (req: FastifyRequest, reply: FastifyReply) => {
+    const { userId } = req.query as { userId: string };
+    if (!userId) return reply.status(400).send(fail(Errors.VALIDATION('userId query param is required')));
+
+    const result = await service.getSubscription(userId);
+    return reply.send(ok(result));
+  });
+
+  // POST /billing/cancel
+  fastify.post(
+    '/cancel',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['userId'],
+          properties: {
+            userId: { type: 'string' },
+          },
+        },
+      },
+    },
+    async (req: FastifyRequest<{ Body: { userId: string } }>, reply: FastifyReply) => {
+      const { userId } = req.body;
+
+      try {
+        const result = await service.cancelSubscription(userId);
+        if (!result) {
+          return reply.status(404).send(fail(Errors.NOT_FOUND('Subscription')));
+        }
+        return reply.send(ok(result));
+      } catch (err) {
+        logger.error(err, 'Failed to cancel subscription');
+        return reply.status(500).send(fail(Errors.INTERNAL()));
       }
     },
   );

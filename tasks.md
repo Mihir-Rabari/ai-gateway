@@ -133,15 +133,15 @@
 - [x] GET /billing/plans
 - [x] POST /billing/subscribe (create Razorpay subscription)
 - [x] POST /billing/webhooks/razorpay (handle subscription events)
-- [ ] Razorpay webhook signature verification (HMAC SHA256)
-- [ ] Handle `subscription.activated` → upgrade plan + add credits
-- [ ] Handle `subscription.charged` → add monthly credits
-- [ ] Handle `subscription.cancelled` → downgrade to free plan
-- [ ] Handle `payment.failed` → notify user (Kafka event)
-- [ ] GET /billing/subscription?userId= (current subscription status)
-- [ ] POST /billing/cancel (cancel current subscription)
-- [ ] Credit addition calls credit-service HTTP API (not direct DB)
-- [ ] Webhook idempotency (store processed event IDs in Redis)
+- [x] Razorpay webhook signature verification (HMAC SHA256)
+- [x] Handle `subscription.activated` → upgrade plan + add credits
+- [x] Handle `subscription.charged` → add monthly credits
+- [x] Handle `subscription.cancelled` → downgrade to free plan
+- [x] Handle `payment.failed` → notify user (Kafka event)
+- [x] GET /billing/subscription?userId= (current subscription status)
+- [x] POST /billing/cancel (cancel current subscription)
+- [x] Credit addition calls credit-service HTTP API (not direct DB)
+- [x] Webhook idempotency (store processed event IDs in Redis)
 - [ ] Unit tests for BillingService (mock Razorpay + credit-service)
 - [ ] Webhook test with Razorpay test events
 
