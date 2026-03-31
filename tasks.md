@@ -156,14 +156,14 @@
 - [x] ClickHouse batch insertion (100 events or 1s interval)
 - [x] GET /analytics/usage/me?userId= (monthly stats)
 - [x] Worker: revenue split (20% to developer wallet)
-- [ ] GET /analytics/usage/app?appId= (per-app usage for devs)
-- [ ] GET /analytics/dashboard?userId= (dashboard summary — requests, tokens, credits, models used)
+- [x] GET /analytics/usage/app?appId= (per-app usage for devs)
+- [x] GET /analytics/dashboard?userId= (dashboard summary — requests, tokens, credits, models used)
 - [ ] GET /analytics/models (global model usage breakdown)
-- [ ] ClickHouse schema initialization fix (use HTTP API on startup, not file mount)
-- [ ] Worker: handle `billing.events` (subscription lifecycle tracking)
-- [ ] Worker: handle `auth.events` (user creation tracking)
-- [ ] Error handling for bad Kafka messages (dead letter logging)
-- [ ] Analytics service graceful shutdown (flush batch before exit)
+- [x] ClickHouse schema initialization fix (use HTTP API on startup, not file mount)
+- [x] Worker: handle `billing.events` (subscription lifecycle tracking)
+- [x] Worker: handle `auth.events` (user creation tracking)
+- [x] Error handling for bad Kafka messages (dead letter logging)
+- [x] Analytics service graceful shutdown (flush batch before exit)
 - [ ] Unit tests for batch flush logic
 
 ---
