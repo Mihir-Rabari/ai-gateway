@@ -10,6 +10,8 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
       creditServiceUrl: process.env['CREDIT_SERVICE_URL'] ?? 'http://localhost:3005',
       routingServiceUrl: process.env['ROUTING_SERVICE_URL'] ?? 'http://localhost:3006',
       kafkaPublish: fastify.kafka.publish.bind(fastify.kafka),
+      pgPool: fastify.pg,
+      redis: fastify.redis,
     });
 
   // POST /gateway/request
@@ -84,6 +86,15 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
         'claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307',
         'gemini-1.5-pro', 'gemini-1.5-flash',
       ],
+    }));
+  });
+
+  // GET /gateway/status
+  fastify.get('/status', async (_req, reply) => {
+    return reply.send(ok({
+      status: 'healthy',
+      providers: ['openai', 'anthropic', 'google'],
+      timestamp: new Date().toISOString(),
     }));
   });
 }
