@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import Razorpay from 'razorpay';
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { fetch } from 'undici';
 import { ok, createLogger, generateId } from '@ai-gateway/utils';
 import { PLANS, KAFKA_TOPICS } from '@ai-gateway/config';
@@ -67,12 +67,21 @@ export async function billingRoutes(fastify: FastifyInstance) {
       try {
         const signature = req.headers['x-razorpay-signature'] as string | undefined;
         const secret = process.env['RAZORPAY_WEBHOOK_SECRET'] ?? '';
-        const body = JSON.stringify(req.body);
+        const rawBody = (req as any).rawBody as string | undefined;
 
-        if (!signature) return reply.status(400).send({ error: 'Missing signature' });
+        if (!signature || !rawBody) {
+          return reply.status(400).send({ error: 'Missing signature or body' });
+        }
 
-        const expectedSig = createHmac('sha256', secret).update(body).digest('hex');
-        if (expectedSig !== signature) return reply.status(400).send({ error: 'Invalid signature' });
+        const expectedSig = createHmac('sha256', secret).update(rawBody).digest('hex');
+
+        // Prevent timing attacks by using timingSafeEqual
+        const signatureBuffer = Buffer.from(signature, 'utf8');
+        const expectedSigBuffer = Buffer.from(expectedSig, 'utf8');
+
+        if (signatureBuffer.length !== expectedSigBuffer.length || !timingSafeEqual(signatureBuffer, expectedSigBuffer)) {
+          return reply.status(400).send({ error: 'Invalid signature' });
+        }
 
         const event = req.body as {
           event: string;

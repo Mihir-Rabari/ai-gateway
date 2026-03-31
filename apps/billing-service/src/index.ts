@@ -11,6 +11,17 @@ const logger = createLogger('billing-service');
 const config = getBillingConfig();
 const app = Fastify({ logger: false });
 
+// Custom content type parser to capture raw request body for signature verification
+app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
+  try {
+    (req as any).rawBody = body;
+    done(null, JSON.parse(body as string));
+  } catch (err) {
+    (err as any).statusCode = 400;
+    done(err as Error, undefined);
+  }
+});
+
 async function bootstrap() {
   await app.register(cors);
   await app.register(postgresPlugin);
