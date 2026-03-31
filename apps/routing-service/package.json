@@ -13,13 +13,14 @@
     "@ai-gateway/config": "workspace:*",
     "@ai-gateway/types": "workspace:*",
     "@ai-gateway/utils": "workspace:*",
+    "@anthropic-ai/sdk": "^0.24.3",
     "@fastify/cors": "^9.0.1",
+    "@google/generative-ai": "^0.24.1",
     "fastify": "^4.28.1",
     "fastify-plugin": "^4.5.1",
     "ioredis": "^5.4.1",
     "kafkajs": "^2.2.4",
     "openai": "^4.51.0",
-    "@anthropic-ai/sdk": "^0.24.3",
     "undici": "^6.19.2"
   },
   "devDependencies": {

@@ -30,6 +30,7 @@ async function bootstrap() {
             messages: { type: 'array' },
             maxTokens: { type: 'number' },
             temperature: { type: 'number' },
+            stream: { type: 'boolean' },
           },
         },
       },
@@ -42,12 +43,13 @@ async function bootstrap() {
           messages: Message[];
           maxTokens?: number;
           temperature?: number;
+          stream?: boolean;
         };
       }>,
       reply: FastifyReply,
     ) => {
       try {
-        const service = new RoutingService(app.kafka.publish.bind(app.kafka));
+        const service = new RoutingService(app.kafka.publish.bind(app.kafka), app.redis);
         const result = await service.route(req.body);
         return reply.send(ok(result));
       } catch (err) {
@@ -59,12 +61,9 @@ async function bootstrap() {
   );
 
   app.get('/internal/routing/providers', async (_req, reply) => {
-    return reply.send(ok({
-      providers: [
-        { name: 'openai', models: ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'], healthy: true },
-        { name: 'anthropic', models: ['claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307'], healthy: true },
-      ],
-    }));
+    const service = new RoutingService(app.kafka.publish.bind(app.kafka), app.redis);
+    const providers = await service.getProvidersHealth();
+    return reply.send(ok({ providers }));
   });
 
   app.get('/health', async () => ({ status: 'ok', service: 'routing-service' }));
