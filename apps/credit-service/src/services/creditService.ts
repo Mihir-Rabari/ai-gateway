@@ -1,29 +1,30 @@
-import { randomUUID } from 'crypto';
 import type { Pool } from 'pg';
 import type Redis from 'ioredis';
-import { Errors, createLogger, calculateCredits, generateId } from '@ai-gateway/utils';
-import { KAFKA_TOPICS } from '@ai-gateway/config';
+import { Errors, createLogger, generateId } from '@ai-gateway/utils';
+import { KAFKA_TOPICS, getCreditConfig } from '@ai-gateway/config';
 import type { CreditEvent } from '@ai-gateway/types';
+import { CreditRepository, type CreditTransactionRecord } from '../repositories/creditRepository.js';
 
 const logger = createLogger('credit-service');
 
 export class CreditService {
+  private repo: CreditRepository;
+  private config = getCreditConfig();
+
   constructor(
     private readonly db: Pool,
     private readonly redis: Redis,
     private readonly kafkaPublish: (topic: string, msg: object) => Promise<void>,
-  ) {}
+  ) {
+    this.repo = new CreditRepository(db);
+  }
 
   // ─────────────────────────────────────────
   // Get Balance
   // ─────────────────────────────────────────
 
   async getBalance(userId: string): Promise<number> {
-    const result = await this.db.query<{ credit_balance: number }>(
-      'SELECT credit_balance FROM users WHERE id = $1',
-      [userId],
-    );
-    return result.rows[0]?.credit_balance ?? 0;
+    return this.repo.getBalance(userId);
   }
 
   // ─────────────────────────────────────────
@@ -41,21 +42,28 @@ export class CreditService {
 
   async lock(userId: string, requestId: string, amount: number): Promise<void> {
     const lockKey = `credit_lock:${userId}:${requestId}`;
-    const lockTtl = parseInt(process.env['CREDIT_LOCK_TTL_SECONDS'] ?? '30', 10);
+    const lockTtl = this.config.CREDIT_LOCK_TTL_SECONDS ?? 30;
 
     const balance = await this.getBalance(userId);
     if (balance < amount) throw Errors.INSUFFICIENT_CREDITS(balance, amount);
 
-    // Atomic lock: SET key value NX EX ttl
     const lockValue = JSON.stringify({ amount, lockedAt: Date.now() });
-    // Use setnx + expire atomically via a lua script approach or just setnx then expire
-    const wasSet = await this.redis.setnx(lockKey, lockValue);
-    if (wasSet === 1) {
-      await this.redis.expire(lockKey, lockTtl);
-    }
-    const locked = wasSet === 1;
 
-    if (!locked) throw Errors.CREDIT_LOCK_FAILED();
+    const LOCK_LUA = `
+      local key = KEYS[1]
+      local value = ARGV[1]
+      local ttl = tonumber(ARGV[2])
+      if redis.call('EXISTS', key) == 0 then
+        redis.call('SET', key, value)
+        redis.call('EXPIRE', key, ttl)
+        return 1
+      else
+        return 0
+      end
+    `;
+
+    const wasSet = await this.redis.eval(LOCK_LUA, 1, lockKey, lockValue, lockTtl.toString());
+    if (wasSet !== 1) throw Errors.CREDIT_LOCK_FAILED();
 
     void this.publishEvent('credit.locked', userId, amount, requestId);
   }
@@ -65,40 +73,48 @@ export class CreditService {
   // ─────────────────────────────────────────
 
   async confirm(userId: string, requestId: string): Promise<{ balanceAfter: number }> {
+    // Idempotency: Check if already processed
+    const exists = await this.repo.transactionExists(requestId);
+    if (exists) {
+      const balance = await this.repo.getBalance(userId);
+      return { balanceAfter: balance };
+    }
+
     const lockKey = `credit_lock:${userId}:${requestId}`;
     const lockData = await this.redis.get(lockKey);
     if (!lockData) throw Errors.CREDIT_LOCK_FAILED();
 
     const { amount } = JSON.parse(lockData) as { amount: number };
 
-    const client = await this.db.connect();
+    const client = await this.repo.getClient();
     try {
       await client.query('BEGIN');
 
-      const result = await client.query<{ credit_balance: number }>(
-        `UPDATE users SET credit_balance = credit_balance - $1, updated_at = NOW()
-         WHERE id = $2 AND credit_balance >= $1
-         RETURNING credit_balance`,
-        [amount, userId],
-      );
+      const balanceAfter = await this.repo.deductCredits(client, userId, amount);
 
-      if (!result.rows[0]) {
+      if (balanceAfter === null) {
         await client.query('ROLLBACK');
         throw Errors.INSUFFICIENT_CREDITS(0, amount);
       }
 
-      const balanceAfter = result.rows[0].credit_balance;
-
-      await client.query(
-        `INSERT INTO credit_transactions (id, user_id, amount, type, reason, request_id, balance_after)
-         VALUES ($1, $2, $3, 'debit', 'request', $4, $5)`,
-        [generateId(), userId, -amount, requestId, balanceAfter],
-      );
+      await this.repo.insertTransaction(client, {
+        id: generateId(),
+        user_id: userId,
+        amount: -amount,
+        type: 'debit',
+        reason: 'request',
+        request_id: requestId,
+        balance_after: balanceAfter,
+      });
 
       await client.query('COMMIT');
       await this.redis.del(lockKey);
 
       void this.publishEvent('credit.deducted', userId, amount, requestId, balanceAfter);
+
+      if (balanceAfter < 10) {
+        void this.publishEvent('credit.low' as CreditEvent['type'], userId, 0, requestId, balanceAfter);
+      }
 
       return { balanceAfter };
     } catch (err) {
@@ -114,6 +130,11 @@ export class CreditService {
   // ─────────────────────────────────────────
 
   async release(userId: string, requestId: string): Promise<void> {
+    const exists = await this.repo.transactionExists(requestId);
+    if (exists) {
+      return; // Already processed/confirmed, nothing to release
+    }
+
     const lockKey = `credit_lock:${userId}:${requestId}`;
     const lockData = await this.redis.get(lockKey);
 
@@ -130,26 +151,22 @@ export class CreditService {
   // ─────────────────────────────────────────
 
   async addCredits(userId: string, amount: number, reason: string): Promise<{ balanceAfter: number }> {
-    const client = await this.db.connect();
+    const client = await this.repo.getClient();
     try {
       await client.query('BEGIN');
 
-      const result = await client.query<{ credit_balance: number }>(
-        `UPDATE users SET credit_balance = credit_balance + $1, updated_at = NOW()
-         WHERE id = $2
-         RETURNING credit_balance`,
-        [amount, userId],
-      );
+      const balanceAfter = await this.repo.addCredits(client, userId, amount);
 
-      if (!result.rows[0]) throw Errors.USER_NOT_FOUND();
+      if (balanceAfter === null) throw Errors.USER_NOT_FOUND();
 
-      const balanceAfter = result.rows[0].credit_balance;
-
-      await client.query(
-        `INSERT INTO credit_transactions (id, user_id, amount, type, reason, balance_after)
-         VALUES ($1, $2, $3, 'credit', $4, $5)`,
-        [generateId(), userId, amount, reason, balanceAfter],
-      );
+      await this.repo.insertTransaction(client, {
+        id: generateId(),
+        user_id: userId,
+        amount: amount,
+        type: 'credit',
+        reason: reason,
+        balance_after: balanceAfter,
+      });
 
       await client.query('COMMIT');
       void this.publishEvent('credit.added', userId, amount, undefined, balanceAfter);
@@ -167,16 +184,8 @@ export class CreditService {
   // Get Transactions
   // ─────────────────────────────────────────
 
-  async getTransactions(userId: string, limit = 20, offset = 0) {
-    const result = await this.db.query(
-      `SELECT id, amount, type, reason, request_id, balance_after, created_at
-       FROM credit_transactions
-       WHERE user_id = $1
-       ORDER BY created_at DESC
-       LIMIT $2 OFFSET $3`,
-      [userId, limit, offset],
-    );
-    return result.rows;
+  async getTransactions(userId: string, limit = 20, offset = 0): Promise<CreditTransactionRecord[]> {
+    return this.repo.getTransactions(userId, limit, offset);
   }
 
   // ─────────────────────────────────────────
@@ -190,7 +199,7 @@ export class CreditService {
     requestId?: string,
     balanceAfter?: number,
   ): Promise<void> {
-    const event: CreditEvent = {
+    const event = {
       eventId: generateId(),
       topic: 'credit.events',
       type,

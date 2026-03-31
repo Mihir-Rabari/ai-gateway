@@ -141,4 +141,31 @@ export async function creditRoutes(fastify: FastifyInstance) {
       }
     },
   );
+
+  // GET /credits/transactions
+  fastify.get(
+    '/transactions',
+    {
+      schema: {
+        querystring: {
+          type: 'object',
+          required: ['userId'],
+          properties: {
+            userId: { type: 'string' },
+            limit: { type: 'number', default: 20 },
+            offset: { type: 'number', default: 0 },
+          },
+        },
+      },
+    },
+    async (req: FastifyRequest<{ Querystring: { userId: string; limit: number; offset: number } }>, reply: FastifyReply) => {
+      try {
+        const { userId, limit, offset } = req.query;
+        const transactions = await getService().getTransactions(userId, limit, offset);
+        return reply.send(ok({ transactions, userId }));
+      } catch (err) {
+        return reply.status((err as GatewayError).statusCode ?? 500).send(fail(err as GatewayError));
+      }
+    },
+  );
 }

@@ -70,14 +70,14 @@
 - [x] POST /credits/confirm (PostgreSQL deduction)
 - [x] POST /credits/release (release lock on failure)
 - [x] POST /credits/add (add credits — for billing webhooks)
-- [ ] GET /credits/transactions?userId=&limit=&offset= (transaction history)
-- [ ] Credit lock uses proper atomic SETNX with Lua eval for race condition safety
-- [ ] Credit lock TTL is configurable via env (`CREDIT_LOCK_TTL_SECONDS`)
-- [ ] Low credit alert event publish to Kafka (when balance < 10)
-- [ ] User repository using the shared DB pool
-- [ ] Full unit tests for CreditService (lock → confirm → release flow)
+- [x] GET /credits/transactions?userId=&limit=&offset= (transaction history)
+- [x] Credit lock uses proper atomic SETNX with Lua eval for race condition safety
+- [x] Credit lock TTL is configurable via env (`CREDIT_LOCK_TTL_SECONDS`)
+- [x] Low credit alert event publish to Kafka (when balance < 10)
+- [x] User repository using the shared DB pool
+- [x] Full unit tests for CreditService (lock → confirm → release flow)
 - [ ] Integration test with real Redis (testcontainers or separate Redis)
-- [ ] Idempotency: confirm/release use requestId deduplication
+- [x] Idempotency: confirm/release use requestId deduplication
 
 ---
 
