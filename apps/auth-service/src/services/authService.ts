@@ -30,14 +30,19 @@ export class AuthService {
     name: string;
     password: string;
   }): Promise<AuthResult> {
-    const exists = await this.userRepo.emailExists(data.email);
+    const normalizedEmail = data.email.toLowerCase().trim();
+
+    const exists = await this.userRepo.emailExists(normalizedEmail);
     if (exists) throw Errors.EMAIL_TAKEN();
+
+    if (data.password.length < 8) throw Errors.VALIDATION('Password must be at least 8 characters');
+    if (data.password.length > 128) throw Errors.VALIDATION('Password too long');
 
     const passwordHash = await bcrypt.hash(data.password, BCRYPT_ROUNDS);
 
     const user = await this.userRepo.create({
       id: generateId(),
-      email: data.email,
+      email: normalizedEmail,
       name: data.name,
       passwordHash,
       planId: 'free',
@@ -63,7 +68,8 @@ export class AuthService {
   // ─────────────────────────────────────────
 
   async login(data: { email: string; password: string }): Promise<AuthResult> {
-    const user = await this.userRepo.findByEmail(data.email);
+    const normalizedEmail = data.email.toLowerCase().trim();
+    const user = await this.userRepo.findByEmail(normalizedEmail);
     if (!user) throw Errors.INVALID_CREDENTIALS();
 
     const passwordValid = await bcrypt.compare(data.password, user.passwordHash);
@@ -107,6 +113,23 @@ export class AuthService {
     if (!user) throw Errors.USER_NOT_FOUND();
 
     return this.issueTokens(user.id, user.email, user.planId);
+  }
+
+  // ─────────────────────────────────────────
+  // Get Me
+  // ─────────────────────────────────────────
+
+  async getMe(token: string) {
+    const payload = await this.validateToken(token);
+    const user = await this.userRepo.findById(payload.userId);
+    if (!user) throw Errors.USER_NOT_FOUND();
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      planId: user.planId,
+      creditBalance: user.creditBalance,
+    };
   }
 
   // ─────────────────────────────────────────

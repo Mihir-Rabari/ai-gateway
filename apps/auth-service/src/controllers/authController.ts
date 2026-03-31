@@ -92,8 +92,8 @@ export class AuthController {
       if (!authHeader?.startsWith('Bearer ')) throw Errors.INVALID_TOKEN();
 
       const token = authHeader.slice(7);
-      const payload = await this.authService.validateToken(token);
-      return reply.send(ok(payload));
+      const user = await this.authService.getMe(token);
+      return reply.send(ok(user));
     } catch (err) {
       return reply
         .status((err as GatewayError).statusCode ?? 401)
