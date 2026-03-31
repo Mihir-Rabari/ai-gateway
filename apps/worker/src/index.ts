@@ -2,7 +2,7 @@ import { createLogger, generateId } from '@ai-gateway/utils';
 import { Kafka, type Consumer } from 'kafkajs';
 import { Pool } from 'pg';
 import { KAFKA_TOPICS } from '@ai-gateway/config';
-import type { UsageEvent } from '@ai-gateway/types';
+import type { UsageEvent, BillingEvent, AuthEvent } from '@ai-gateway/types';
 
 const logger = createLogger('worker');
 
@@ -52,22 +52,57 @@ async function startConsumers(): Promise<void> {
   });
 
   await consumer.run({
-    eachMessage: async ({ topic, message }) => {
+    eachMessage: async ({ topic, partition, message }) => {
+      const messageId = `${topic}:${partition}:${message.offset}`;
       try {
         const value = message.value?.toString();
         if (!value) return;
 
-        const event = JSON.parse(value) as { topic: string; type: string } & UsageEvent;
+        const event = JSON.parse(value) as { topic?: string; type?: string; [key: string]: unknown };
+        const eventType = typeof event.type === 'string' ? event.type : 'unknown';
 
         switch (topic) {
           case KAFKA_TOPICS.USAGE:
-            await processUsageEvent(event as UsageEvent);
+            if (eventType === 'usage.request.completed' || eventType === 'usage.request.failed') {
+              await processUsageEvent(event as unknown as UsageEvent);
+            }
             break;
+          case KAFKA_TOPICS.AUTH: {
+            if (eventType === 'user.created') {
+              const authEvent = event as unknown as AuthEvent;
+              if (authEvent.userId) {
+                await db.query(
+                  'INSERT INTO user_events (user_id, event_type, created_at) VALUES ($1, $2, NOW())',
+                  [authEvent.userId, 'signup']
+                );
+                logger.info({ userId: authEvent.userId }, 'User signup tracked');
+              }
+            }
+            break;
+          }
+          case KAFKA_TOPICS.BILLING: {
+            if (
+              eventType === 'billing.subscription.created' ||
+              eventType === 'billing.subscription.renewed'
+            ) {
+              const billingEvent = event as unknown as BillingEvent;
+              if (billingEvent.userId && billingEvent.planId) {
+                logger.info(
+                  { userId: billingEvent.userId, plan: billingEvent.planId },
+                  'Subscription event received'
+                );
+              }
+            }
+            break;
+          }
           default:
-            logger.debug({ topic, type: event.type }, 'Event received');
+            logger.debug({ topic, type: eventType }, 'Event received');
         }
       } catch (err) {
-        logger.error({ err, topic }, 'Error processing Kafka message');
+        logger.error(
+          { err, topic, messageId, value: message.value?.toString() },
+          'Failed to process Kafka message — writing to dead letter log'
+        );
       }
     },
   });
