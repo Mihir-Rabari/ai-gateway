@@ -114,12 +114,12 @@
 - [x] OpenAI integration (chat completions)
 - [x] Anthropic integration (messages API)
 - [x] Automatic fallback on provider failure
-- [ ] Google Gemini integration (via `@google/generative-ai`)
-- [ ] Provider health tracking (Redis-backed — mark unhealthy for 60s on failure)
-- [ ] Streaming support (pass through SSE from provider)
+- [x] Google Gemini integration (via `@google/generative-ai`)
+- [x] Provider health tracking (Redis-backed — mark unhealthy for 60s on failure)
+- [x] Streaming support (pass through SSE from provider)
 - [ ] Model-to-provider mapping with proper fallback chain
 - [ ] Provider latency tracking (publish latency to Kafka)
-- [ ] Circuit breaker pattern (stop routing to provider after 5 consecutive failures)
+- [x] Circuit breaker pattern (stop routing to provider after 5 consecutive failures)
 - [ ] Unit tests for RoutingService (mock OpenAI + Anthropic clients)
 - [ ] Integration test: real OpenAI call (with test API key)
 
