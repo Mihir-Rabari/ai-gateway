@@ -91,14 +91,14 @@
 - [x] Token validation via auth-service (internal HTTP call)
 - [x] Credit lock → confirm → release flow
 - [x] Kafka usage event publishing
-- [ ] App API key validation (validate `x-app-id` header against registered_apps table)
-- [ ] Request ID generation + response headers
+- [x] App API key validation (validate `x-app-id` header against registered_apps table)
+- [x] Request ID generation + response headers
 - [ ] Streaming response support (SSE or chunked transfer)
-- [ ] Request timeout handling (30s timeout, release credits on timeout)
+- [x] Request timeout handling (30s timeout, release credits on timeout)
 - [ ] Retry logic for transient provider errors (via `withRetry` from utils)
-- [ ] Full gateway plugin setup (postgres, redis, kafka)
-- [ ] Rate limiting per user per minute
-- [ ] GET /gateway/status endpoint (health + provider availability)
+- [x] Full gateway plugin setup (postgres, redis, kafka)
+- [x] Rate limiting per user per minute
+- [x] GET /gateway/status endpoint (health + provider availability)
 - [ ] Unit tests for GatewayService mocking all external calls
 - [ ] Integration test: mock auth + credit, real routing call
 

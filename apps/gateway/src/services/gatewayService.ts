@@ -1,7 +1,9 @@
 import { fetch } from 'undici';
-import { generateId, Errors, calculateCredits, createLogger, type GatewayError } from '@ai-gateway/utils';
+import { generateId, Errors, calculateCredits, createLogger, GatewayError } from '@ai-gateway/utils';
 import { KAFKA_TOPICS } from '@ai-gateway/config';
 import type { GatewayRequest, GatewayResponse, UsageEvent } from '@ai-gateway/types';
+import type { Pool } from 'pg';
+import type Redis from 'ioredis';
 
 const logger = createLogger('gateway-service');
 
@@ -10,6 +12,8 @@ interface ServiceClients {
   creditServiceUrl: string;
   routingServiceUrl: string;
   kafkaPublish: (topic: string, msg: object) => Promise<void>;
+  pgPool: Pool;
+  redis: Redis;
 }
 
 interface ValidatedUser {
@@ -49,23 +53,48 @@ export class GatewayService {
     const user = await this.validateToken(input.token);
     logger.info({ requestId, userId: user.userId, model: input.model }, 'Processing request');
 
-    // Step 2: Estimate cost
+    // Step 2: Rate Limiting
+    const limit = this.getRateLimit(user.planId);
+    const rateLimitKey = `ratelimit:gateway:${user.userId}`;
+    const currentUsage = await this.clients.redis.incr(rateLimitKey);
+    if (currentUsage === 1) {
+      await this.clients.redis.expire(rateLimitKey, 60);
+    }
+    if (currentUsage > limit) {
+      throw new GatewayError('RATE_LIMIT_EXCEEDED', 'Rate limit exceeded', 429);
+    }
+
+    // Step 3: Validate App ID
+    if (input.appId && input.appId !== 'unknown') {
+      const isValidApp = await this.validateAppKey(input.appId);
+      if (!isValidApp) {
+        throw Errors.FORBIDDEN();
+      }
+    }
+
+    // Step 4: Estimate cost
     const estimatedTokens = input.maxTokens ?? 1000;
     const estimatedCredits = calculateCredits(input.model, estimatedTokens);
 
-    // Step 3: Lock credits
+    // Step 4: Lock credits
     await this.lockCredits(user.userId, requestId, estimatedCredits);
 
-    // Step 4: Route to model
+    // Step 5: Route to model
     let routingResult: RoutingResult;
     try {
-      routingResult = await this.routeRequest({
+      const TIMEOUT_MS = 30_000;
+      const routingPromise = this.routeRequest({
         requestId,
         model: input.model,
         messages: input.messages,
         maxTokens: input.maxTokens,
         temperature: input.temperature,
       });
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout')), TIMEOUT_MS)
+      );
+
+      routingResult = await Promise.race([routingPromise, timeoutPromise]);
     } catch (err) {
       await this.releaseCredits(user.userId, requestId).catch(() => undefined);
       const latencyMs = Date.now() - startTime;
@@ -73,14 +102,16 @@ export class GatewayService {
         requestId, user.userId, input.appId, input.model, 'openai',
         0, 0, 0, 0, latencyMs, (err as GatewayError).code,
       );
-      throw err;
+      throw err instanceof Error && err.message === 'Request timeout'
+        ? new GatewayError('GATEWAY_003', 'Request timed out', 504)
+        : err;
     }
 
-    // Step 5: Confirm credit deduction
+    // Step 6: Confirm credit deduction
     const actualCredits = calculateCredits(routingResult.model, routingResult.tokensTotal);
     await this.confirmCredits(user.userId, requestId);
 
-    // Step 6: Publish usage event
+    // Step 7: Publish usage event
     const latencyMs = Date.now() - startTime;
     void this.publishUsageEvent(
       requestId, user.userId, input.appId, routingResult.model,
@@ -105,6 +136,20 @@ export class GatewayService {
   // ─────────────────────────────────────────
   // Internal Helpers
   // ─────────────────────────────────────────
+
+  private getRateLimit(planId: string): number {
+    if (planId === 'pro') return 60;
+    if (planId === 'max') return 200;
+    return 10;
+  }
+
+  private async validateAppKey(appId: string): Promise<boolean> {
+    const result = await this.clients.pgPool.query(
+      'SELECT id FROM registered_apps WHERE id = $1 AND is_active = true',
+      [appId]
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
 
   private async validateToken(token: string): Promise<ValidatedUser> {
     const res = await fetch(`${this.clients.authServiceUrl}/internal/auth/validate`, {
