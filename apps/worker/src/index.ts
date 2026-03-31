@@ -23,18 +23,16 @@ async function processUsageEvent(event: UsageEvent): Promise<void> {
   // Revenue split: 20% to developer
   const appEarning = Math.floor(event.creditsDeducted * 0.2);
 
-  // Update dev wallet
+  // Update dev wallet - combined into a single round-trip using CTE
   await db.query(
-    `INSERT INTO dev_wallet_transactions (id, app_id, request_id, credits_earned, created_at)
-     VALUES ($1, $2, $3, $4, NOW())
-     ON CONFLICT DO NOTHING`,
+    `WITH ins AS (
+      INSERT INTO dev_wallet_transactions (id, app_id, request_id, credits_earned, created_at)
+      VALUES ($1, $2, $3, $4, NOW())
+      ON CONFLICT DO NOTHING
+    )
+    UPDATE dev_wallets SET balance = balance + $4, total_earned = total_earned + $4, updated_at = NOW()
+    WHERE developer_id = (SELECT developer_id FROM registered_apps WHERE id = $2)`,
     [generateId(), event.appId, event.requestId, appEarning],
-  );
-
-  await db.query(
-    `UPDATE dev_wallets SET balance = balance + $1, total_earned = total_earned + $1, updated_at = NOW()
-     WHERE developer_id = (SELECT developer_id FROM registered_apps WHERE id = $2)`,
-    [appEarning, event.appId],
   );
 
   logger.info({ requestId: event.requestId, appId: event.appId, earning: appEarning }, 'Revenue split processed');
