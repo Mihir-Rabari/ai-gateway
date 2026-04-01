@@ -1,0 +1,56 @@
+import { AppRepository } from '../repositories/AppRepository.js';
+import { generateId } from '@ai-gateway/utils';
+import bcrypt from 'bcrypt';
+
+export class AppService {
+  private repo: AppRepository;
+
+  constructor(repo: AppRepository) {
+    this.repo = repo;
+  }
+
+  async registerApp(developerId: string, name: string, description?: string) {
+    const appId = generateId();
+    const rawApiKey = `agk_${generateId()}${generateId()}`;
+    const keyId = generateId();
+    const keyHash = await bcrypt.hash(rawApiKey, 10);
+
+    await this.repo.withTransaction(async (client) => {
+      await this.repo.createApp(client, appId, developerId, name, description ?? null);
+      await this.repo.createApiKey(client, keyId, appId, keyHash);
+    });
+
+    return { id: appId, name, description, apiKey: rawApiKey };
+  }
+
+  async listApps(developerId: string) {
+    return this.repo.findAppsByDeveloperId(developerId);
+  }
+
+  async deleteApp(appId: string, developerId: string) {
+    return this.repo.deleteApp(appId, developerId);
+  }
+
+  async rotateApiKey(appId: string, developerId: string) {
+    const rawApiKey = `agk_${generateId()}${generateId()}`;
+    const keyId = generateId();
+    const keyHash = await bcrypt.hash(rawApiKey, 10);
+
+    const success = await this.repo.withTransaction(async (client) => {
+      const exists = await this.repo.findActiveAppById(client, appId, developerId);
+      if (!exists) {
+        return false;
+      }
+
+      await this.repo.revokeActiveApiKeys(client, appId);
+      await this.repo.createApiKey(client, keyId, appId, keyHash);
+      return true;
+    });
+
+    if (!success) {
+      return null;
+    }
+
+    return { apiKey: rawApiKey };
+  }
+}

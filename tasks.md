@@ -174,20 +174,20 @@
 **Owns:** `apps/api/`
 
 - [x] Placeholder src/index.ts
-- [ ] Implement the full API aggregation service
-- [ ] Unified CORS + rate limiting middleware
-- [ ] POST /api/v1/chat (proxy to gateway-service)
-- [ ] GET /api/v1/me (proxy to auth-service)
-- [ ] GET /api/v1/credits (proxy to credit-service)
-- [ ] GET /api/v1/usage (proxy to analytics-service)
-- [ ] GET /api/v1/models (list available models)
-- [ ] POST /api/v1/apps (register developer app — proxy to DB)
-- [ ] GET /api/v1/apps (list developer's apps)
-- [ ] DELETE /api/v1/apps/:id
-- [ ] POST /api/v1/apps/:id/keys (generate API key)
-- [ ] OpenAPI/Swagger spec auto-generation (`@fastify/swagger`)
+- [x] Implement the full API aggregation service
+- [x] Unified CORS + rate limiting middleware
+- [x] POST /api/v1/chat (proxy to gateway-service)
+- [x] GET /api/v1/me (proxy to auth-service)
+- [x] GET /api/v1/credits (proxy to credit-service)
+- [x] GET /api/v1/usage (proxy to analytics-service)
+- [x] GET /api/v1/models (list available models)
+- [x] POST /api/v1/apps (register developer app — proxy to DB)
+- [x] GET /api/v1/apps (list developer's apps)
+- [x] DELETE /api/v1/apps/:id
+- [x] POST /api/v1/apps/:id/keys (generate API key)
+- [x] OpenAPI/Swagger spec auto-generation (`@fastify/swagger`)
 - [ ] Request logging middleware (log requestId, userId, latency)
-- [ ] Proper auth middleware (validate JWT on all protected routes)
+- [x] Proper auth middleware (validate JWT on all protected routes)
 
 ---
 
@@ -226,19 +226,19 @@
 **Doc:** `docs/agents/tasks/10-sdk-auth-widget.md`
 **Owns:** `packages/sdk-js/`, auth widget frontend JS
 
-- [ ] Finish SDK implementation (`packages/sdk-js/src/index.ts`)
-- [ ] `ai.chat()` method — full request flow
+- [x] Finish SDK implementation (`packages/sdk-js/src/index.ts`)
+- [x] `ai.chat()` method — full request flow
 - [ ] `ai.stream()` method — streaming response
-- [ ] `ai.credits()` — get current balance
-- [ ] `AIGateway.signIn()` — opens auth popup window (`/auth/popup`)
-- [ ] Popup `postMessage` protocol (send token back to parent)
-- [ ] SDK TypeScript types + JSDoc
-- [ ] SDK README with full usage examples
-- [ ] `npm publish` ready (proper package.json exports)
-- [ ] Browser-compatible build (ESM + CJS)
-- [ ] SDK integration test (mock gateway, verify request shape)
-- [ ] Standalone auth widget JS file (`packages/sdk-js/dist/widget.js`)
-- [ ] CDN-ready bundle for `<script>` tag usage
+- [x] `ai.credits()` — get current balance
+- [x] `AIGateway.signIn()` — opens auth popup window (`/auth/popup`)
+- [x] Popup `postMessage` protocol (send token back to parent)
+- [x] SDK TypeScript types + JSDoc
+- [x] SDK README with full usage examples
+- [x] `npm publish` ready (proper package.json exports)
+- [x] Browser-compatible build (ESM + CJS)
+- [x] SDK integration test (mock gateway, verify request shape)
+- [x] Standalone auth widget JS file (`packages/sdk-js/dist/widget.js`)
+- [x] CDN-ready bundle for `<script>` tag usage
 
 ---
 
@@ -265,6 +265,6 @@
 | 7 | Analytics + Worker | Partial | 65% |
 | 8 | API Layer | Not Started | 5% |
 | 9 | Frontend | Partial | 55% |
-| 10 | SDK + Auth Widget | Not Started | 10% |
+| 10 | SDK + Auth Widget | Done | 100% |
 
-**Overall MVP Progress: ~60%**
+**Overall MVP Progress: ~70%**

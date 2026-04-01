@@ -1,20 +1,26 @@
 {
   "name": "@ai-gateway/sdk-js",
   "version": "0.1.0",
-  "description": "Official JavaScript/TypeScript SDK for AI Gateway",
+  "description": "JavaScript SDK for AI Gateway",
   "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./widget": {
+      "types": "./dist/widget.d.ts",
+      "import": "./dist/widget.mjs"
     }
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "clean": "rm -rf dist",
+    "build": "pnpm run build:index && pnpm run build:widget",
+    "build:index": "tsup src/index.ts --format esm,cjs --dts",
+    "build:widget": "tsup src/widget.ts --format esm,iife --globalName AIGateway --outDir dist",
+    "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
@@ -22,8 +28,14 @@
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
-    "typescript": "^5.4.5"
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
   },
-  "keywords": ["ai-gateway", "sdk", "ai", "llm"],
+  "keywords": [
+    "ai-gateway",
+    "sdk",
+    "ai",
+    "llm"
+  ],
   "license": "MIT"
 }
