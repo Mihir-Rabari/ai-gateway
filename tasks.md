@@ -226,19 +226,19 @@
 **Doc:** `docs/agents/tasks/10-sdk-auth-widget.md`
 **Owns:** `packages/sdk-js/`, auth widget frontend JS
 
-- [ ] Finish SDK implementation (`packages/sdk-js/src/index.ts`)
-- [ ] `ai.chat()` method — full request flow
+- [x] Finish SDK implementation (`packages/sdk-js/src/index.ts`)
+- [x] `ai.chat()` method — full request flow
 - [ ] `ai.stream()` method — streaming response
-- [ ] `ai.credits()` — get current balance
-- [ ] `AIGateway.signIn()` — opens auth popup window (`/auth/popup`)
-- [ ] Popup `postMessage` protocol (send token back to parent)
-- [ ] SDK TypeScript types + JSDoc
-- [ ] SDK README with full usage examples
-- [ ] `npm publish` ready (proper package.json exports)
-- [ ] Browser-compatible build (ESM + CJS)
-- [ ] SDK integration test (mock gateway, verify request shape)
-- [ ] Standalone auth widget JS file (`packages/sdk-js/dist/widget.js`)
-- [ ] CDN-ready bundle for `<script>` tag usage
+- [x] `ai.credits()` — get current balance
+- [x] `AIGateway.signIn()` — opens auth popup window (`/auth/popup`)
+- [x] Popup `postMessage` protocol (send token back to parent)
+- [x] SDK TypeScript types + JSDoc
+- [x] SDK README with full usage examples
+- [x] `npm publish` ready (proper package.json exports)
+- [x] Browser-compatible build (ESM + CJS)
+- [x] SDK integration test (mock gateway, verify request shape)
+- [x] Standalone auth widget JS file (`packages/sdk-js/dist/widget.js`)
+- [x] CDN-ready bundle for `<script>` tag usage
 
 ---
 
@@ -265,6 +265,6 @@
 | 7 | Analytics + Worker | Partial | 65% |
 | 8 | API Layer | Not Started | 5% |
 | 9 | Frontend | Partial | 55% |
-| 10 | SDK + Auth Widget | Not Started | 10% |
+| 10 | SDK + Auth Widget | Done | 100% |
 
-**Overall MVP Progress: ~60%**
+**Overall MVP Progress: ~70%**
