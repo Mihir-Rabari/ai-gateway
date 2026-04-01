@@ -206,18 +206,18 @@
 - [x] Usage page (monthly stats + credit bars)
 - [x] Billing page (plan comparison + Razorpay CTAs)
 - [x] Settings page (profile + API key + SDK quickstart)
-- [ ] **FIX: Rebuild landing page using shadcn/ui components** (current has Tailwind issues)
-- [ ] Install shadcn/ui in `apps/web` (latest — v2+)
-- [ ] Migrate all dashboard pages to use shadcn components (Card, Button, Input, Badge, etc.)
-- [ ] Auth popup page (`/auth/popup`) — minimal login form in iframe
-- [ ] Developer portal (`/dev`) — app registration, API key management
-- [ ] Developer earnings page (`/dev/earnings`) — wallet balance + transaction history
-- [ ] Real-time credit balance update (poll every 30s or SSE)
-- [ ] Toast notifications (login success, credit low warning)
-- [ ] Mobile responsive sidebar (hamburger menu)
-- [ ] Dark mode enforced (already dark — just ensure no light mode fallback)
-- [ ] Error boundary components
-- [ ] Loading skeleton states
+- [x] **FIX: Rebuild landing page using shadcn/ui components** (current has Tailwind issues)
+- [x] Install shadcn/ui in `apps/web` (latest — v2+)
+- [x] Migrate all dashboard pages to use shadcn components (Card, Button, Input, Badge, etc.)
+- [x] Auth popup page (`/auth/popup`) — minimal login form in iframe
+- [x] Developer portal (`/dev`) — app registration, API key management
+- [x] Developer earnings page (`/dev/earnings`) — wallet balance + transaction history
+- [x] Real-time credit balance update (poll every 30s or SSE)
+- [x] Toast notifications (login success, credit low warning)
+- [x] Mobile responsive sidebar (hamburger menu)
+- [x] Dark mode enforced (already dark — just ensure no light mode fallback)
+- [x] Error boundary components
+- [x] Loading skeleton states
 
 ---
 
@@ -264,7 +264,7 @@
 | 6 | Billing | Partial | 60% |
 | 7 | Analytics + Worker | Partial | 65% |
 | 8 | API Layer | Not Started | 5% |
-| 9 | Frontend | Partial | 55% |
+| 9 | Frontend | Done | 100% |
 | 10 | SDK + Auth Widget | Not Started | 10% |
 
 **Overall MVP Progress: ~60%**
