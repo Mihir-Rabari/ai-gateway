@@ -1,11 +1,40 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { createHmac, timingSafeEqual } from 'crypto';
+import { fetch } from 'undici';
 import { ok, fail, Errors, createLogger } from '@ai-gateway/utils';
 import { PLANS } from '@ai-gateway/config';
 import { BillingRepository } from '../repositories/BillingRepository.js';
 import { BillingService } from '../services/BillingService.js';
 
 const logger = createLogger('billing-routes');
+
+async function validateUserToken(req: FastifyRequest, expectedUserId: string): Promise<boolean> {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader?.startsWith('Bearer ')) {
+    return false;
+  }
+
+  const token = authHeader.slice(7);
+  const authUrl = process.env['AUTH_SERVICE_URL'] ?? 'http://localhost:3003';
+
+  try {
+    const res = await fetch(`${authUrl}/internal/auth/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+
+    const json = await res.json() as { success: boolean; data?: { userId: string } };
+    if (!json.success || !json.data) {
+      return false;
+    }
+
+    return json.data.userId === expectedUserId;
+  } catch (err) {
+    logger.error(err, 'Failed to validate token with auth service');
+    return false;
+  }
+}
 
 export async function billingRoutes(fastify: FastifyInstance) {
   const repo = new BillingRepository(fastify.pg);
@@ -33,6 +62,11 @@ export async function billingRoutes(fastify: FastifyInstance) {
     },
     async (req: FastifyRequest<{ Body: { userId: string; planId: 'pro' | 'max' } }>, reply: FastifyReply) => {
       try {
+        const isValid = await validateUserToken(req, req.body.userId);
+        if (!isValid) {
+          return reply.status(401).send(fail(Errors.INVALID_TOKEN()));
+        }
+
         const result = await service.createSubscription(req.body.userId, req.body.planId);
         return reply.send(ok(result));
       } catch (err) {
@@ -95,6 +129,11 @@ export async function billingRoutes(fastify: FastifyInstance) {
     const { userId } = req.query as { userId: string };
     if (!userId) return reply.status(400).send(fail(Errors.VALIDATION('userId query param is required')));
 
+    const isValid = await validateUserToken(req, userId);
+    if (!isValid) {
+      return reply.status(401).send(fail(Errors.INVALID_TOKEN()));
+    }
+
     const result = await service.getSubscription(userId);
     return reply.send(ok(result));
   });
@@ -117,6 +156,11 @@ export async function billingRoutes(fastify: FastifyInstance) {
       const { userId } = req.body;
 
       try {
+        const isValid = await validateUserToken(req, userId);
+        if (!isValid) {
+          return reply.status(401).send(fail(Errors.INVALID_TOKEN()));
+        }
+
         const result = await service.cancelSubscription(userId);
         if (!result) {
           return reply.status(404).send(fail(Errors.NOT_FOUND('Subscription')));
