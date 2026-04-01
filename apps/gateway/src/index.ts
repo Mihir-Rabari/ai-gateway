@@ -31,6 +31,11 @@ async function bootstrap() {
 
   app.addHook('onSend', async (req, reply) => {
     reply.header('X-Request-Id', req.id);
+    reply.header('X-Frame-Options', 'DENY');
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    reply.header('Content-Security-Policy', "default-src 'none'");
+    reply.header('X-XSS-Protection', '1; mode=block');
   });
 
   app.get('/health', async () => ({ status: 'ok', service: 'gateway' }));
