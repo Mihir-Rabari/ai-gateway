@@ -1,187 +1,213 @@
-import type {
-  GatewayRequest,
-  GatewayResponse,
-  Message,
-  AuthResult,
-} from '@ai-gateway/types';
-
-// ─────────────────────────────────────────
-// Config
-// ─────────────────────────────────────────
-
-export interface AiGatewayConfig {
-  /** Your registered app ID */
+export interface AIGatewayConfig {
   appId: string;
-  /** Your app API key from the developer dashboard */
-  apiKey: string;
-  /** Override the default gateway URL (for self-hosting) */
+  apiKey?: string;
   baseUrl?: string;
 }
 
-// ─────────────────────────────────────────
-// Request Options
-// ─────────────────────────────────────────
+export interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
 
-export interface GenerateOptions {
-  /** User's access token (obtained via Login with AI Gateway) */
-  userToken: string;
-  /** Model identifier e.g. 'gpt-4o', 'claude-3-5-sonnet-20241022' */
+export interface ChatOptions {
   model: string;
-  /** Messages in OpenAI-compatible format */
-  messages: Message[];
-  /** Max tokens to generate */
+  messages: ChatMessage[];
   maxTokens?: number;
-  /** Sampling temperature (0-1) */
   temperature?: number;
 }
 
-// ─────────────────────────────────────────
-// Error
-// ─────────────────────────────────────────
-
-export class AiGatewayError extends Error {
-  constructor(
-    public readonly code: string,
-    message: string,
-    public readonly statusCode: number,
-  ) {
-    super(message);
-    this.name = 'AiGatewayError';
-  }
+export interface ChatResult {
+  requestId: string;
+  output: string;
+  tokensInput: number;
+  tokensOutput: number;
+  tokensTotal: number;
+  creditsUsed: number;
+  model: string;
+  provider: string;
+  latencyMs: number;
 }
 
-// ─────────────────────────────────────────
-// SDK Client
-// ─────────────────────────────────────────
+export interface CreditsResult {
+  balance: number;
+  planId: 'free' | 'pro' | 'max';
+}
 
-export class AiGateway {
-  private readonly baseUrl: string;
+/**
+ * AI Gateway SDK Client
+ *
+ * Initialize this class to interact with the AI Gateway.
+ * It manages authentication, credit checks, and sending requests to AI models.
+ */
+export class AIGateway {
   private readonly appId: string;
-  private readonly apiKey: string;
+  private readonly baseUrl: string;
+  private apiKey: string | undefined;
+  private accessToken: string | undefined;
 
-  constructor(config: AiGatewayConfig) {
+  /**
+   * Create a new AIGateway instance.
+   *
+   * @param config - The configuration options
+   * @param config.appId - The developer's app ID registered with AI Gateway
+   * @param config.apiKey - The user's API key (optional if using `signIn()`)
+   * @param config.baseUrl - Override the default API URL
+   */
+  constructor(config: AIGatewayConfig) {
     this.appId = config.appId;
     this.apiKey = config.apiKey;
-    this.baseUrl = config.baseUrl ?? 'https://api.aigateway.dev';
+    this.baseUrl = config.baseUrl ?? 'https://api.ai-gateway.io';
   }
 
   /**
-   * Generate a text response using AI Gateway.
-   * Credits are automatically deducted from the user's balance.
+   * Set the user's access token obtained via `signIn()`.
+   *
+   * @param token - The JWT access token
+   */
+  setToken(token: string): void {
+    this.accessToken = token;
+  }
+
+  private getAuthHeader(): string {
+    const token = this.accessToken ?? this.apiKey;
+    if (!token) throw new Error('AIGateway: No API key or access token set. Call signIn() first.');
+    return `Bearer ${token}`;
+  }
+
+  /**
+   * Send a chat message to any AI model.
+   *
+   * @param options - Chat configuration
+   * @param options.model - Model ID (e.g. 'gpt-4o', 'claude-3-5-sonnet')
+   * @param options.messages - Conversation history
+   * @param options.maxTokens - Maximum tokens to generate (default: 1024)
+   * @param options.temperature - Sampling temperature (0-1)
+   * @returns Chat result with output text and token/credit usage
+   * @throws {Error} When insufficient credits or provider error
    *
    * @example
-   * const response = await gateway.generate({
-   *   userToken: accessToken,
+   * const result = await ai.chat({
    *   model: 'gpt-4o',
-   *   messages: [{ role: 'user', content: 'Hello!' }]
+   *   messages: [{ role: 'user', content: 'What is TypeScript?' }],
    * });
    */
-  async generate(options: GenerateOptions): Promise<GatewayResponse> {
-    const response = await this.request<GatewayResponse>('/gateway/request', {
+  async chat(options: ChatOptions): Promise<ChatResult> {
+    const res = await fetch(`${this.baseUrl}/api/v1/chat`, {
       method: 'POST',
-      userToken: options.userToken,
-      body: {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: this.getAuthHeader(),
+        'X-App-Id': this.appId,
+      },
+      body: JSON.stringify({
         model: options.model,
         messages: options.messages,
         maxTokens: options.maxTokens,
         temperature: options.temperature,
-      } satisfies Omit<GatewayRequest, 'requestId' | 'userId' | 'appId'>,
+      }),
     });
-    return response;
+
+    const json = await res.json() as { success: boolean; data?: ChatResult & { creditsDeducted?: number }; error?: { message: string } };
+
+    if (!json.success || !json.data) {
+      throw new Error(`AIGateway chat error: ${json.error?.message ?? 'Unknown error'}`);
+    }
+
+    return {
+      ...json.data,
+      creditsUsed: json.data.creditsDeducted ?? json.data.creditsUsed,
+    } as ChatResult;
   }
 
   /**
-   * Get the list of available models
+   * Get the current user's credit balance and plan.
+   *
+   * @returns The credit balance and plan ID
+   * @throws {Error} If fetching credits fails
    */
-  async getModels(): Promise<string[]> {
-    const response = await this.request<{ models: string[] }>('/gateway/models', {
-      method: 'GET',
+  async credits(): Promise<CreditsResult> {
+    const res = await fetch(`${this.baseUrl}/api/v1/credits`, {
+      headers: { Authorization: this.getAuthHeader() },
     });
-    return response.models;
+
+    const json = await res.json() as { success: boolean; data?: CreditsResult };
+    if (!json.success || !json.data) throw new Error('Failed to fetch credits');
+    return json.data;
   }
 
-  // ─────────────────────────────────────────
-  // Auth Helpers
-  // ─────────────────────────────────────────
-
   /**
-   * Get the URL to redirect the user to for "Login with AI Gateway"
+   * Open a popup for the user to sign in with AI Gateway and authorize the app.
+   *
+   * @param options - Sign in options
+   * @param options.appId - The developer's app ID registered with AI Gateway
+   * @param options.popupUrl - The URL of the auth popup (optional)
+   * @param options.width - Width of the popup window
+   * @param options.height - Height of the popup window
+   * @returns The user's access token and basic user info
+   * @throws {Error} If the popup fails to open or is closed before signing in
    *
    * @example
-   * const loginUrl = gateway.getLoginUrl('https://yourapp.com/callback');
-   * window.location.href = loginUrl;
+   * const { token, user } = await AIGateway.signIn({ appId: 'app_123' });
+   * ai.setToken(token);
    */
-  getLoginUrl(redirectUri: string): string {
-    const params = new URLSearchParams({
-      appId: this.appId,
-      redirectUri,
-      responseType: 'code',
-    });
-    return `${this.baseUrl}/oauth/authorize?${params.toString()}`;
-  }
+  static async signIn(options: {
+    appId: string;
+    popupUrl?: string;
+    width?: number;
+    height?: number;
+  }): Promise<{ token: string; user: { id: string; email: string; name: string } }> {
+    const url = options.popupUrl ?? 'https://app.ai-gateway.io/auth/popup';
+    const width = options.width ?? 420;
+    const height = options.height ?? 560;
 
-  /**
-   * Exchange an authorization code for access + refresh tokens.
-   * Call this on your /callback route after the user logs in.
-   */
-  async exchangeCode(code: string): Promise<AuthResult> {
-    return this.request<AuthResult>('/auth/oauth/token', {
-      method: 'POST',
-      body: { code, appId: this.appId },
-    });
-  }
+    const left = Math.round((window.screen.width - width) / 2);
+    const top = Math.round((window.screen.height - height) / 2);
 
-  /**
-   * Refresh an expired access token using a refresh token.
-   */
-  async refreshToken(refreshToken: string): Promise<{ accessToken: string }> {
-    return this.request<{ accessToken: string }>('/auth/refresh', {
-      method: 'POST',
-      body: { refreshToken },
-    });
-  }
+    const popup = window.open(
+      `${url}?appId=${options.appId}`,
+      'ai-gateway-auth',
+      `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=no`
+    );
 
-  // ─────────────────────────────────────────
-  // Internal HTTP Client
-  // ─────────────────────────────────────────
-
-  private async request<T>(
-    path: string,
-    options: {
-      method: 'GET' | 'POST' | 'PUT' | 'DELETE';
-      body?: unknown;
-      userToken?: string;
-    },
-  ): Promise<T> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'x-app-id': this.appId,
-      'x-api-key': this.apiKey,
-    };
-
-    if (options.userToken) {
-      headers['Authorization'] = `Bearer ${options.userToken}`;
+    if (!popup) {
+      throw new Error('AIGateway: Could not open auth popup. Check if popups are blocked.');
     }
 
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method: options.method,
-      headers,
-      body: options.body ? JSON.stringify(options.body) : undefined,
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('AIGateway: Auth timed out (2 minutes)'));
+        cleanup();
+      }, 2 * 60 * 1000);
+
+      function cleanup() {
+        clearTimeout(timeout);
+        window.removeEventListener('message', handleMessage);
+      }
+
+      function handleMessage(event: MessageEvent) {
+        // Only accept messages from our popup
+        if (!url.startsWith(event.origin) && event.origin !== window.location.origin) return;
+
+        const data = event.data as { type?: string; accessToken?: string; user?: unknown };
+        if (data.type === 'AI_GATEWAY_AUTH' && data.accessToken) {
+          cleanup();
+          resolve({
+            token: data.accessToken,
+            user: data.user as { id: string; email: string; name: string }
+          });
+        }
+      }
+
+      window.addEventListener('message', handleMessage);
+
+      // Detect if popup was closed without auth
+      const pollClosed = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(pollClosed);
+          cleanup();
+          reject(new Error('AIGateway: Auth popup was closed'));
+        }
+      }, 500);
     });
-
-    const json = (await response.json()) as { success: boolean; data?: T; error?: { code: string; message: string } };
-
-    if (!json.success || !response.ok) {
-      throw new AiGatewayError(
-        json.error?.code ?? 'UNKNOWN',
-        json.error?.message ?? 'Unknown error',
-        response.status,
-      );
-    }
-
-    return json.data as T;
   }
 }
-
-// Named exports for tree-shaking
-export type { GatewayResponse, Message, AuthResult };
