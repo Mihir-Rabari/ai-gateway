@@ -174,20 +174,20 @@
 **Owns:** `apps/api/`
 
 - [x] Placeholder src/index.ts
-- [ ] Implement the full API aggregation service
-- [ ] Unified CORS + rate limiting middleware
-- [ ] POST /api/v1/chat (proxy to gateway-service)
-- [ ] GET /api/v1/me (proxy to auth-service)
-- [ ] GET /api/v1/credits (proxy to credit-service)
-- [ ] GET /api/v1/usage (proxy to analytics-service)
-- [ ] GET /api/v1/models (list available models)
-- [ ] POST /api/v1/apps (register developer app — proxy to DB)
-- [ ] GET /api/v1/apps (list developer's apps)
-- [ ] DELETE /api/v1/apps/:id
-- [ ] POST /api/v1/apps/:id/keys (generate API key)
-- [ ] OpenAPI/Swagger spec auto-generation (`@fastify/swagger`)
+- [x] Implement the full API aggregation service
+- [x] Unified CORS + rate limiting middleware
+- [x] POST /api/v1/chat (proxy to gateway-service)
+- [x] GET /api/v1/me (proxy to auth-service)
+- [x] GET /api/v1/credits (proxy to credit-service)
+- [x] GET /api/v1/usage (proxy to analytics-service)
+- [x] GET /api/v1/models (list available models)
+- [x] POST /api/v1/apps (register developer app — proxy to DB)
+- [x] GET /api/v1/apps (list developer's apps)
+- [x] DELETE /api/v1/apps/:id
+- [x] POST /api/v1/apps/:id/keys (generate API key)
+- [x] OpenAPI/Swagger spec auto-generation (`@fastify/swagger`)
 - [ ] Request logging middleware (log requestId, userId, latency)
-- [ ] Proper auth middleware (validate JWT on all protected routes)
+- [x] Proper auth middleware (validate JWT on all protected routes)
 
 ---
 
