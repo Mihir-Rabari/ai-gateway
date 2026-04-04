@@ -67,14 +67,24 @@ CREATE TABLE IF NOT EXISTS registered_apps (
   developer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name         TEXT NOT NULL,
   description  TEXT,
-  api_key      TEXT UNIQUE NOT NULL,
   is_active    BOOLEAN NOT NULL DEFAULT true,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_apps_developer_id ON registered_apps (developer_id);
-CREATE INDEX IF NOT EXISTS idx_apps_api_key ON registered_apps (api_key);
+
+-- Active API Keys
+CREATE TABLE IF NOT EXISTS api_keys (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  app_id        UUID NOT NULL REFERENCES registered_apps(id) ON DELETE CASCADE,
+  key_hash      TEXT NOT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  revoked_at    TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_keys_app_id ON api_keys (app_id);
+CREATE INDEX IF NOT EXISTS idx_api_keys_active_app_id ON api_keys (app_id) WHERE revoked_at IS NULL;
 
 -- ──────────────────────────────────────────────
 -- Developer Wallets
@@ -101,6 +111,17 @@ CREATE TABLE IF NOT EXISTS dev_wallet_transactions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_dev_wallet_txn_app_id ON dev_wallet_transactions (app_id);
+
+-- User Events (analytics/audit support)
+CREATE TABLE IF NOT EXISTS user_events (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  event_type  TEXT NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_events_user_id ON user_events (user_id);
+CREATE INDEX IF NOT EXISTS idx_user_events_created_at ON user_events (created_at DESC);
 
 -- ──────────────────────────────────────────────
 -- Trigger: Update updated_at automatically

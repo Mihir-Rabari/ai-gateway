@@ -20,8 +20,17 @@ export class BillingService {
   ) {}
 
   async createSubscription(userId: string, planId: 'pro' | 'max') {
+    const razorpayPlanId =
+      planId === 'pro' ? process.env['RAZORPAY_PLAN_ID_PRO']
+      : planId === 'max' ? process.env['RAZORPAY_PLAN_ID_MAX']
+      : null;
+
+    if (!razorpayPlanId) {
+      throw new Error(`Missing Razorpay plan mapping for ${planId}`);
+    }
+
     const subscription = await razorpay.subscriptions.create({
-      plan_id: planId,
+      plan_id: razorpayPlanId,
       total_count: 12,
       quantity: 1,
       customer_notify: 1,
@@ -106,16 +115,16 @@ export class BillingService {
           logger.error(err, 'Failed to publish billing event');
         });
       } else if (event === 'payment.failed') {
-        const billingEvent = {
+        const billingEvent: BillingEvent = {
           eventId: generateId(),
           topic: 'billing.events',
-          type: 'billing.payment.failed' as unknown as BillingEvent['type'],
+          type: 'billing.payment.failed',
           userId,
           planId: planId as BillingEvent['planId'],
           amountPaise: payload.payment?.entity.amount ?? 0,
           timestamp: new Date().toISOString(),
           version: '1.0',
-        } as BillingEvent;
+        };
 
         void this.fastify.kafka.publish(KAFKA_TOPICS.BILLING, billingEvent).catch((err) => {
           logger.error(err, 'Failed to publish billing event for payment failure');

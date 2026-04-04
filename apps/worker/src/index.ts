@@ -38,6 +38,13 @@ async function processUsageEvent(event: UsageEvent): Promise<void> {
   logger.info({ requestId: event.requestId, appId: event.appId, earning: appEarning }, 'Revenue split processed');
 }
 
+async function trackUserEvent(userId: string, eventType: string): Promise<void> {
+  await db.query(
+    'INSERT INTO user_events (id, user_id, event_type, created_at) VALUES ($1, $2, $3, NOW())',
+    [generateId(), userId, eventType],
+  );
+}
+
 async function startConsumers(): Promise<void> {
   const consumer: Consumer = kafka.consumer({ groupId: 'ai-gateway-worker' });
 
@@ -66,14 +73,15 @@ async function startConsumers(): Promise<void> {
             }
             break;
           case KAFKA_TOPICS.AUTH: {
-            if (eventType === 'user.created') {
+            if (eventType === 'user.created' || eventType === 'user.login' || eventType === 'user.logout') {
               const authEvent = event as unknown as AuthEvent;
               if (authEvent.userId) {
-                await db.query(
-                  'INSERT INTO user_events (user_id, event_type, created_at) VALUES ($1, $2, NOW())',
-                  [authEvent.userId, 'signup']
-                );
-                logger.info({ userId: authEvent.userId }, 'User signup tracked');
+                const mappedType =
+                  eventType === 'user.created' ? 'signup'
+                  : eventType === 'user.login' ? 'login'
+                  : 'logout';
+                await trackUserEvent(authEvent.userId, mappedType);
+                logger.info({ userId: authEvent.userId, eventType: mappedType }, 'User event tracked');
               }
             }
             break;

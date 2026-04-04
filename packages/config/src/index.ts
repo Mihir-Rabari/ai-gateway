@@ -1,8 +1,10 @@
 import { z } from 'zod';
 import { config as loadDotenv } from 'dotenv';
 
-// Load .env file
-loadDotenv();
+import path from 'path';
+
+// Load .env file from the monorepo root
+loadDotenv({ path: path.resolve(process.cwd(), '../../.env') });
 
 // ─────────────────────────────────────────
 // Base Config Schema (shared across all services)
@@ -65,6 +67,8 @@ const billingSchema = baseSchema.extend({
   RAZORPAY_KEY_ID: z.string(),
   RAZORPAY_KEY_SECRET: z.string(),
   RAZORPAY_WEBHOOK_SECRET: z.string(),
+  RAZORPAY_PLAN_ID_PRO: z.string(),
+  RAZORPAY_PLAN_ID_MAX: z.string(),
   CREDIT_SERVICE_URL: z.string().url(),
   FREE_PLAN_CREDITS: z.coerce.number().default(100),
   PRO_PLAN_CREDITS: z.coerce.number().default(1000),

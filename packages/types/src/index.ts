@@ -152,7 +152,8 @@ export type CreditEventType =
   | 'credit.deducted'
   | 'credit.added'
   | 'credit.locked'
-  | 'credit.released';
+  | 'credit.released'
+  | 'credit.low';
 
 export interface CreditEvent extends BaseEvent {
   topic: 'credit.events';
@@ -167,7 +168,8 @@ export interface CreditEvent extends BaseEvent {
 export type BillingEventType =
   | 'billing.subscription.created'
   | 'billing.subscription.renewed'
-  | 'billing.subscription.cancelled';
+  | 'billing.subscription.cancelled'
+  | 'billing.payment.failed';
 
 export interface BillingEvent extends BaseEvent {
   topic: 'billing.events';
