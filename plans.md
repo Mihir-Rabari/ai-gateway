@@ -354,3 +354,4 @@ Still pending from the production audit:
 - Extracted analytics batch buffering/mapping logic into a dedicated service module with unit tests, and wired analytics into the repo test run
 - Routing-service now measures per-call provider latency and includes `latencyMs` in published routing events for both selected primary paths and fallback paths
 - Auth-service now has an integration-style signup/login/refresh test path with real token/password behavior and refresh token single-use rotation assertions
+- Credit-service now includes a real Redis integration test for lock/release behavior, with graceful skip when Redis is unavailable in the environment

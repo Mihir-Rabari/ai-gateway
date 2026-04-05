@@ -76,7 +76,7 @@
 - [x] Low credit alert event publish to Kafka (when balance < 10)
 - [x] User repository using the shared DB pool
 - [x] Full unit tests for CreditService (lock → confirm → release flow)
-- [ ] Integration test with real Redis (testcontainers or separate Redis)
+- [x] Integration test with real Redis (testcontainers or separate Redis)
 - [x] Idempotency: confirm/release use requestId deduplication
 
 ---
@@ -301,3 +301,4 @@ Focus: backend-first completion and contract cleanup before the next frontend pa
 - [x] Add analytics batch buffer unit tests and wire analytics service into monorepo `test` pipeline
 - [x] Add latency timing to routing events for both primary and fallback provider selections
 - [x] Add auth-service integration-style signup/login/refresh flow test with refresh token rotation validation
+- [x] Add credit-service real-Redis integration test path (auto-skip when Redis is unavailable)
