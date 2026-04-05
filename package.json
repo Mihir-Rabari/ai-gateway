@@ -11,15 +11,18 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
   },
   "devDependencies": {
-    "turbo": "^2.1.0",
-    "typescript": "^5.4.5",
     "@types/node": "^20.14.0",
+    "eslint": "^9.5.0",
     "prettier": "^3.3.0",
-    "eslint": "^9.5.0"
+    "turbo": "^2.1.0",
+    "typescript": "^5.4.5"
   },
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=9.0.0"
   },
-  "packageManager": "pnpm@9.4.0"
+  "packageManager": "pnpm@9.4.0",
+  "dependencies": {
+    "pino-pretty": "^13.1.3"
+  }
 }

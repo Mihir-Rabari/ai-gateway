@@ -18,6 +18,8 @@
   },
   "dependencies": {
     "@ai-gateway/types": "workspace:*",
+    "@fastify/cors": "8",
+    "@fastify/rate-limit": "8",
     "pino": "^9.2.0"
   },
   "devDependencies": {

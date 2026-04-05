@@ -18,5 +18,9 @@
   },
   "devDependencies": {
     "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "@fastify/cors": "8",
+    "@fastify/rate-limit": "8"
   }
 }

@@ -5,14 +5,31 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowUpRight, Activity, Zap, CreditCard } from "lucide-react";
+import { api } from "@/lib/api";
 
 export default function DashboardOverview() {
   const [loading, setLoading] = useState(true);
+  const [balance, setBalance] = useState<number>(0);
+  const [usageStats, setUsageStats] = useState({ requests: 0, tokens: 0 });
 
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => setLoading(false), 1500);
-    return () => clearTimeout(timer);
+    async function loadStats() {
+      try {
+        const bal = await api.credits.getBalance();
+        setBalance(bal?.balance || 0);
+        
+        const stats = await api.usage.getStats();
+        setUsageStats({
+          requests: stats?.totalRequests || 0,
+          tokens: stats?.totalTokens || 0
+        });
+      } catch (e) {
+        console.error("Failed to load dashboard stats", e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadStats();
   }, []);
 
   return (
@@ -39,7 +56,7 @@ export default function DashboardOverview() {
               </div>
             ) : (
               <>
-                <div className="text-2xl font-bold text-white">₹45,231.89</div>
+                <div className="text-2xl font-bold text-white">₹{balance.toLocaleString()}</div>
                 <p className="text-xs text-green-400 mt-1 flex items-center">
                   <ArrowUpRight className="h-3 w-3 mr-1" />
                   +20.1% from last month
@@ -84,7 +101,7 @@ export default function DashboardOverview() {
               </div>
             ) : (
               <>
-                <div className="text-2xl font-bold text-white">+12,234</div>
+                <div className="text-2xl font-bold text-white">{usageStats.tokens.toLocaleString()}</div>
                 <p className="text-xs text-white/40 mt-1">
                   +19% from last month
                 </p>

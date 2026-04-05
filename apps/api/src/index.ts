@@ -9,6 +9,9 @@ const logger = createLogger('api');
 const app = Fastify({ logger: false, genReqId: () => `req_${Date.now()}` });
 
 async function bootstrap() {
+  const loggerM = await import('./middleware/requestLogger.js');
+  await app.register(loggerM.requestLogger);
+
   // CORS
   await app.register(cors, {
     origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000'],

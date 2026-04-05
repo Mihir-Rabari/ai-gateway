@@ -24,7 +24,9 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@ai-gateway/types": "workspace:*"
+    "@ai-gateway/types": "workspace:*",
+    "@fastify/cors": "8",
+    "@fastify/rate-limit": "8"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

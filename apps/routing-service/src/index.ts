@@ -51,6 +51,29 @@ async function bootstrap() {
       try {
         const service = new RoutingService(app.kafka.publish.bind(app.kafka), app.redis);
         const result = await service.route(req.body);
+
+        if (req.body.stream) {
+          reply.raw.setHeader('Content-Type', 'text/event-stream');
+          reply.raw.setHeader('Cache-Control', 'no-cache');
+          reply.raw.setHeader('Connection', 'keep-alive');
+          reply.hijack();
+          
+          Object.assign(reply.raw, {
+            flushHeaders() {
+              if (!reply.raw.headersSent) {
+                reply.raw.writeHead(200);
+              }
+            }
+          });
+          (reply.raw as any).flushHeaders();
+          
+          for await (const chunk of result as AsyncIterable<string>) {
+            reply.raw.write(chunk);
+          }
+          reply.raw.end();
+          return;
+        }
+
         return reply.send(ok(result));
       } catch (err) {
         return reply

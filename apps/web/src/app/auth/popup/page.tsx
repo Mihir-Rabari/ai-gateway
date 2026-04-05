@@ -1,14 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-// import { login } from '../../../lib/api'; // Mock this for now
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-
-const login = async (email: string, password: string) => ({
-  success: true,
-  data: { accessToken: "mock_token", user: { id: "123", email } }
-});
+import { api, setAuthToken } from "@/lib/api";
 
 export default function AuthPopupPage() {
   const [email, setEmail] = useState('');
@@ -22,8 +17,9 @@ export default function AuthPopupPage() {
     setError('');
 
     try {
-      const res = await login(email, password);
-      if (res.success && res.data) {
+      const res = await api.auth.login(email, password);
+      if (res && res.data && res.data.accessToken) {
+        setAuthToken(res.data.accessToken);
         if (typeof window !== 'undefined' && window.opener) {
           window.opener.postMessage(
             { type: 'AI_GATEWAY_AUTH', accessToken: res.data.accessToken, user: res.data.user },
@@ -35,7 +31,7 @@ export default function AuthPopupPage() {
         }
       } else {
         // setError(res.error?.message ?? 'Login failed');
-        setError('Login failed');
+        setError('Login failed, no token returned');
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An error occurred');
