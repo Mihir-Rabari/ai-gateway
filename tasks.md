@@ -52,7 +52,7 @@
 - [x] Email validation + normalization on signup
 - [x] Password strength validation
 - [x] GET /auth/me endpoint (return current user from token)
-- [ ] GET /users/:id endpoint (internal — for gateway use)
+- [x] GET /users/:id endpoint (internal — for gateway use)
 - [x] Auth events consumer (listen to auth.events for audit log)
 - [x] Unit tests for authService (mock Redis + Postgres)
 - [x] Integration test for full signup → login → refresh flow
@@ -247,7 +247,7 @@
 - [ ] **Docker Desktop must be running** → `docker-compose up -d`
 - [x] **ClickHouse init** — doesn't use `initdb.d` — needs HTTP API schema creation
 - [x] **Kafka listener fix** — `KAFKA_ADVERTISED_LISTENERS` needs `PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092`
-- [ ] **Landing page rebuild** — current Tailwind v4 has syntax issues, migrate to shadcn
+- [x] **Landing page rebuild** — current Tailwind v4 has syntax issues, migrate to shadcn
 - [ ] **.env real values** — `OPENAI_API_KEY`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` must be set
 
 ---
@@ -256,18 +256,18 @@
 
 | Agent | Module | Status | % Done |
 |-------|--------|--------|--------|
-| 1 | Infra | Partial | 70% |
-| 2 | Auth Service | Partial | 80% |
-| 3 | Credit Service | Partial | 85% |
+| 1 | Infra | Partial | 95% |
+| 2 | Auth Service | Done | 100% |
+| 3 | Credit Service | Done | 100% |
 | 4 | Gateway | Done | 100% |
-| 5 | Routing | Partial | 90% |
-| 6 | Billing | Partial | 60% |
-| 7 | Analytics + Worker | Partial | 65% |
+| 5 | Routing | Done | 100% |
+| 6 | Billing | Done | 100% |
+| 7 | Analytics + Worker | Done | 100% |
 | 8 | API Layer | Done | 100% |
 | 9 | Frontend | Done | 100% |
 | 10 | SDK + Auth Widget | Done | 100% |
 
-**Overall MVP Progress: ~70%**
+**Overall MVP Progress: ~96%**
 
 ---
 
@@ -304,6 +304,7 @@ Focus: backend-first completion and contract cleanup before the next frontend pa
 - [x] Add credit-service real-Redis integration test path (auto-skip when Redis is unavailable)
 - [x] Add billing webhook route integration tests for Razorpay signature validation and idempotent event handling
 - [x] Add gateway route integration test for `/gateway/request` with mocked auth/credit flow and real routing HTTP call
+- [x] Harden monorepo test scripts against Windows `spawn EPERM` by disabling node test isolation where required
 
 ## Backend P1 Follow-Up - Codex
 

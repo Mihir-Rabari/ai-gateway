@@ -8,7 +8,7 @@
     "start": "node dist/index.js",
     "clean": "rm -rf dist",
     "type-check": "tsc --noEmit",
-    "test": "pnpm build && node --test dist/__tests__/usageBatch.test.js"
+    "test": "pnpm build && node --experimental-test-isolation=none --test dist/__tests__/usageBatch.test.js"
   },
   "dependencies": {
     "@ai-gateway/config": "workspace:*",

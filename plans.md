@@ -358,3 +358,9 @@ Still pending from the production audit:
 - Auth-service now includes an optional `auth.events` audit consumer path that writes idempotent `user_events` rows when `AUTH_EVENTS_CONSUMER_ENABLED=true`
 - Routing-service now includes a real OpenAI integration test path that runs only when `OPENAI_API_KEY` is configured
 - Gateway now includes streaming route integration coverage that validates SSE headers and end-of-stream framing
+
+Validation snapshot (2026-04-05):
+
+- `pnpm test` passes across the monorepo after stabilizing test runner scripts for Windows `spawn EPERM`
+- `docker compose ps` currently fails because Docker Desktop daemon is not running in this environment
+- `pnpm build` still fails at `@ai-gateway/sdk-js` in this sandbox due `esbuild` child-process `spawn EPERM`; backend package builds are succeeding
