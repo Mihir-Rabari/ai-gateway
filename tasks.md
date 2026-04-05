@@ -285,7 +285,7 @@ Focus: backend-first completion and contract cleanup before the next frontend pa
 - [x] Add runnable test scripts for auth-service and credit-service
 - [x] Run and stabilize auth-service tests in CI/local pipeline
 - [x] Run and stabilize credit-service tests in CI/local pipeline
-- [ ] Add billing-service unit tests for plan mapping and webhook handling
-- [ ] Add worker tests for `usage.events` and `auth.events`
-- [ ] Add API route tests for billing and usage alias coverage
+- [x] Add billing-service unit tests for plan mapping and webhook handling
+- [x] Add worker tests for `usage.events` and `auth.events`
+- [x] Add API route tests for billing and usage alias coverage
 - [ ] Reconcile gateway app-key behavior with SDK expectations

@@ -334,5 +334,5 @@ This repository is in an active backend stabilization pass. The most important c
 Current backend gaps still remaining:
 
 - Gateway auth/app-key semantics still need a dedicated cleanup pass
-- Billing-service, worker, and API route tests are still incomplete
+- API route tests are still incomplete
 - Some planning sections above still reflect target-state MVP claims rather than shipped-state reality

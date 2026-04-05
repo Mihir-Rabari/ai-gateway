@@ -13,13 +13,39 @@ const razorpay = new Razorpay({
   key_secret: process.env['RAZORPAY_KEY_SECRET'] ?? '',
 });
 
+interface RazorpayClientLike {
+  subscriptions: {
+    create: (input: {
+      plan_id: string;
+      total_count: number;
+      quantity: number;
+      customer_notify: number;
+    }) => Promise<{ id: string }>;
+    cancel: (id: string, options: unknown) => Promise<void>;
+  };
+}
+
+interface BillingServiceDeps {
+  razorpayClient?: RazorpayClientLike;
+  httpFetch?: typeof fetch;
+}
+
 export class BillingService {
   constructor(
     private readonly repo: BillingRepository,
     private readonly fastify: FastifyInstance,
+    private readonly deps: BillingServiceDeps = {},
   ) {}
 
-  async createSubscription(userId: string, planId: 'pro' | 'max') {
+  private get razorpayClient(): RazorpayClientLike {
+    return this.deps.razorpayClient ?? (razorpay as unknown as RazorpayClientLike);
+  }
+
+  private get httpFetch(): typeof fetch {
+    return this.deps.httpFetch ?? fetch;
+  }
+
+  private resolveRazorpayPlanId(planId: 'pro' | 'max'): string {
     const razorpayPlanId =
       planId === 'pro' ? process.env['RAZORPAY_PLAN_ID_PRO']
       : planId === 'max' ? process.env['RAZORPAY_PLAN_ID_MAX']
@@ -29,7 +55,13 @@ export class BillingService {
       throw new Error(`Missing Razorpay plan mapping for ${planId}`);
     }
 
-    const subscription = await razorpay.subscriptions.create({
+    return razorpayPlanId;
+  }
+
+  async createSubscription(userId: string, planId: 'pro' | 'max') {
+    const razorpayPlanId = this.resolveRazorpayPlanId(planId);
+
+    const subscription = await this.razorpayClient.subscriptions.create({
       plan_id: razorpayPlanId,
       total_count: 12,
       quantity: 1,
@@ -74,7 +106,7 @@ export class BillingService {
         await this.repo.updateSubscriptionStatus(subId!, 'active');
         await this.repo.updateUserPlan(userId, planId);
 
-        await fetch(`${process.env['CREDIT_SERVICE_URL'] ?? 'http://localhost:3005'}/credits/add`, {
+        await this.httpFetch(`${process.env['CREDIT_SERVICE_URL'] ?? 'http://localhost:3005'}/credits/add`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId, amount: planCredits, reason: 'subscription' }),
@@ -149,7 +181,7 @@ export class BillingService {
 
     // Razorpay typed issue bypass without `any`.
     // The library typing for cancel might be limited.
-    await (razorpay.subscriptions.cancel as unknown as (id: string, options: unknown) => Promise<void>)(
+    await this.razorpayClient.subscriptions.cancel(
       razorpaySubscriptionId,
       { cancel_at_cycle_end: 1 }
     );
