@@ -99,8 +99,8 @@
 - [x] Full gateway plugin setup (postgres, redis, kafka)
 - [x] Rate limiting per user per minute
 - [x] GET /gateway/status endpoint (health + provider availability)
-- [ ] Unit tests for GatewayService mocking all external calls
-- [ ] Integration test: mock auth + credit, real routing call
+- [x] Unit tests for GatewayService mocking all external calls
+- [x] Integration test: mock auth + credit, real routing call
 
 ---
 
@@ -303,3 +303,10 @@ Focus: backend-first completion and contract cleanup before the next frontend pa
 - [x] Add auth-service integration-style signup/login/refresh flow test with refresh token rotation validation
 - [x] Add credit-service real-Redis integration test path (auto-skip when Redis is unavailable)
 - [x] Add billing webhook route integration tests for Razorpay signature validation and idempotent event handling
+- [x] Add gateway route integration test for `/gateway/request` with mocked auth/credit flow and real routing HTTP call
+
+## Backend P1 Follow-Up - Codex
+
+- [ ] Add auth-service consumer for `auth.events` audit trail ingestion path
+- [ ] Add routing-service integration test gated by `OPENAI_API_KEY` for a real provider call
+- [ ] Add gateway streaming route integration test that verifies SSE framing and completion behavior
