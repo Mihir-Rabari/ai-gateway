@@ -2,6 +2,8 @@ import type { FastifyPluginAsync } from 'fastify';
 import { requireAuth } from '../../middleware/requireAuth.js';
 
 export const chatRoutes: FastifyPluginAsync = async (fastify) => {
+  const gatewayUrl = process.env['GATEWAY_URL'] ?? 'http://localhost:3002';
+
   fastify.post('/chat', {
     preHandler: [requireAuth],
     schema: {
@@ -25,7 +27,7 @@ export const chatRoutes: FastifyPluginAsync = async (fastify) => {
     const authHeader = req.headers['authorization'] as string;
     const body = req.body as { appId?: string };
     const incomingAppKey = (req.headers['x-api-key'] ?? req.headers['x-app-key']) as string | undefined;
-    const res = await fetch(`${process.env['GATEWAY_URL']}/gateway/request`, {
+    const res = await fetch(`${gatewayUrl}/gateway/request`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

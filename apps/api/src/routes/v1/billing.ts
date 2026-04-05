@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { requireAuth } from '../../middleware/requireAuth.js';
 
 export const billingRoutes: FastifyPluginAsync = async (fastify) => {
-  const billingServiceUrl = process.env['BILLING_SERVICE_URL'];
+  const billingServiceUrl = process.env['BILLING_SERVICE_URL'] ?? 'http://localhost:3004';
 
   fastify.get('/billing/plans', {
     schema: {
@@ -32,7 +32,7 @@ export const billingRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (req, reply) => {
     const authHeader = req.headers['authorization'] as string;
     const { planId } = req.body as { planId: 'pro' | 'max' };
-    const res = await fetch(`${process.env['BILLING_SERVICE_URL']}/billing/subscribe`, {
+    const res = await fetch(`${billingServiceUrl}/billing/subscribe`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

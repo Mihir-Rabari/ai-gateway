@@ -16,7 +16,8 @@ export async function requireAuth(req: FastifyRequest, reply: FastifyReply): Pro
   }
 
   const token = authHeader.slice(7);
-  const res = await fetch(`${process.env['AUTH_SERVICE_URL']}/internal/auth/validate`, {
+  const authServiceUrl = process.env['AUTH_SERVICE_URL'] ?? 'http://localhost:3003';
+  const res = await fetch(`${authServiceUrl}/internal/auth/validate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token }),

@@ -327,5 +327,11 @@ Focus: backend-first completion and contract cleanup before the next frontend pa
 
 ## Remaining Execution Tasks
 
-- [ ] Run full stack smoke test with Docker (`docker compose up -d` + web flow checks) once Docker Desktop daemon is running
+- [x] Run full stack smoke test with Docker (`docker compose up -d` + API flow checks)
 - [ ] Complete npm publish with account OTP (`npm publish --access public --otp=<code>`) from `packages/sdk-js`
+
+## Runtime Stabilization Follow-Up - Codex (2026-04-05)
+
+- [x] Add safe localhost defaults for API internal dependency URLs (`AUTH_SERVICE_URL`, `GATEWAY_URL`, `CREDIT_SERVICE_URL`, `BILLING_SERVICE_URL`, `ANALYTICS_SERVICE_URL`)
+- [x] Add safe localhost fallback for API app-route `DATABASE_URL` pool
+- [x] Fix analytics `DateTime64` query param formatting for app usage endpoint

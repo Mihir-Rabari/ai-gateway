@@ -6,12 +6,14 @@ import { AppRepository } from '../../repositories/AppRepository.js';
 import { AppService } from '../../services/AppService.js';
 
 const pool = new pg.Pool({
-  connectionString: process.env['DATABASE_URL'],
+  connectionString: process.env['DATABASE_URL'] ?? 'postgresql://gateway_user:gateway_pass@localhost:5432/ai_gateway',
 });
 const appRepository = new AppRepository(pool);
 const appService = new AppService(appRepository);
 
 export const appRoutes: FastifyPluginAsync = async (fastify) => {
+  const analyticsServiceUrl = process.env['ANALYTICS_SERVICE_URL'] ?? 'http://localhost:3007';
+
   fastify.post('/apps', {
     preHandler: [requireAuth],
     schema: {
@@ -140,7 +142,7 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.status(404).send(fail({ name: 'NotFoundError', code: 'APP_NOT_FOUND', message: 'App not found', statusCode: 404 }));
       }
 
-      const analyticsRes = await fetch(`${process.env['ANALYTICS_SERVICE_URL']}/analytics/usage/app?appId=${encodeURIComponent(id)}`);
+      const analyticsRes = await fetch(`${analyticsServiceUrl}/analytics/usage/app?appId=${encodeURIComponent(id)}`);
       const analyticsData = await analyticsRes.json();
       return reply.status(analyticsRes.status).send(analyticsData);
     } catch (err) {

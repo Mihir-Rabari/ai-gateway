@@ -381,3 +381,25 @@ Current blockers / remaining:
 
 - `npm publish --access public` for `@ai-gateway/sdk-js@0.1.0` reached registry publish step but failed with `EOTP` (2FA code required)
 - Full runtime smoke test is still blocked until Docker Desktop daemon is running and stack is up
+
+## Runtime Smoke Update (2026-04-05, Docker Online)
+
+Validated after infra startup:
+
+- Docker infra containers healthy (`postgres`, `redis`, `kafka`, `clickhouse`, `zookeeper`)
+- App services healthy on `:3001` to `:3007` (worker consumer connected to Kafka)
+- End-to-end API flow verified with a fresh user token:
+  - `GET /api/v1/me`
+  - `GET /api/v1/credits`
+  - `GET /api/v1/usage/summary`
+  - `GET /api/v1/models`
+  - `POST /api/v1/apps`
+  - `GET /api/v1/apps`
+  - `GET /api/v1/apps/:id/usage`
+  - `GET /api/v1/credits/transactions`
+
+Runtime fixes applied during smoke:
+
+- API service now has localhost fallbacks for internal service URLs when env vars are absent
+- API app routes now have a localhost fallback for `DATABASE_URL`
+- Analytics app-usage query now formats `DateTime64` params correctly for ClickHouse

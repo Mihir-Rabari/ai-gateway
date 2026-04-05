@@ -28,6 +28,9 @@ const kafka = new Kafka({
 
 const consumer = kafka.consumer({ groupId: 'analytics-ingestion' });
 
+const toClickHouseDateTime64 = (value: Date): string =>
+  value.toISOString().replace('T', ' ').replace('Z', '');
+
 // ─── Schema Initialization ────────────────────
 async function initClickHouseSchema(): Promise<void> {
   const SCHEMA = `
@@ -136,8 +139,8 @@ app.get(
         LIMIT {topN:UInt32}
       `,
       query_params: {
-        fromDate: fromDate.toISOString(),
-        toDate: toDate.toISOString(),
+        fromDate: toClickHouseDateTime64(fromDate),
+        toDate: toClickHouseDateTime64(toDate),
         topN,
       },
       format: 'JSONEachRow',
@@ -191,8 +194,8 @@ app.get(
       `,
       query_params: {
         appId,
-        fromDate: fromDate.toISOString(),
-        toDate: toDate.toISOString(),
+        fromDate: toClickHouseDateTime64(fromDate),
+        toDate: toClickHouseDateTime64(toDate),
       },
       format: 'JSONEachRow',
     });

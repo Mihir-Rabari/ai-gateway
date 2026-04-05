@@ -2,6 +2,8 @@ import type { FastifyPluginAsync } from 'fastify';
 import { requireAuth } from '../../middleware/requireAuth.js';
 
 export const meRoutes: FastifyPluginAsync = async (fastify) => {
+  const authServiceUrl = process.env['AUTH_SERVICE_URL'] ?? 'http://localhost:3003';
+
   fastify.get('/me', {
     preHandler: [requireAuth],
     schema: {
@@ -15,7 +17,7 @@ export const meRoutes: FastifyPluginAsync = async (fastify) => {
     // Proxy to `auth-service`'s `GET /auth/me` to get full user data.
 
     const authHeader = req.headers['authorization'] as string;
-    const res = await fetch(`${process.env['AUTH_SERVICE_URL']}/auth/me`, {
+    const res = await fetch(`${authServiceUrl}/auth/me`, {
       method: 'GET',
       headers: {
         Authorization: authHeader,
