@@ -293,3 +293,5 @@ Focus: backend-first completion and contract cleanup before the next frontend pa
 - [x] Return explicit invalid app-key errors from gateway for bad developer keys
 - [x] Add routing-service unit tests for primary selection, fallback, and provider health
 - [x] Add internal auth user lookup endpoint for gateway-facing backend consumers
+- [x] Replace the stale Dependabot web dependency PR with a clean Next.js security upgrade on current `main`
+- [ ] Plan a dedicated Fastify v5 + auth JWT dependency migration to address remaining production audit findings safely

@@ -342,3 +342,9 @@ Additional stabilization progress since this snapshot:
 - Gateway now returns explicit invalid app-key errors for bad developer keys and has unit coverage for first-party app bypass + key validation
 - Routing-service now has injectable provider clients for unit testing and coverage for primary routing, fallback behavior, and provider health reporting
 - Auth-service now exposes an internal user lookup endpoint backed by service/repository logic and test coverage
+- The stale Dependabot PR was closed and replaced with a clean in-tree Next.js security upgrade on top of current `main`
+
+Still pending from the production audit:
+
+- Fastify remains on the v4 line across backend services; addressing the listed advisories requires a deliberate Fastify v5 migration and validation pass
+- Auth-service still inherits `fast-jwt` findings through `@fastify/jwt`; this should be handled as part of the auth/dependency migration rather than mixed into a web-only security bump
