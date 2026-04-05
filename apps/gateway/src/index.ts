@@ -44,7 +44,7 @@ async function bootstrap() {
     const statusCode = (error as { statusCode?: number }).statusCode ?? 500;
     reply.status(statusCode).send({
       success: false,
-      error: { code: (error as { code?: string }).code ?? 'INTERNAL', message: error.message, statusCode },
+      error: { code: (error as { code?: string }).code ?? 'INTERNAL', message: (error as { message?: string }).message ?? 'Unknown error', statusCode },
     });
   });
 

@@ -283,9 +283,11 @@ Focus: backend-first completion and contract cleanup before the next frontend pa
 - [x] Restore `user.login` Kafka event publishing from auth-service
 - [x] Add Razorpay plan ID placeholders to `.env.example`
 - [x] Add runnable test scripts for auth-service and credit-service
+- [x] Add gateway unit tests for first-party app bypass + app-key validation
 - [x] Run and stabilize auth-service tests in CI/local pipeline
 - [x] Run and stabilize credit-service tests in CI/local pipeline
 - [x] Add billing-service unit tests for plan mapping and webhook handling
 - [x] Add worker tests for `usage.events` and `auth.events`
 - [x] Add API route tests for billing and usage alias coverage
 - [x] Reconcile gateway app-key behavior with SDK expectations
+- [x] Return explicit invalid app-key errors from gateway for bad developer keys

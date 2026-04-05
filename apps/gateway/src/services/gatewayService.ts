@@ -34,8 +34,26 @@ interface RoutingResult {
 
 const FIRST_PARTY_APP_IDS = new Set(['unknown', 'api-direct', 'web-direct', 'web-dashboard']);
 
+type AppAccessResult = 'allowed' | 'invalid_key' | 'forbidden';
+
+interface GatewayServiceDeps {
+  httpFetch?: typeof fetch;
+  compareHash?: (plain: string, hash: string) => Promise<boolean>;
+}
+
 export class GatewayService {
-  constructor(private readonly clients: ServiceClients) {}
+  constructor(
+    private readonly clients: ServiceClients,
+    private readonly deps: GatewayServiceDeps = {},
+  ) {}
+
+  private get httpFetch(): typeof fetch {
+    return this.deps.httpFetch ?? fetch;
+  }
+
+  private get compareHash(): (plain: string, hash: string) => Promise<boolean> {
+    return this.deps.compareHash ?? bcrypt.compare;
+  }
 
   // ─────────────────────────────────────────
   // Main: Process AI Request
@@ -69,8 +87,9 @@ export class GatewayService {
     }
 
     // Step 3: Validate app context
-    if (!(await this.validateAppAccess(input.appId, input.appApiKey))) {
-      throw Errors.FORBIDDEN();
+    const appAccess = await this.validateAppAccess(input.appId, input.appApiKey);
+    if (appAccess !== 'allowed') {
+      throw appAccess === 'invalid_key' ? Errors.INVALID_APP_KEY() : Errors.FORBIDDEN();
     }
 
     // Step 4: Estimate cost
@@ -159,8 +178,9 @@ export class GatewayService {
     if (currentUsage === 1) await this.clients.redis.expire(rateLimitKey, 60);
     if (currentUsage > limit) throw new GatewayError('RATE_LIMIT_EXCEEDED', 'Rate limit exceeded', 429);
 
-    if (!(await this.validateAppAccess(input.appId, input.appApiKey))) {
-      throw Errors.FORBIDDEN();
+    const appAccess = await this.validateAppAccess(input.appId, input.appApiKey);
+    if (appAccess !== 'allowed') {
+      throw appAccess === 'invalid_key' ? Errors.INVALID_APP_KEY() : Errors.FORBIDDEN();
     }
 
     const estimatedTokens = input.maxTokens ?? 1000;
@@ -221,9 +241,9 @@ export class GatewayService {
     return 10;
   }
 
-  private async validateAppAccess(appId: string, appApiKey?: string): Promise<boolean> {
+  private async validateAppAccess(appId: string, appApiKey?: string): Promise<AppAccessResult> {
     if (!appId || FIRST_PARTY_APP_IDS.has(appId)) {
-      return true;
+      return 'allowed';
     }
 
     if (appApiKey) {
@@ -239,23 +259,23 @@ export class GatewayService {
       );
 
       for (const row of result.rows as Array<{ key_hash: string }>) {
-        if (await bcrypt.compare(appApiKey, row.key_hash)) {
-          return true;
+        if (await this.compareHash(appApiKey, row.key_hash)) {
+          return 'allowed';
         }
       }
 
-      return false;
+      return 'invalid_key';
     }
 
     const result = await this.clients.pgPool.query(
       'SELECT id FROM registered_apps WHERE id = $1 AND is_active = true',
       [appId]
     );
-    return (result.rowCount ?? 0) > 0;
+    return (result.rowCount ?? 0) > 0 ? 'allowed' : 'forbidden';
   }
 
   private async validateToken(token: string): Promise<ValidatedUser> {
-    const res = await fetch(`${this.clients.authServiceUrl}/internal/auth/validate`, {
+    const res = await this.httpFetch(`${this.clients.authServiceUrl}/internal/auth/validate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token }),
@@ -271,7 +291,7 @@ export class GatewayService {
   }
 
   private async lockCredits(userId: string, requestId: string, amount: number): Promise<void> {
-    const res = await fetch(`${this.clients.creditServiceUrl}/credits/lock`, {
+    const res = await this.httpFetch(`${this.clients.creditServiceUrl}/credits/lock`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, requestId, amount }),
@@ -284,7 +304,7 @@ export class GatewayService {
   }
 
   private async confirmCredits(userId: string, requestId: string): Promise<void> {
-    await fetch(`${this.clients.creditServiceUrl}/credits/confirm`, {
+    await this.httpFetch(`${this.clients.creditServiceUrl}/credits/confirm`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, requestId }),
@@ -292,7 +312,7 @@ export class GatewayService {
   }
 
   private async releaseCredits(userId: string, requestId: string): Promise<void> {
-    await fetch(`${this.clients.creditServiceUrl}/credits/release`, {
+    await this.httpFetch(`${this.clients.creditServiceUrl}/credits/release`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, requestId }),
@@ -308,7 +328,7 @@ export class GatewayService {
     stream?: boolean;
   }): Promise<RoutingResult | AsyncGenerator<string>> {
     return withRetry<RoutingResult | AsyncGenerator<string>>(async () => {
-      const res = await fetch(`${this.clients.routingServiceUrl}/internal/routing/route`, {
+      const res = await this.httpFetch(`${this.clients.routingServiceUrl}/internal/routing/route`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
