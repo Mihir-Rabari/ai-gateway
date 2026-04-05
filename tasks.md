@@ -311,3 +311,21 @@ Focus: backend-first completion and contract cleanup before the next frontend pa
 - [x] Add auth-service consumer for `auth.events` audit trail ingestion path (env-gated with idempotent inserts)
 - [x] Add routing-service integration test gated by `OPENAI_API_KEY` for a real provider call
 - [x] Add gateway streaming route integration test that verifies SSE framing and completion behavior
+
+## Frontend Real-Data Pass - Codex (2026-04-05)
+
+- [x] Replace frontend API mock fallback layer with typed real backend calls
+- [x] Wire login/signup/popup auth to store both access and refresh tokens
+- [x] Replace dashboard mock cards/lists with live credits, usage, models, and transactions
+- [x] Protect `/dashboard` and `/dev` layouts with auth checks and real user context loading
+- [x] Replace `/dev`, `/dev/apps`, `/dev/apps/new`, `/dev/apps/[id]`, `/dev/earnings`, `/dev/docs` mock flows with live data
+- [x] Add API aggregation route `GET /api/v1/apps/:id/usage` for app-level analytics
+- [x] Revalidate monorepo via `pnpm build`
+- [x] Revalidate monorepo via `pnpm test`
+- [x] Prepare npm SDK package metadata for public publish (`files`, `publishConfig`, widget d.ts, prepublish checks)
+- [!] Publish `@ai-gateway/sdk-js@0.1.0` blocked by npm 2FA OTP requirement (`EOTP`)
+
+## Remaining Execution Tasks
+
+- [ ] Run full stack smoke test with Docker (`docker compose up -d` + web flow checks) once Docker Desktop daemon is running
+- [ ] Complete npm publish with account OTP (`npm publish --access public --otp=<code>`) from `packages/sdk-js`

@@ -2,9 +2,18 @@
   "name": "@ai-gateway/sdk-js",
   "version": "0.1.0",
   "description": "JavaScript SDK for AI Gateway",
+  "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -19,14 +28,10 @@
   "scripts": {
     "build": "pnpm run build:index && pnpm run build:widget",
     "build:index": "tsup src/index.ts --format esm,cjs --dts",
-    "build:widget": "tsup src/widget.ts --format esm,iife --globalName AIGateway --outDir dist",
+    "build:widget": "tsup src/widget.ts --format esm,iife --globalName AIGateway --outDir dist --dts",
     "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
-    "type-check": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@ai-gateway/types": "workspace:*",
-    "@fastify/cors": "8",
-    "@fastify/rate-limit": "8"
+    "type-check": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build && pnpm run type-check"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

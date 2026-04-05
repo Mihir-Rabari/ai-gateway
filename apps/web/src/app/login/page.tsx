@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { api, setAuthToken } from "@/lib/api";
+import { api, setAuthToken, setRefreshToken } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,13 +22,9 @@ export default function LoginPage() {
 
     try {
       const res = await api.auth.login(email, password);
-      // Ensure the response explicitly has the accessToken correctly mapped
-      if (res && res.data && res.data.accessToken) {
-        setAuthToken(res.data.accessToken);
-        router.push("/dashboard");
-      } else {
-        setError("Invalid response. Missing user token.");
-      }
+      setAuthToken(res.accessToken);
+      setRefreshToken(res.refreshToken);
+      router.push("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Invalid credentials");
     } finally {

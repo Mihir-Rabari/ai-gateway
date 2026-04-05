@@ -1,80 +1,145 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
+import { useEffect, useMemo, useState } from "react";
 import { Download, Wallet } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { api, type CreditTransaction } from "@/lib/api";
+
+const INCOME_SHARE = 0.2;
 
 export default function EarningsPage() {
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
 
-  const withdrawFunds = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      toast({
-        title: "Withdrawal Requested",
-        description: "Your funds will be transferred to your bank account within 3-5 business days.",
-      });
-    }, 1500);
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const tx = await api.credits.getTransactions(100, 0);
+        setTransactions(tx.transactions);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load earnings");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, []);
+
+  const { debits, credits, estimatedEarnings, pending } = useMemo(() => {
+    const debitSum = transactions
+      .filter((tx) => tx.type === "debit")
+      .reduce((acc, tx) => acc + tx.amount, 0);
+    const creditSum = transactions
+      .filter((tx) => tx.type === "credit")
+      .reduce((acc, tx) => acc + tx.amount, 0);
+
+    const earned = debitSum * INCOME_SHARE;
+    const paidOut = creditSum * INCOME_SHARE;
+    return {
+      debits: debitSum,
+      credits: creditSum,
+      estimatedEarnings: earned,
+      pending: Math.max(earned - paidOut, 0),
+    };
+  }, [transactions]);
+
+  const exportCsv = () => {
+    const headers = ["date", "id", "type", "reason", "amount", "balance_after"];
+    const rows = transactions.map((tx) =>
+      [
+        new Date(tx.created_at).toISOString(),
+        tx.id,
+        tx.type,
+        tx.reason,
+        tx.amount,
+        tx.balance_after,
+      ].join(","),
+    );
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "ai-gateway-earnings.csv";
+    a.click();
+    URL.revokeObjectURL(url);
   };
-
-  const transactions = [
-    { date: "Oct 15, 2024", type: "Credit Earned", amount: "₹450.00", app: "My Cool App", status: "Completed" },
-    { date: "Oct 12, 2024", type: "Credit Earned", amount: "₹1,200.00", app: "Internal Tools", status: "Completed" },
-    { date: "Oct 05, 2024", type: "Withdrawal", amount: "-₹5,000.00", app: "-", status: "Processed" },
-    { date: "Oct 01, 2024", type: "Credit Earned", amount: "₹3,400.00", app: "My Cool App", status: "Completed" },
-  ];
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Earnings</h1>
-        <p className="text-white/60">View your revenue from app integrations and withdraw funds.</p>
+        <h1 className="mb-2 text-3xl font-bold tracking-tight">Earnings</h1>
+        <p className="text-white/60">Revenue estimation from live credit transaction history.</p>
       </div>
 
+      {error ? (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          {error}
+        </div>
+      ) : null}
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="bg-gradient-to-br from-[#0a0a0a] to-[#1a1a1a] border-white/10 lg:col-span-2">
+        <Card className="lg:col-span-2 border-white/10 bg-gradient-to-br from-[#0a0a0a] to-[#151515]">
           <CardHeader>
-            <CardTitle>Available Balance</CardTitle>
-            <CardDescription className="text-white/40">Funds ready to be withdrawn.</CardDescription>
+            <CardTitle>Estimated Available</CardTitle>
+            <CardDescription className="text-white/40">
+              Based on {Math.round(INCOME_SHARE * 100)}% partner share of consumed credits.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-6">
-              <div className="text-5xl font-bold tracking-tighter text-white">₹12,450.00</div>
-              <Button onClick={withdrawFunds} disabled={loading} className="bg-white text-black hover:bg-white/90 shadow-lg">
-                <Wallet className="mr-2 h-4 w-4" />
-                {loading ? "Processing..." : "Withdraw Funds"}
-              </Button>
-            </div>
-            <p className="text-xs text-white/40 mt-4">
-              Minimum withdrawal amount is ₹1,000. Withdrawals are processed via Razorpay Payouts.
+            {loading ? (
+              <Skeleton className="h-12 w-56 bg-white/10" />
+            ) : (
+              <div className="flex flex-wrap items-center gap-6">
+                <p className="text-5xl font-bold tracking-tight text-white">
+                  INR {pending.toFixed(2)}
+                </p>
+                <Button disabled className="bg-white/30 text-black/80">
+                  <Wallet className="mr-2 h-4 w-4" />
+                  Withdrawal (coming soon)
+                </Button>
+              </div>
+            )}
+            <p className="mt-4 text-xs text-white/40">
+              Automatic payouts are not wired yet on backend; this page now reflects real transaction data only.
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#0a0a0a] border-white/10">
+        <Card className="border-white/10 bg-[#0a0a0a]">
           <CardHeader>
-            <CardTitle>Pending</CardTitle>
-            <CardDescription className="text-white/40">Awaiting clearance.</CardDescription>
+            <CardTitle>Stats</CardTitle>
+            <CardDescription className="text-white/40">Live credits movement.</CardDescription>
           </CardHeader>
-          <CardContent>
-             <div className="text-3xl font-bold tracking-tight text-white/80">₹450.00</div>
+          <CardContent className="space-y-3 text-sm text-white/70">
+            <p>Total debits: {loading ? "..." : debits.toLocaleString()}</p>
+            <p>Total credits: {loading ? "..." : credits.toLocaleString()}</p>
+            <p>Estimated earnings: {loading ? "..." : `INR ${estimatedEarnings.toFixed(2)}`}</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="bg-[#0a0a0a] border-white/10">
-        <div className="flex justify-between items-center p-6 border-b border-white/10">
+      <Card className="border-white/10 bg-[#0a0a0a]">
+        <div className="flex items-center justify-between border-b border-white/10 p-6">
           <div>
             <CardTitle className="text-white">Transaction History</CardTitle>
-            <CardDescription className="text-white/40 mt-1">Your recent earnings and payouts.</CardDescription>
+            <CardDescription className="mt-1 text-white/40">Latest 100 transactions.</CardDescription>
           </div>
-          <Button variant="outline" size="sm" className="border-white/20 text-white hover:bg-white/5">
-            <Download className="h-4 w-4 mr-2" /> Export CSV
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-white/20 text-white hover:bg-white/5"
+            onClick={exportCsv}
+            disabled={transactions.length === 0}
+          >
+            <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
         </div>
 
@@ -82,28 +147,44 @@ export default function EarningsPage() {
           <TableHeader>
             <TableRow className="border-white/10 hover:bg-transparent">
               <TableHead className="text-white/60">Date</TableHead>
+              <TableHead className="text-white/60">Reason</TableHead>
               <TableHead className="text-white/60">Type</TableHead>
-              <TableHead className="text-white/60">App</TableHead>
-              <TableHead className="text-white/60 text-right">Amount</TableHead>
-              <TableHead className="text-white/60 text-right">Status</TableHead>
+              <TableHead className="text-right text-white/60">Amount</TableHead>
+              <TableHead className="text-right text-white/60">Balance After</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {transactions.map((tx, i) => (
-              <TableRow key={i} className="border-white/10 hover:bg-white/5">
-                <TableCell className="font-medium text-white/80">{tx.date}</TableCell>
-                <TableCell className="text-white/60">{tx.type}</TableCell>
-                <TableCell className="text-white/60">{tx.app}</TableCell>
-                <TableCell className={`text-right font-medium ${tx.amount.startsWith('-') ? 'text-white' : 'text-green-400'}`}>
-                  {tx.amount}
-                </TableCell>
-                <TableCell className="text-right">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${tx.status === 'Completed' || tx.status === 'Processed' ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-400'}`}>
-                    {tx.status}
-                  </span>
+            {loading ? (
+              <TableRow className="border-white/10">
+                <TableCell colSpan={5}>
+                  <div className="space-y-2 py-2">
+                    <Skeleton className="h-8 w-full bg-white/10" />
+                    <Skeleton className="h-8 w-full bg-white/10" />
+                  </div>
                 </TableCell>
               </TableRow>
-            ))}
+            ) : transactions.length === 0 ? (
+              <TableRow className="border-white/10">
+                <TableCell colSpan={5} className="py-10 text-center text-sm text-white/50">
+                  No transactions found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              transactions.map((tx) => (
+                <TableRow key={tx.id} className="border-white/10 hover:bg-white/5">
+                  <TableCell className="text-white/80">
+                    {new Date(tx.created_at).toLocaleString()}
+                  </TableCell>
+                  <TableCell className="max-w-[240px] truncate text-white/60">{tx.reason}</TableCell>
+                  <TableCell className="text-white/60">{tx.type}</TableCell>
+                  <TableCell className={`text-right font-medium ${tx.type === "debit" ? "text-red-300" : "text-green-300"}`}>
+                    {tx.type === "debit" ? "-" : "+"}
+                    {tx.amount}
+                  </TableCell>
+                  <TableCell className="text-right text-white/60">{tx.balance_after}</TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </Card>

@@ -114,4 +114,38 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(500).send(fail({ name: 'Error', code: 'APP_ROTATE_KEY_ERR', message: 'Failed to rotate API key', statusCode: 500 }));
     }
   });
+
+  fastify.get('/apps/:id/usage', {
+    preHandler: [requireAuth],
+    schema: {
+      tags: ['Developer Apps'],
+      description: 'Get usage analytics for a specific app',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: {
+          id: { type: 'string' },
+        },
+      },
+    },
+  }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+
+    try {
+      const apps = await appService.listApps(req.userId);
+      const exists = (apps as Array<{ id: string }>).some((app) => app.id === id);
+
+      if (!exists) {
+        return reply.status(404).send(fail({ name: 'NotFoundError', code: 'APP_NOT_FOUND', message: 'App not found', statusCode: 404 }));
+      }
+
+      const analyticsRes = await fetch(`${process.env['ANALYTICS_SERVICE_URL']}/analytics/usage/app?appId=${encodeURIComponent(id)}`);
+      const analyticsData = await analyticsRes.json();
+      return reply.status(analyticsRes.status).send(analyticsData);
+    } catch (err) {
+      fastify.log.error(err, 'Failed to fetch app usage');
+      return reply.status(500).send(fail({ name: 'Error', code: 'APP_USAGE_FETCH_ERR', message: 'Failed to fetch app usage', statusCode: 500 }));
+    }
+  });
 };

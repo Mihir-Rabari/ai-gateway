@@ -53,7 +53,7 @@ export default function LandingPage() {
                   Start for free
                 </Button>
               </Link>
-              <Link href="/docs">
+              <Link href="/dev/docs">
                 <Button size="lg" variant="outline" className="rounded-full px-8 h-12 text-base">
                   Read docs
                 </Button>

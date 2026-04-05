@@ -1,113 +1,174 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-// import { useAuth } from "@/context/AuthContext";
-// import { getCreditBalance } from "@/lib/api";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
+import { api, getAuthToken, type UserProfile } from "@/lib/api";
+import { Button } from "@/components/ui/button";
 
-const useAuth = () => ({ user: { id: "123", creditBalance: 100 }, refreshUser: () => {} });
-const getCreditBalance = async (id: string) => ({ balance: 100 });
+const navLinks = [
+  { href: "/dashboard", label: "Overview" },
+  { href: "/dev", label: "Developer Portal" },
+  { href: "/dev/apps", label: "Apps" },
+  { href: "/dev/earnings", label: "Earnings" },
+  { href: "/dev/docs", label: "Docs" },
+];
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { user, refreshUser } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
   const { toast } = useToast();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    const bootstrap = async () => {
+      try {
+        const me = await api.auth.me();
+        const balance = await api.credits.getBalance();
+        setUser({ ...me, creditBalance: balance.balance });
+      } catch {
+        router.replace("/login");
+      } finally {
+        setCheckingAuth(false);
+      }
+    };
+
+    void bootstrap();
+  }, [router]);
 
   useEffect(() => {
     if (!user) return;
-    const interval = setInterval(() => {
-      const poll = async () => {
-        try {
-          const res = await getCreditBalance(user.id);
-          if (res && res.balance !== user.creditBalance) {
-            refreshUser();
-            if (res.balance < 10) {
-              toast({
-                title: "⚠ Low credits",
-                description: "Your credits are running low. Please upgrade your plan.",
-                variant: "destructive",
-              });
-            }
-          }
-        } catch (error) {
-          // ignore error
+
+    const intervalId = window.setInterval(async () => {
+      try {
+        const latestBalance = await api.credits.getBalance();
+        setUser((prev) => (prev ? { ...prev, creditBalance: latestBalance.balance } : prev));
+        if (latestBalance.balance < 10) {
+          toast({
+            title: "Low credits",
+            description: "Your balance is below 10 credits. Recharge to avoid request failures.",
+            variant: "destructive",
+          });
         }
-      };
-      void poll();
+      } catch {
+        // Ignore intermittent polling issues.
+      }
     }, 30_000);
-    return () => clearInterval(interval);
-  }, [user, refreshUser, toast]);
+
+    return () => window.clearInterval(intervalId);
+  }, [toast, user]);
+
+  const handleLogout = async () => {
+    await api.auth.logout();
+    router.replace("/login");
+  };
+
+  if (checkingAuth) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black text-white">
+        <div className="text-sm text-white/60">Loading dashboard...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-black text-white">
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/80 md:hidden transition-opacity"
+          className="fixed inset-0 z-40 bg-black/80 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      <aside className={`
-        fixed md:sticky top-0 left-0 z-50 h-screen w-64 bg-[#0a0a0a] border-r border-white/10
-        transform transition-transform duration-200 ease-in-out md:translate-x-0 flex flex-col
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        <div className="h-16 flex items-center justify-between px-6 border-b border-white/10 shrink-0">
+      <aside
+        className={`fixed left-0 top-0 z-50 flex h-screen w-64 flex-col border-r border-white/10 bg-[#0a0a0a] transition-transform md:sticky md:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex h-16 items-center justify-between border-b border-white/10 px-6">
           <div className="flex items-center gap-3">
-            <div className="h-7 w-7 rounded-md bg-white text-black flex items-center justify-center font-bold text-xs shadow-sm">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-xs font-bold text-black">
               AI
             </div>
-            <span className="font-semibold tracking-tight text-white/90">Dashboard</span>
+            <span className="font-semibold tracking-tight text-white/90">AI Gateway</span>
           </div>
-          <button className="md:hidden p-2 text-white/50 hover:text-white transition-colors" onClick={() => setSidebarOpen(false)}>
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          <button
+            className="p-2 text-white/50 transition-colors hover:text-white md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          >
+            x
           </button>
         </div>
-        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-          {/* Navigation Links Placeholder */}
+
+        <nav className="flex-1 space-y-1 overflow-y-auto p-4">
+          {navLinks.map((item) => {
+            const active = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`block rounded-lg px-3 py-2 text-sm transition-colors ${
+                  active
+                    ? "bg-white/10 text-white"
+                    : "text-white/60 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
-        <div className="p-4 border-t border-white/10">
-          {user && (
-            <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-medium shrink-0">
-                U
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="font-medium truncate text-white/90">User Account</span>
-                <span className="text-xs text-white/50 flex items-center gap-1.5">
-                  <div className={`w-1.5 h-1.5 rounded-full ${user.creditBalance < 10 ? 'bg-red-500' : 'bg-green-500'}`} />
-                  {user.creditBalance} credits
-                </span>
-              </div>
+
+        <div className="space-y-3 border-t border-white/10 p-4">
+          {user ? (
+            <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm">
+              <p className="truncate font-medium text-white/90">{user.name}</p>
+              <p className="truncate text-xs text-white/50">{user.email}</p>
+              <p className="mt-1 text-xs text-white/70">{user.creditBalance} credits</p>
             </div>
-          )}
+          ) : null}
+          <Button
+            variant="outline"
+            className="w-full border-white/20 bg-transparent text-white hover:bg-white/10"
+            onClick={handleLogout}
+          >
+            Logout
+          </Button>
         </div>
       </aside>
 
-      <main className="flex-1 min-w-0 flex flex-col bg-black">
-        <header className="h-16 border-b border-white/10 flex items-center px-4 md:px-6 justify-between shrink-0 bg-black/50 backdrop-blur-md sticky top-0 z-30">
-           <div className="flex items-center gap-4">
-             <button className="md:hidden p-2 -ml-2 text-white/60 hover:text-white transition-colors rounded-md hover:bg-white/5" onClick={() => setSidebarOpen(true)}>
-               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-             </button>
-             <h1 className="text-lg font-medium text-white/90 md:hidden">Overview</h1>
-           </div>
-           <div className="flex items-center gap-4">
-             {/* Header actions */}
-           </div>
+      <main className="flex min-w-0 flex-1 flex-col bg-black">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/10 bg-black/70 px-4 backdrop-blur md:px-6">
+          <button
+            className="rounded-md p-2 text-white/60 transition-colors hover:bg-white/5 hover:text-white md:hidden"
+            onClick={() => setSidebarOpen(true)}
+          >
+            menu
+          </button>
+          <h1 className="text-sm font-medium text-white/70">Control Center</h1>
+          <Link href="/dev/apps/new">
+            <Button className="bg-white text-black hover:bg-white/90">New App</Button>
+          </Link>
         </header>
-        <div className="flex-1 p-4 md:p-8 overflow-auto">
-          <div className="max-w-6xl mx-auto space-y-8">
-            {children}
-          </div>
+
+        <div className="flex-1 overflow-auto p-4 md:p-8">
+          <div className="mx-auto max-w-6xl space-y-8">{children}</div>
         </div>
       </main>
-
       <Toaster />
     </div>
   );

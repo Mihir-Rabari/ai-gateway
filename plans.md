@@ -364,3 +364,20 @@ Validation snapshot (2026-04-05):
 - `pnpm test` passes across the monorepo after stabilizing test runner scripts for Windows `spawn EPERM`
 - `docker compose ps` currently fails because Docker Desktop daemon is not running in this environment
 - `pnpm build` now passes across the full monorepo (including `@ai-gateway/sdk-js`)
+
+## Frontend Completion Snapshot (2026-04-05)
+
+Completed in this pass:
+
+- Replaced frontend mock/stub API usage with typed real API integrations in `apps/web/src/lib/api.ts`
+- Wired auth token + refresh token handling for `/login`, `/signup`, and `/auth/popup`
+- Rebuilt dashboard and developer portal pages to load live data from backend endpoints
+- Added protected layout behavior for dashboard and developer areas (auth check + logout flow)
+- Added API route `GET /api/v1/apps/:id/usage` in `apps/api` to expose per-app analytics to the frontend
+- Updated app metadata and key frontend routing links
+- Hardened `packages/sdk-js` for publish readiness (public publishConfig, file list, widget d.ts, prepublish checks)
+
+Current blockers / remaining:
+
+- `npm publish --access public` for `@ai-gateway/sdk-js@0.1.0` reached registry publish step but failed with `EOTP` (2FA code required)
+- Full runtime smoke test is still blocked until Docker Desktop daemon is running and stack is up

@@ -1,14 +1,35 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useEffect, useState } from "react";
 import { Copy, Terminal } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
 
 export default function DocsPage() {
   const { toast } = useToast();
+  const [models, setModels] = useState<string[]>([]);
+  const [loadingModels, setLoadingModels] = useState(true);
 
-  const handleCopy = (code: string) => {
-    navigator.clipboard.writeText(code);
+  useEffect(() => {
+    const loadModels = async () => {
+      setLoadingModels(true);
+      try {
+        const result = await api.models.list();
+        setModels(result.models);
+      } catch {
+        setModels([]);
+      } finally {
+        setLoadingModels(false);
+      }
+    };
+
+    void loadModels();
+  }, []);
+
+  const handleCopy = async (code: string) => {
+    await navigator.clipboard.writeText(code);
     toast({
       title: "Copied",
       description: "Code copied to clipboard.",
@@ -16,134 +37,119 @@ export default function DocsPage() {
   };
 
   const codeBlocks = {
-    install: `npm install @ai-gateway/sdk-js`,
-    auth: `import { AIGateway } from '@ai-gateway/sdk-js';
+    install: "npm install @ai-gateway/sdk-js",
+    auth: `import { AIGateway } from "@ai-gateway/sdk-js";
 
-// 1. Trigger "Sign in with AI Gateway" flow
-// This opens a secure popup where the user logs in and authorizes your app
-const token = await AIGateway.signIn({ appId: 'YOUR_APP_ID' });
-
-// 2. Initialize the SDK with the user's token
-const ai = new AIGateway({ token });`,
-    chat: `// Call any supported model (gpt-4, claude-3, gemini)
-const response = await ai.chat({
-  model: 'gpt-4o',
+const auth = await AIGateway.signIn({ appId: "YOUR_APP_ID" });
+const ai = new AIGateway({ appId: "YOUR_APP_ID" });
+ai.setToken(auth.token);`,
+    chat: `const response = await ai.chat({
+  model: "gpt-4o",
   messages: [
-    { role: 'system', content: 'You are a helpful assistant.' },
-    { role: 'user', content: 'Explain quantum computing in one sentence.' }
+    { role: "system", content: "You are a helpful assistant." },
+    { role: "user", content: "Explain quantum computing in one sentence." }
   ]
 });
 
-console.log(response.choices[0].message.content);`
+console.log(response.output);`,
   };
 
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="max-w-4xl space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">SDK Documentation</h1>
-        <p className="text-white/60 text-lg">Integrate the AI Gateway SDK into your JavaScript or TypeScript application.</p>
+        <h1 className="mb-2 text-3xl font-bold tracking-tight">SDK Documentation</h1>
+        <p className="text-lg text-white/60">
+          Integration guide for <code>@ai-gateway/sdk-js</code> with live model registry.
+        </p>
       </div>
 
       <div className="space-y-12">
+        <DocSection title="1. Installation" fileLabel="Terminal" code={codeBlocks.install} onCopy={handleCopy} />
+
         <section>
-          <h2 className="text-2xl font-semibold mb-4 text-white">1. Installation</h2>
-          <Card className="bg-[#0a0a0a] border-white/10">
+          <h2 className="mb-4 text-2xl font-semibold text-white">2. Authentication</h2>
+          <p className="mb-4 text-white/60">
+            Use the popup auth flow, then attach the access token to the SDK client.
+          </p>
+          <DocSection title="" fileLabel="auth.ts" code={codeBlocks.auth} onCopy={handleCopy} />
+        </section>
+
+        <section>
+          <h2 className="mb-4 text-2xl font-semibold text-white">3. Request Any Model</h2>
+          <p className="mb-4 text-white/60">
+            Call unified <code className="rounded bg-white/10 px-1 py-0.5 text-sm text-white">chat()</code> from
+            one client.
+          </p>
+          <DocSection title="" fileLabel="chat.ts" code={codeBlocks.chat} onCopy={handleCopy} />
+        </section>
+
+        <section>
+          <h2 className="mb-4 text-2xl font-semibold text-white">Supported Models (Live)</h2>
+          <Card className="border-white/10 bg-[#0a0a0a]">
             <CardContent className="p-0">
-              <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-black">
-                <div className="text-xs font-mono text-white/50">Terminal</div>
-                <button onClick={() => handleCopy(codeBlocks.install)} className="text-white/40 hover:text-white">
-                  <Copy className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="p-4 bg-[#050505] overflow-x-auto text-sm font-mono text-green-400">
-                <div className="flex items-center gap-2">
-                  <Terminal className="h-3 w-3 text-white/40" />
-                  {codeBlocks.install}
+              {loadingModels ? (
+                <div className="p-4">
+                  <Skeleton className="h-28 w-full bg-white/10" />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-semibold mb-4 text-white">2. Authentication</h2>
-          <p className="text-white/60 mb-4">
-            Our SDK includes a built-in authentication flow. When your user clicks "Sign in", they authorize your app to spend their credits. You don't need to manage their billing or API keys.
-          </p>
-          <Card className="bg-[#0a0a0a] border-white/10">
-            <CardContent className="p-0">
-              <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-black">
-                <div className="text-xs font-mono text-white/50">auth.ts</div>
-                <button onClick={() => handleCopy(codeBlocks.auth)} className="text-white/40 hover:text-white">
-                  <Copy className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="p-4 bg-[#050505] overflow-x-auto text-sm font-mono leading-relaxed whitespace-pre text-white/80">
-                {codeBlocks.auth}
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-semibold mb-4 text-white">3. Making Requests</h2>
-          <p className="text-white/60 mb-4">
-            Use the unified <code className="bg-white/10 px-1 py-0.5 rounded text-sm text-pink-400">chat</code> method to communicate with any supported model. Credits are automatically deducted from the user's account.
-          </p>
-          <Card className="bg-[#0a0a0a] border-white/10">
-            <CardContent className="p-0">
-              <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-black">
-                <div className="text-xs font-mono text-white/50">request.ts</div>
-                <button onClick={() => handleCopy(codeBlocks.chat)} className="text-white/40 hover:text-white">
-                  <Copy className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="p-4 bg-[#050505] overflow-x-auto text-sm font-mono leading-relaxed whitespace-pre text-white/80">
-                {codeBlocks.chat}
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-semibold mb-4 text-white">Supported Models</h2>
-          <Card className="bg-[#0a0a0a] border-white/10">
-            <CardContent className="p-0">
-               <table className="w-full text-sm text-left">
-                 <thead className="bg-black text-white/60 font-medium">
-                   <tr>
-                     <th className="px-4 py-3 border-b border-white/10">Provider</th>
-                     <th className="px-4 py-3 border-b border-white/10">Model ID</th>
-                     <th className="px-4 py-3 border-b border-white/10 text-right">Credits / 1k tokens</th>
-                   </tr>
-                 </thead>
-                 <tbody className="divide-y divide-white/10 text-white/80">
-                   <tr className="hover:bg-white/5">
-                     <td className="px-4 py-3">OpenAI</td>
-                     <td className="px-4 py-3 font-mono text-xs">gpt-4o</td>
-                     <td className="px-4 py-3 text-right">10</td>
-                   </tr>
-                   <tr className="hover:bg-white/5">
-                     <td className="px-4 py-3">OpenAI</td>
-                     <td className="px-4 py-3 font-mono text-xs">gpt-3.5-turbo</td>
-                     <td className="px-4 py-3 text-right">1</td>
-                   </tr>
-                   <tr className="hover:bg-white/5">
-                     <td className="px-4 py-3">Anthropic</td>
-                     <td className="px-4 py-3 font-mono text-xs">claude-3-5-sonnet</td>
-                     <td className="px-4 py-3 text-right">12</td>
-                   </tr>
-                   <tr className="hover:bg-white/5">
-                     <td className="px-4 py-3">Google</td>
-                     <td className="px-4 py-3 font-mono text-xs">gemini-1.5-pro</td>
-                     <td className="px-4 py-3 text-right">8</td>
-                   </tr>
-                 </tbody>
-               </table>
+              ) : models.length === 0 ? (
+                <p className="p-4 text-sm text-white/50">No models found from `/api/v1/models`.</p>
+              ) : (
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-black font-medium text-white/60">
+                    <tr>
+                      <th className="border-b border-white/10 px-4 py-3">Model ID</th>
+                      <th className="border-b border-white/10 px-4 py-3 text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/10 text-white/80">
+                    {models.map((model) => (
+                      <tr key={model} className="hover:bg-white/5">
+                        <td className="px-4 py-3 font-mono text-xs">{model}</td>
+                        <td className="px-4 py-3 text-right text-emerald-300">Available</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </CardContent>
           </Card>
         </section>
       </div>
     </div>
+  );
+}
+
+function DocSection({
+  title,
+  fileLabel,
+  code,
+  onCopy,
+}: {
+  title: string;
+  fileLabel: string;
+  code: string;
+  onCopy: (code: string) => Promise<void>;
+}) {
+  return (
+    <section>
+      {title ? <h2 className="mb-4 text-2xl font-semibold text-white">{title}</h2> : null}
+      <Card className="border-white/10 bg-[#0a0a0a]">
+        <CardContent className="p-0">
+          <div className="flex items-center justify-between border-b border-white/10 bg-black px-4 py-2">
+            <div className="text-xs font-mono text-white/50">{fileLabel}</div>
+            <button onClick={() => void onCopy(code)} className="text-white/40 hover:text-white">
+              <Copy className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="overflow-x-auto bg-[#050505] p-4 font-mono text-sm leading-relaxed text-white/80">
+            <div className="mb-2 flex items-center gap-2 text-white/40">
+              <Terminal className="h-3 w-3" />
+              {fileLabel}
+            </div>
+            <pre className="whitespace-pre-wrap">{code}</pre>
+          </div>
+        </CardContent>
+      </Card>
+    </section>
   );
 }

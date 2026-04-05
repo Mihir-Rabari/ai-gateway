@@ -1,113 +1,189 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Copy, Eye, EyeOff, RotateCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Copy, Eye, EyeOff, RotateCw, Trash2, ArrowLeft } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { api, type AppUsageSummary, type DeveloperApp } from "@/lib/api";
 
 export default function AppDetailsPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
   const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
   const [showKey, setShowKey] = useState(false);
-  const [apiKey, setApiKey] = useState("agk_test_5x9a8b7c6d5e4f3g2h1i0j9k8l7m6n5");
+  const [apiKey, setApiKey] = useState("");
+  const [appData, setAppData] = useState<DeveloperApp | null>(null);
+  const [usage, setUsage] = useState<AppUsageSummary | null>(null);
 
-  const copyKey = () => {
-    navigator.clipboard.writeText(apiKey);
-    toast({
-      title: "API Key copied",
-      description: "Copied to clipboard.",
-    });
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [apps, usageRes] = await Promise.all([api.apps.list(), api.apps.usage(params.id)]);
+        const app = apps.find((item) => item.id === params.id) ?? null;
+        setAppData(app);
+        setUsage(usageRes);
+      } catch (err) {
+        toast({
+          title: "Failed to load app",
+          description: err instanceof Error ? err.message : "Unexpected error",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, [params.id, toast]);
+
+  const copyKey = async () => {
+    if (!apiKey) return;
+    await navigator.clipboard.writeText(apiKey);
+    toast({ title: "API key copied", description: "Copied to clipboard." });
   };
 
-  const rotateKey = () => {
-    if (confirm("Are you sure? This will invalidate the current key immediately.")) {
-      setApiKey(`agk_test_${Math.random().toString(36).substring(2, 15)}`);
+  const rotateKey = async () => {
+    if (!window.confirm("Rotate key now? This will immediately invalidate the previous key.")) {
+      return;
+    }
+
+    try {
+      const result = await api.apps.rotateKey(params.id);
+      setApiKey(result.apiKey);
+      setShowKey(true);
+      toast({ title: "API key rotated", description: "Your new key is shown below." });
+    } catch (err) {
       toast({
-        title: "API Key Rotated",
-        description: "Your new API key is ready.",
+        title: "Key rotation failed",
+        description: err instanceof Error ? err.message : "Unexpected error",
+        variant: "destructive",
       });
     }
   };
 
+  const deleteApp = async () => {
+    if (!window.confirm("Delete this app? This action is irreversible.")) {
+      return;
+    }
+
+    try {
+      await api.apps.delete(params.id);
+      toast({ title: "App deleted", description: "The app was removed successfully." });
+      router.push("/dev/apps");
+    } catch (err) {
+      toast({
+        title: "Delete failed",
+        description: err instanceof Error ? err.message : "Unexpected error",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const usageRows = usage?.rows ?? [];
+  const totalCredits = usageRows.reduce((acc, row) => acc + Number(row.total_credits || 0), 0);
+  const totalRequests = usageRows.reduce((acc, row) => acc + Number(row.total_requests || 0), 0);
+
   return (
     <div className="space-y-8">
       <div>
-        <Link href="/dev/apps" className="inline-flex items-center text-sm font-medium text-white/50 hover:text-white mb-4 transition-colors">
+        <Link
+          href="/dev/apps"
+          className="mb-4 inline-flex items-center text-sm font-medium text-white/50 transition-colors hover:text-white"
+        >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Apps
         </Link>
-        <div className="flex justify-between items-start">
+        <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2">App Details</h1>
-            <p className="text-white/60">Manage API keys and view usage for this application.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-400">
-              Active
-            </span>
+            <h1 className="mb-2 text-3xl font-bold tracking-tight">App Details</h1>
+            <p className="text-white/60">Rotate keys and inspect usage for this app.</p>
           </div>
         </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="bg-[#0a0a0a] border-white/10">
+        <Card className="border-white/10 bg-[#0a0a0a]">
           <CardHeader>
             <CardTitle>Application Info</CardTitle>
-            <CardDescription className="text-white/40">General details about this app.</CardDescription>
+            <CardDescription className="text-white/40">Data from registered apps service.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm font-medium text-white/60">App Name</p>
-              <p className="mt-1 font-medium text-lg">My Cool App</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-white/60">App ID</p>
-              <p className="mt-1 font-mono text-sm bg-black p-2 rounded border border-white/5 text-white/80">{params.id}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-white/60">Website</p>
-              <p className="mt-1 text-blue-400 hover:underline">https://mycoolapp.com</p>
-            </div>
+            {loading ? (
+              <>
+                <Skeleton className="h-5 w-40 bg-white/10" />
+                <Skeleton className="h-4 w-full bg-white/10" />
+                <Skeleton className="h-4 w-48 bg-white/10" />
+              </>
+            ) : !appData ? (
+              <p className="text-sm text-white/50">App not found or you no longer have access.</p>
+            ) : (
+              <>
+                <div>
+                  <p className="text-sm text-white/60">App Name</p>
+                  <p className="mt-1 text-lg font-medium">{appData.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-white/60">App ID</p>
+                  <p className="mt-1 rounded border border-white/10 bg-black p-2 font-mono text-xs text-white/80">
+                    {appData.id}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-white/60">Description</p>
+                  <p className="mt-1 text-sm text-white/80">{appData.description || "-"}</p>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
-        <Card className="bg-[#0a0a0a] border-white/10">
+        <Card className="border-white/10 bg-[#0a0a0a]">
           <CardHeader>
             <CardTitle>API Configuration</CardTitle>
-            <CardDescription className="text-white/40">Use this key to authenticate your SDK calls.</CardDescription>
+            <CardDescription className="text-white/40">Rotate to issue a fresh API key.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
-              <p className="text-sm font-medium text-white/60 mb-2">API Key</p>
-              <div className="flex mt-1 rounded-md shadow-sm">
-                <div className="relative flex items-stretch flex-grow focus-within:z-10">
-                  <div className="flex items-center pl-3 pr-3 w-full bg-black border border-white/10 rounded-l-md overflow-hidden font-mono text-sm">
-                    {showKey ? apiKey : "••••••••••••••••••••••••••••••••••••"}
-                  </div>
+              <p className="mb-2 text-sm text-white/60">Current Visible Key</p>
+              <div className="flex">
+                <div className="flex flex-1 items-center overflow-hidden rounded-l-md border border-white/10 bg-black px-3 font-mono text-sm">
+                  {apiKey ? (showKey ? apiKey : "********************************") : "Rotate to generate a new key"}
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowKey(!showKey)}
-                  className="-ml-px relative inline-flex items-center space-x-2 px-4 py-2 border border-white/10 bg-white/5 text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white"
+                  onClick={() => setShowKey((prev) => !prev)}
+                  className="border border-l-0 border-white/10 bg-white/5 px-4 text-white/70 hover:bg-white/10 hover:text-white"
                 >
                   {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
                 <button
                   type="button"
                   onClick={copyKey}
-                  className="-ml-px relative inline-flex items-center space-x-2 px-4 py-2 border border-white/10 bg-white/5 text-sm font-medium text-white/70 rounded-r-md hover:bg-white/10 hover:text-white"
+                  className="rounded-r-md border border-l-0 border-white/10 bg-white/5 px-4 text-white/70 hover:bg-white/10 hover:text-white"
                 >
                   <Copy className="h-4 w-4" />
                 </button>
               </div>
             </div>
 
-            <div className="pt-4 border-t border-white/5 flex gap-4">
-              <Button onClick={rotateKey} variant="outline" className="border-yellow-500/20 text-yellow-500 hover:bg-yellow-500/10">
+            <div className="flex gap-4 border-t border-white/5 pt-4">
+              <Button
+                onClick={rotateKey}
+                variant="outline"
+                className="border-yellow-500/20 text-yellow-400 hover:bg-yellow-500/10"
+              >
                 <RotateCw className="mr-2 h-4 w-4" /> Rotate Key
               </Button>
-              <Button variant="outline" className="border-red-500/20 text-red-500 hover:bg-red-500/10">
+              <Button
+                onClick={deleteApp}
+                variant="outline"
+                className="border-red-500/20 text-red-400 hover:bg-red-500/10"
+              >
                 <Trash2 className="mr-2 h-4 w-4" /> Delete App
               </Button>
             </div>
@@ -115,15 +191,48 @@ export default function AppDetailsPage({ params }: { params: { id: string } }) {
         </Card>
       </div>
 
-      <Card className="bg-[#0a0a0a] border-white/10">
+      <Card className="border-white/10 bg-[#0a0a0a]">
         <CardHeader>
           <CardTitle>Usage Stats</CardTitle>
-          <CardDescription className="text-white/40">Total credits driven through this app.</CardDescription>
+          <CardDescription className="text-white/40">
+            Aggregated from analytics-service for this app.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-           <div className="h-[200px] flex items-center justify-center text-white/40 text-sm border border-dashed border-white/10 rounded-lg">
-             Usage Chart Placeholder (GET /analytics/usage/app?appId={params.id})
-           </div>
+          {loading ? (
+            <Skeleton className="h-28 w-full bg-white/10" />
+          ) : usageRows.length === 0 ? (
+            <p className="text-sm text-white/50">No usage events recorded yet for this app.</p>
+          ) : (
+            <div className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-white/10 bg-black/40 p-3">
+                  <p className="text-xs text-white/50">Total Requests</p>
+                  <p className="mt-1 text-xl font-semibold text-white">{totalRequests.toLocaleString()}</p>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-black/40 p-3">
+                  <p className="text-xs text-white/50">Total Credits</p>
+                  <p className="mt-1 text-xl font-semibold text-white">{totalCredits.toLocaleString()}</p>
+                </div>
+              </div>
+
+              {usageRows.map((row) => (
+                <div
+                  key={row.model}
+                  className="flex items-center justify-between rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm"
+                >
+                  <div>
+                    <p className="text-white">{row.model}</p>
+                    <p className="text-xs text-white/50">avg latency {Math.round(row.avg_latency_ms || 0)} ms</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-white">{Number(row.total_requests || 0).toLocaleString()} req</p>
+                    <p className="text-xs text-white/50">{Number(row.total_credits || 0).toLocaleString()} credits</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

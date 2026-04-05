@@ -1,84 +1,109 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
 
 export default function RegisterAppPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
-  const [url, setUrl] = useState("");
   const [desc, setDesc] = useState("");
+  const [createdKey, setCreatedKey] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const result = await api.apps.create(name, desc || undefined);
+      setCreatedKey(result.apiKey);
       toast({
-        title: "App Registered",
-        description: `Successfully created ${name}`,
+        title: "App registered",
+        description: `${result.name} is ready. Save your API key now.`,
       });
-      router.push("/dev/apps/app_new123");
-    }, 1000);
+      setTimeout(() => {
+        router.push(`/dev/apps/${result.id}`);
+      }, 1200);
+    } catch (err) {
+      toast({
+        title: "Failed to register app",
+        description: err instanceof Error ? err.message : "Unexpected error",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyApiKey = async () => {
+    if (!createdKey) return;
+    await navigator.clipboard.writeText(createdKey);
+    toast({ title: "API key copied", description: "Store it securely before you leave this page." });
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8 mt-8">
+    <div className="mx-auto mt-8 max-w-2xl space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Register New App</h1>
-        <p className="text-white/60">Create a new application to get an API key and integrate AI Gateway.</p>
+        <h1 className="mb-2 text-3xl font-bold tracking-tight">Register New App</h1>
+        <p className="text-white/60">Create a developer app and get your first API key instantly.</p>
       </div>
 
-      <Card className="bg-[#0a0a0a] border-white/10">
+      <Card className="border-white/10 bg-[#0a0a0a]">
         <form onSubmit={handleSubmit}>
           <CardHeader>
             <CardTitle>Application Details</CardTitle>
-            <CardDescription className="text-white/40">These details help us track your integrations.</CardDescription>
+            <CardDescription className="text-white/40">Only app name is required.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-medium leading-none text-white/80">App Name <span className="text-red-400">*</span></label>
+              <label htmlFor="name" className="text-sm font-medium text-white/80">
+                App Name <span className="text-red-400">*</span>
+              </label>
               <Input
                 id="name"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="My Awesome App"
-                className="bg-black border-white/10 text-white placeholder:text-white/30 focus-visible:ring-white/20"
+                className="border-white/10 bg-black text-white placeholder:text-white/30 focus-visible:ring-white/20"
               />
             </div>
+
             <div className="space-y-2">
-              <label htmlFor="url" className="text-sm font-medium leading-none text-white/80">Website URL</label>
-              <Input
-                id="url"
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://myawesomeapp.com"
-                className="bg-black border-white/10 text-white placeholder:text-white/30 focus-visible:ring-white/20"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="desc" className="text-sm font-medium leading-none text-white/80">Description</label>
+              <label htmlFor="desc" className="text-sm font-medium text-white/80">
+                Description
+              </label>
               <Input
                 id="desc"
                 value={desc}
                 onChange={(e) => setDesc(e.target.value)}
-                placeholder="Briefly describe what your app does"
-                className="bg-black border-white/10 text-white placeholder:text-white/30 focus-visible:ring-white/20"
+                placeholder="What does this app do?"
+                className="border-white/10 bg-black text-white placeholder:text-white/30 focus-visible:ring-white/20"
               />
             </div>
 
-            <div className="pt-4 flex gap-4 border-t border-white/5">
+            {createdKey ? (
+              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
+                <p className="text-xs text-emerald-200">New API key (shown once):</p>
+                <p className="mt-1 break-all font-mono text-sm text-white">{createdKey}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-3 border-emerald-400/40 bg-transparent text-emerald-100 hover:bg-emerald-500/20"
+                  onClick={copyApiKey}
+                >
+                  Copy API Key
+                </Button>
+              </div>
+            ) : null}
+
+            <div className="flex gap-4 border-t border-white/5 pt-4">
               <Button type="submit" disabled={loading} className="bg-white text-black hover:bg-white/90">
                 {loading ? "Registering..." : "Register App"}
               </Button>
