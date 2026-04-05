@@ -333,7 +333,6 @@ This repository is in an active backend stabilization pass. The most important c
 
 Current backend gaps still remaining:
 
-- Routing-service real OpenAI integration test remains pending (requires test API key)
 - Some planning sections above still reflect target-state MVP claims rather than shipped-state reality
 
 Additional stabilization progress since this snapshot:
@@ -357,3 +356,4 @@ Still pending from the production audit:
 - Billing-service now includes route-level Razorpay webhook integration coverage for signature verification and idempotent event processing
 - Gateway now includes route-level integration coverage for `/gateway/request` with mocked auth/credit behavior and a real routing HTTP call
 - Auth-service now includes an optional `auth.events` audit consumer path that writes idempotent `user_events` rows when `AUTH_EVENTS_CONSUMER_ENABLED=true`
+- Routing-service now includes a real OpenAI integration test path that runs only when `OPENAI_API_KEY` is configured

@@ -53,7 +53,7 @@
 - [x] Password strength validation
 - [x] GET /auth/me endpoint (return current user from token)
 - [ ] GET /users/:id endpoint (internal — for gateway use)
-- [ ] Auth events consumer (listen to auth.events for audit log)
+- [x] Auth events consumer (listen to auth.events for audit log)
 - [x] Unit tests for authService (mock Redis + Postgres)
 - [x] Integration test for full signup → login → refresh flow
 
@@ -121,7 +121,7 @@
 - [x] Provider latency tracking (publish latency to Kafka)
 - [x] Circuit breaker pattern (stop routing to provider after 5 consecutive failures)
 - [x] Unit tests for RoutingService (mock OpenAI + Anthropic clients)
-- [ ] Integration test: real OpenAI call (with test API key)
+- [x] Integration test: real OpenAI call (with test API key)
 
 ---
 
@@ -308,5 +308,5 @@ Focus: backend-first completion and contract cleanup before the next frontend pa
 ## Backend P1 Follow-Up - Codex
 
 - [x] Add auth-service consumer for `auth.events` audit trail ingestion path (env-gated with idempotent inserts)
-- [ ] Add routing-service integration test gated by `OPENAI_API_KEY` for a real provider call
+- [x] Add routing-service integration test gated by `OPENAI_API_KEY` for a real provider call
 - [ ] Add gateway streaming route integration test that verifies SSE framing and completion behavior
