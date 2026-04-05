@@ -5,6 +5,7 @@ import { getAnalyticsConfig } from '@ai-gateway/config';
 import { createLogger, ok } from '@ai-gateway/utils';
 import type { UsageEvent } from '@ai-gateway/types';
 import type { FastifyRequest, FastifyReply } from 'fastify';
+import { UsageBatchBuffer, toRequestLogRow } from './services/usageBatch.js';
 
 const logger = createLogger('analytics-service');
 const config = getAnalyticsConfig();
@@ -54,30 +55,16 @@ async function initClickHouseSchema(): Promise<void> {
 }
 
 // Batch buffer
-let batch: UsageEvent[] = [];
 const BATCH_SIZE = 100;
 const FLUSH_INTERVAL_MS = 1000;
+const batch = new UsageBatchBuffer(BATCH_SIZE);
 
 async function flush(events: UsageEvent[]): Promise<void> {
   if (events.length === 0) return;
 
   await clickhouse.insert({
     table: 'request_logs',
-    values: events.map((e) => ({
-      request_id: e.requestId,
-      user_id: e.userId,
-      app_id: e.appId,
-      model: e.model,
-      provider: e.provider,
-      tokens_input: e.tokensInput,
-      tokens_output: e.tokensOutput,
-      tokens_total: e.tokensTotal,
-      credits_deducted: e.creditsDeducted,
-      latency_ms: e.latencyMs,
-      success: e.type === 'usage.request.completed' ? 1 : 0,
-      error_code: e.errorCode ?? null,
-      timestamp: e.timestamp,
-    })),
+    values: events.map(toRequestLogRow),
     format: 'JSONEachRow',
   });
 
@@ -90,8 +77,8 @@ async function startConsumer(): Promise<void> {
 
   // Periodic flush
   setInterval(async () => {
-    if (batch.length > 0) {
-      const toFlush = batch.splice(0, batch.length);
+    if (batch.size() > 0) {
+      const toFlush = batch.drain();
       try {
         await flush(toFlush);
       } catch (err) {
@@ -106,10 +93,8 @@ async function startConsumer(): Promise<void> {
       if (!value) return;
 
       const event = JSON.parse(value) as UsageEvent;
-      batch.push(event);
-
-      if (batch.length >= BATCH_SIZE) {
-        const toFlush = batch.splice(0, batch.length);
+      const toFlush = batch.push(event);
+      if (toFlush && toFlush.length > 0) {
         try {
           await flush(toFlush);
         } catch (err) {
@@ -121,6 +106,61 @@ async function startConsumer(): Promise<void> {
 }
 
 // ─── HTTP API ────────────────────────────────
+
+app.get(
+  '/analytics/models',
+  async (
+    req: FastifyRequest<{ Querystring: { from?: string; to?: string; limit?: string } }>,
+    reply: FastifyReply,
+  ) => {
+    const { from, to, limit } = req.query;
+    const fromDate = from ? new Date(from) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const toDate = to ? new Date(to) : new Date();
+    const parsedLimit = Number.parseInt(limit ?? '20', 10);
+    const topN = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 20;
+
+    const result = await clickhouse.query({
+      query: `
+        SELECT
+          model,
+          count() as total_requests,
+          sum(tokens_total) as total_tokens,
+          sum(credits_deducted) as total_credits,
+          if(count() > 0, countIf(success = 1) / count(), 0) as success_rate,
+          avg(latency_ms) as avg_latency_ms
+        FROM request_logs
+        WHERE timestamp >= {fromDate:DateTime64}
+          AND timestamp <= {toDate:DateTime64}
+        GROUP BY model
+        ORDER BY total_requests DESC
+        LIMIT {topN:UInt32}
+      `,
+      query_params: {
+        fromDate: fromDate.toISOString(),
+        toDate: toDate.toISOString(),
+        topN,
+      },
+      format: 'JSONEachRow',
+    });
+
+    const rows = await result.json<{
+      model: string;
+      total_requests: number;
+      total_tokens: number;
+      total_credits: number;
+      success_rate: number;
+      avg_latency_ms: number;
+    }>();
+
+    return reply.send(
+      ok({
+        from: fromDate,
+        to: toDate,
+        rows,
+      }),
+    );
+  },
+);
 
 app.get(
   '/analytics/usage/app',
@@ -276,9 +316,9 @@ async function bootstrap() {
 
   const shutdown = async () => {
     logger.info('Shutting down analytics service...');
-    if (batch.length > 0) {
+    if (batch.size() > 0) {
       try {
-        await flush(batch);
+        await flush(batch.drain());
       } catch (err) {
         logger.error(err, 'Final flush failed');
       }

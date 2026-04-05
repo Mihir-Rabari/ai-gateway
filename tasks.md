@@ -158,13 +158,13 @@
 - [x] Worker: revenue split (20% to developer wallet)
 - [x] GET /analytics/usage/app?appId= (per-app usage for devs)
 - [x] GET /analytics/dashboard?userId= (dashboard summary — requests, tokens, credits, models used)
-- [ ] GET /analytics/models (global model usage breakdown)
+- [x] GET /analytics/models (global model usage breakdown)
 - [x] ClickHouse schema initialization fix (use HTTP API on startup, not file mount)
 - [x] Worker: handle `billing.events` (subscription lifecycle tracking)
 - [x] Worker: handle `auth.events` (user creation tracking)
 - [x] Error handling for bad Kafka messages (dead letter logging)
 - [x] Analytics service graceful shutdown (flush batch before exit)
-- [ ] Unit tests for batch flush logic
+- [x] Unit tests for batch flush logic
 
 ---
 
@@ -297,3 +297,5 @@ Focus: backend-first completion and contract cleanup before the next frontend pa
 - [x] Upgrade backend services to Fastify v5-compatible dependency majors and `bcrypt` v6 to remove the production audit findings
 - [x] Remove the unused `@fastify/jwt` auth-service dependency after confirming auth already uses `jsonwebtoken` directly
 - [x] Re-run backend builds/tests and confirm `pnpm audit --prod --json` reports zero production vulnerabilities
+- [x] Add `/analytics/models` global model usage endpoint
+- [x] Add analytics batch buffer unit tests and wire analytics service into monorepo `test` pipeline
