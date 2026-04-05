@@ -346,5 +346,7 @@ Additional stabilization progress since this snapshot:
 
 Still pending from the production audit:
 
-- Fastify remains on the v4 line across backend services; addressing the listed advisories requires a deliberate Fastify v5 migration and validation pass
-- Auth-service still inherits `fast-jwt` findings through `@fastify/jwt`; this should be handled as part of the auth/dependency migration rather than mixed into a web-only security bump
+- Completed a coordinated backend dependency migration to Fastify v5-compatible plugin majors across API, auth-service, gateway, routing-service, analytics-service, billing-service, and credit-service
+- Upgraded `bcrypt` to v6 in the services that use it, removing the old `node-pre-gyp -> tar` production advisory chain
+- Confirmed auth-service was not using `@fastify/jwt` at runtime and removed that unused dependency instead of carrying a vulnerable transitive JWT package
+- Revalidated the backend pass with focused service builds/tests plus `pnpm test`, and `pnpm audit --prod --json` now reports zero production vulnerabilities

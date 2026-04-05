@@ -32,8 +32,16 @@ async function bootstrap() {
   app.get('/health', async () => ({ status: 'ok', service: 'billing-service' }));
 
   app.setErrorHandler((error, _req, reply) => {
-    const statusCode = (error as { statusCode?: number }).statusCode ?? 500;
-    reply.status(statusCode).send({ success: false, error: { code: 'INTERNAL', message: error.message, statusCode } });
+    const appError = error as { statusCode?: number; code?: string; message?: string };
+    const statusCode = appError.statusCode ?? 500;
+    reply.status(statusCode).send({
+      success: false,
+      error: {
+        code: appError.code ?? 'INTERNAL',
+        message: appError.message ?? 'Internal server error',
+        statusCode,
+      },
+    });
   });
 
   await app.listen({ port: config.BILLING_SERVICE_PORT, host: '0.0.0.0' });

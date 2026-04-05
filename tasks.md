@@ -294,4 +294,6 @@ Focus: backend-first completion and contract cleanup before the next frontend pa
 - [x] Add routing-service unit tests for primary selection, fallback, and provider health
 - [x] Add internal auth user lookup endpoint for gateway-facing backend consumers
 - [x] Replace the stale Dependabot web dependency PR with a clean Next.js security upgrade on current `main`
-- [ ] Plan a dedicated Fastify v5 + auth JWT dependency migration to address remaining production audit findings safely
+- [x] Upgrade backend services to Fastify v5-compatible dependency majors and `bcrypt` v6 to remove the production audit findings
+- [x] Remove the unused `@fastify/jwt` auth-service dependency after confirming auth already uses `jsonwebtoken` directly
+- [x] Re-run backend builds/tests and confirm `pnpm audit --prod --json` reports zero production vulnerabilities

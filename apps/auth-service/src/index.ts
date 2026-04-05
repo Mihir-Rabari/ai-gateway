@@ -48,12 +48,13 @@ async function bootstrap() {
   // ─── Error Handler ─────────────────────────────
   app.setErrorHandler((error, _req, reply) => {
     logger.error({ error }, 'Unhandled error');
-    const statusCode = (error as { statusCode?: number }).statusCode ?? 500;
+    const appError = error as { statusCode?: number; code?: string; message?: string };
+    const statusCode = appError.statusCode ?? 500;
     reply.status(statusCode).send({
       success: false,
       error: {
-        code: (error as { code?: string }).code ?? 'INTERNAL',
-        message: error.message ?? 'Internal server error',
+        code: appError.code ?? 'INTERNAL',
+        message: appError.message ?? 'Internal server error',
         statusCode,
       },
     });
