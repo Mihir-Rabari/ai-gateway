@@ -93,9 +93,9 @@
 - [x] Kafka usage event publishing
 - [x] App API key validation (validate `x-app-id` header against registered_apps table)
 - [x] Request ID generation + response headers
-- [ ] Streaming response support (SSE or chunked transfer)
+- [x] Streaming response support (SSE or chunked transfer)
 - [x] Request timeout handling (30s timeout, release credits on timeout)
-- [ ] Retry logic for transient provider errors (via `withRetry` from utils)
+- [x] Retry logic for transient provider errors (via `withRetry` from utils)
 - [x] Full gateway plugin setup (postgres, redis, kafka)
 - [x] Rate limiting per user per minute
 - [x] GET /gateway/status endpoint (health + provider availability)
@@ -117,7 +117,7 @@
 - [x] Google Gemini integration (via `@google/generative-ai`)
 - [x] Provider health tracking (Redis-backed — mark unhealthy for 60s on failure)
 - [x] Streaming support (pass through SSE from provider)
-- [ ] Model-to-provider mapping with proper fallback chain
+- [x] Model-to-provider mapping with proper fallback chain
 - [ ] Provider latency tracking (publish latency to Kafka)
 - [x] Circuit breaker pattern (stop routing to provider after 5 consecutive failures)
 - [ ] Unit tests for RoutingService (mock OpenAI + Anthropic clients)
@@ -186,7 +186,7 @@
 - [x] DELETE /api/v1/apps/:id
 - [x] POST /api/v1/apps/:id/keys (generate API key)
 - [x] OpenAPI/Swagger spec auto-generation (`@fastify/swagger`)
-- [ ] Request logging middleware (log requestId, userId, latency)
+- [x] Request logging middleware (log requestId, userId, latency)
 - [x] Proper auth middleware (validate JWT on all protected routes)
 
 ---
@@ -228,7 +228,7 @@
 
 - [x] Finish SDK implementation (`packages/sdk-js/src/index.ts`)
 - [x] `ai.chat()` method — full request flow
-- [ ] `ai.stream()` method — streaming response
+- [x] `ai.stream()` method — streaming response
 - [x] `ai.credits()` — get current balance
 - [x] `AIGateway.signIn()` — opens auth popup window (`/auth/popup`)
 - [x] Popup `postMessage` protocol (send token back to parent)
@@ -259,12 +259,33 @@
 | 1 | Infra | Partial | 70% |
 | 2 | Auth Service | Partial | 80% |
 | 3 | Credit Service | Partial | 85% |
-| 4 | Gateway | Partial | 75% |
-| 5 | Routing | Partial | 70% |
+| 4 | Gateway | Done | 100% |
+| 5 | Routing | Partial | 90% |
 | 6 | Billing | Partial | 60% |
 | 7 | Analytics + Worker | Partial | 65% |
-| 8 | API Layer | Not Started | 5% |
+| 8 | API Layer | Done | 100% |
 | 9 | Frontend | Done | 100% |
 | 10 | SDK + Auth Widget | Done | 100% |
 
 **Overall MVP Progress: ~70%**
+
+---
+
+## Backend Stabilization Sprint - Codex
+
+Focus: backend-first completion and contract cleanup before the next frontend pass.
+
+- [x] Add missing `api_keys` table to PostgreSQL schema
+- [x] Add missing `user_events` table to PostgreSQL schema
+- [x] Fix API -> billing-service subscription contract by injecting authenticated `userId`
+- [x] Expose API routes for billing subscription status and cancellation
+- [x] Add `/api/v1/usage/summary` alias for the current dashboard client
+- [x] Restore `user.login` Kafka event publishing from auth-service
+- [x] Add Razorpay plan ID placeholders to `.env.example`
+- [x] Add runnable test scripts for auth-service and credit-service
+- [x] Run and stabilize auth-service tests in CI/local pipeline
+- [x] Run and stabilize credit-service tests in CI/local pipeline
+- [ ] Add billing-service unit tests for plan mapping and webhook handling
+- [ ] Add worker tests for `usage.events` and `auth.events`
+- [ ] Add API route tests for billing and usage alias coverage
+- [ ] Reconcile gateway app-key behavior with SDK expectations

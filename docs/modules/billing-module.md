@@ -100,3 +100,17 @@ subscriptions (
 | `billing.events` | `billing.subscription.created` | New subscription |
 | `billing.events` | `billing.subscription.renewed` | Monthly renewal |
 | `billing.events` | `billing.subscription.cancelled` | Cancellation |
+## Current Runtime Notes
+
+- The public API layer enriches subscription/cancel requests with the authenticated `userId`
+- Billing-service must map local plan names to real Razorpay plan IDs using:
+  - `RAZORPAY_PLAN_ID_PRO`
+  - `RAZORPAY_PLAN_ID_MAX`
+- Subscription creation currently returns the Razorpay subscription ID for checkout flow wiring
+## Current Runtime Notes
+
+- The public API layer enriches subscription/cancel requests with the authenticated `userId`
+- Billing-service must map local plan names to real Razorpay plan IDs using:
+  - `RAZORPAY_PLAN_ID_PRO`
+  - `RAZORPAY_PLAN_ID_MAX`
+- Subscription creation currently returns the Razorpay subscription ID for checkout flow wiring

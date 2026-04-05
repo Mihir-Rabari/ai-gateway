@@ -318,3 +318,21 @@ ANTHROPIC_API_KEY=sk-ant-...
 RAZORPAY_KEY_ID=rzp_test_...
 RAZORPAY_KEY_SECRET=...
 ```
+
+---
+
+## Backend Stabilization Snapshot (2026-04-04)
+
+This repository is in an active backend stabilization pass. The most important completed fixes in this pass are:
+
+- API billing proxy now derives `userId` from the authenticated request before calling billing-service
+- API exposes a `/api/v1/usage/summary` compatibility alias for the current dashboard client
+- Auth-service now emits `user.login` events again
+- PostgreSQL schema now includes the `api_keys` and `user_events` tables used by runtime code
+- Razorpay plan IDs are now expected as explicit env vars instead of assuming local plan names are valid provider plan IDs
+
+Current backend gaps still remaining:
+
+- Gateway auth/app-key semantics still need a dedicated cleanup pass
+- Billing-service, worker, and API route tests are still incomplete
+- Some planning sections above still reflect target-state MVP claims rather than shipped-state reality

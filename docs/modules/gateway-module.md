@@ -88,3 +88,13 @@ routing-service → select provider + call AI model
 - Per user: 60 requests/minute
 - Per app: 1000 requests/minute
 - Rate limits stored in Redis with sliding window
+## Current Runtime Notes
+
+- Runtime auth currently depends on a user bearer token plus the `x-app-id` header
+- The gateway exposes `GET /gateway/status` in addition to `POST /gateway/request` and `GET /gateway/models`
+- Usage events are published; the separate `analytics.events` topic described above is not currently implemented
+## Current Runtime Notes
+
+- Runtime auth currently depends on a user bearer token plus the `x-app-id` header
+- The gateway exposes `GET /gateway/status` in addition to `POST /gateway/request` and `GET /gateway/models`
+- Usage events are published; the separate `analytics.events` topic described above is not currently implemented
