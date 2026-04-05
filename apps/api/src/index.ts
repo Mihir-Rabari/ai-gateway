@@ -58,6 +58,15 @@ async function bootstrap() {
   const billingM = await import('./routes/v1/billing.js');
   await app.register(billingM.billingRoutes, { prefix: '/api/v1' });
 
+  // Security Headers
+  app.addHook('onSend', async (req, reply) => {
+    reply.header('X-Frame-Options', 'DENY');
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    reply.header('Content-Security-Policy', "default-src 'none'");
+    reply.header('X-XSS-Protection', '1; mode=block');
+  });
+
   await app.listen({ port: Number(process.env['API_PORT'] ?? 3001), host: '0.0.0.0' });
   logger.info(`🚀 API service running on port ${process.env['API_PORT'] ?? 3001}`);
 }
