@@ -142,8 +142,8 @@
 - [x] POST /billing/cancel (cancel current subscription)
 - [x] Credit addition calls credit-service HTTP API (not direct DB)
 - [x] Webhook idempotency (store processed event IDs in Redis)
-- [ ] Unit tests for BillingService (mock Razorpay + credit-service)
-- [ ] Webhook test with Razorpay test events
+- [x] Unit tests for BillingService (mock Razorpay + credit-service)
+- [x] Webhook test with Razorpay test events
 
 ---
 
@@ -302,3 +302,4 @@ Focus: backend-first completion and contract cleanup before the next frontend pa
 - [x] Add latency timing to routing events for both primary and fallback provider selections
 - [x] Add auth-service integration-style signup/login/refresh flow test with refresh token rotation validation
 - [x] Add credit-service real-Redis integration test path (auto-skip when Redis is unavailable)
+- [x] Add billing webhook route integration tests for Razorpay signature validation and idempotent event handling
