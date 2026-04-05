@@ -307,6 +307,6 @@ Focus: backend-first completion and contract cleanup before the next frontend pa
 
 ## Backend P1 Follow-Up - Codex
 
-- [ ] Add auth-service consumer for `auth.events` audit trail ingestion path
+- [x] Add auth-service consumer for `auth.events` audit trail ingestion path (env-gated with idempotent inserts)
 - [ ] Add routing-service integration test gated by `OPENAI_API_KEY` for a real provider call
 - [ ] Add gateway streaming route integration test that verifies SSE framing and completion behavior

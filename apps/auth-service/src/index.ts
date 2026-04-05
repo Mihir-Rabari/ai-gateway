@@ -8,6 +8,7 @@ import { redisPlugin } from './plugins/redis.js';
 import { kafkaPlugin } from './plugins/kafka.js';
 import { authRoutes } from './routes/authRoutes.js';
 import { internalRoutes } from './routes/internalRoutes.js';
+import { startAuthAuditConsumer } from './events/authAuditConsumer.js';
 
 const logger = createLogger('auth-service');
 const config = getAuthConfig();
@@ -23,6 +24,8 @@ const app = Fastify({
 });
 
 async function bootstrap() {
+  let auditConsumer: { disconnect: () => Promise<void> } | null = null;
+
   // ─── Plugins ───────────────────────────────────
   await app.register(cors, {
     origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000'],
@@ -37,6 +40,20 @@ async function bootstrap() {
     timeWindow: config.RATE_LIMIT_WINDOW_MS,
     redis: app.redis,
   });
+
+  if (config.AUTH_EVENTS_CONSUMER_ENABLED) {
+    auditConsumer = await startAuthAuditConsumer({
+      db: app.pg,
+      logger,
+      clientId: 'auth-service-audit',
+      brokers: process.env['KAFKA_BROKERS'],
+      groupId: process.env['AUTH_AUDIT_CONSUMER_GROUP_ID'],
+    });
+
+    app.addHook('onClose', async () => {
+      await auditConsumer?.disconnect();
+    });
+  }
 
   // ─── Routes ────────────────────────────────────
   await app.register(authRoutes, { prefix: '/auth' });
