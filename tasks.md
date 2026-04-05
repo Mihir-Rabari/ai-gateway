@@ -292,3 +292,4 @@ Focus: backend-first completion and contract cleanup before the next frontend pa
 - [x] Reconcile gateway app-key behavior with SDK expectations
 - [x] Return explicit invalid app-key errors from gateway for bad developer keys
 - [x] Add routing-service unit tests for primary selection, fallback, and provider health
+- [x] Add internal auth user lookup endpoint for gateway-facing backend consumers

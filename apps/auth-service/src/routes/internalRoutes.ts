@@ -33,4 +33,27 @@ export async function internalRoutes(fastify: FastifyInstance) {
       }
     },
   );
+
+  fastify.get(
+    '/users/:id',
+    {
+      schema: {
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: { id: { type: 'string' } },
+        },
+      },
+    },
+    async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+      try {
+        const user = await authService.getUserById(req.params.id);
+        return reply.send(ok(user));
+      } catch (err) {
+        return reply
+          .status((err as GatewayError).statusCode ?? 404)
+          .send(fail(err as GatewayError));
+      }
+    },
+  );
 }

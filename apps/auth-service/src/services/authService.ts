@@ -121,7 +121,11 @@ export class AuthService {
 
   async getMe(token: string) {
     const payload = await this.validateToken(token);
-    const user = await this.userRepo.findById(payload.userId);
+    return this.getUserById(payload.userId);
+  }
+
+  async getUserById(userId: string) {
+    const user = await this.userRepo.findById(userId);
     if (!user) throw Errors.USER_NOT_FOUND();
     return {
       id: user.id,

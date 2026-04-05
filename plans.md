@@ -341,3 +341,4 @@ Additional stabilization progress since this snapshot:
 
 - Gateway now returns explicit invalid app-key errors for bad developer keys and has unit coverage for first-party app bypass + key validation
 - Routing-service now has injectable provider clients for unit testing and coverage for primary routing, fallback behavior, and provider health reporting
+- Auth-service now exposes an internal user lookup endpoint backed by service/repository logic and test coverage
