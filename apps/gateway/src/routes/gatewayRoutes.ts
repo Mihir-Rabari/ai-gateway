@@ -37,14 +37,15 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
             },
             maxTokens: { type: 'number' },
             temperature: { type: 'number' },
+            stream: { type: 'boolean' },
           },
         },
       },
     },
     async (
       req: FastifyRequest<{
-        Body: { model: string; messages: Message[]; maxTokens?: number; temperature?: number };
-        Headers: { authorization?: string; 'x-app-id'?: string };
+        Body: { model: string; messages: Message[]; maxTokens?: number; temperature?: number; stream?: boolean; };
+        Headers: { authorization?: string; 'x-app-id'?: string; 'x-api-key'?: string; 'x-app-key'?: string };
       }>,
       reply: FastifyReply,
     ) => {
@@ -59,10 +60,44 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
 
         const token = authHeader.slice(7);
         const appId = req.headers['x-app-id'] ?? 'unknown';
+        const appApiKey = req.headers['x-api-key'] ?? req.headers['x-app-key'];
+
+        if (req.body.stream) {
+          const stream = await getService().processStreamRequest({
+            token,
+            appId,
+            appApiKey,
+            model: req.body.model,
+            messages: req.body.messages,
+            maxTokens: req.body.maxTokens,
+            temperature: req.body.temperature,
+          });
+
+          reply.raw.setHeader('Content-Type', 'text/event-stream');
+          reply.raw.setHeader('Cache-Control', 'no-cache');
+          reply.raw.setHeader('Connection', 'keep-alive');
+          reply.hijack();
+          
+          Object.assign(reply.raw, {
+            flushHeaders() {
+              if (!reply.raw.headersSent) {
+                reply.raw.writeHead(200);
+              }
+            }
+          });
+          (reply.raw as any).flushHeaders();
+          
+          for await (const chunk of stream) {
+            reply.raw.write(chunk);
+          }
+          reply.raw.end();
+          return;
+        }
 
         const result = await getService().processRequest({
           token,
           appId,
+          appApiKey,
           model: req.body.model,
           messages: req.body.messages,
           maxTokens: req.body.maxTokens,

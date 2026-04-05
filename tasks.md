@@ -288,4 +288,4 @@ Focus: backend-first completion and contract cleanup before the next frontend pa
 - [x] Add billing-service unit tests for plan mapping and webhook handling
 - [x] Add worker tests for `usage.events` and `auth.events`
 - [x] Add API route tests for billing and usage alias coverage
-- [ ] Reconcile gateway app-key behavior with SDK expectations
+- [x] Reconcile gateway app-key behavior with SDK expectations
