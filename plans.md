@@ -357,3 +357,4 @@ Still pending from the production audit:
 - Gateway now includes route-level integration coverage for `/gateway/request` with mocked auth/credit behavior and a real routing HTTP call
 - Auth-service now includes an optional `auth.events` audit consumer path that writes idempotent `user_events` rows when `AUTH_EVENTS_CONSUMER_ENABLED=true`
 - Routing-service now includes a real OpenAI integration test path that runs only when `OPENAI_API_KEY` is configured
+- Gateway now includes streaming route integration coverage that validates SSE headers and end-of-stream framing

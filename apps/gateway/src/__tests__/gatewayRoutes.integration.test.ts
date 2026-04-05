@@ -9,16 +9,27 @@ type GatewayPrototype = {
   validateToken: (token: string) => Promise<{ userId: string; planId: string; email: string }>;
   lockCredits: (userId: string, requestId: string, amount: number) => Promise<void>;
   confirmCredits: (userId: string, requestId: string) => Promise<void>;
+  processStreamRequest: (input: {
+    token: string;
+    appId: string;
+    appApiKey?: string;
+    model: string;
+    messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
+    maxTokens?: number;
+    temperature?: number;
+  }) => AsyncGenerator<string>;
 };
 
 const originalValidateToken = (GatewayService.prototype as unknown as GatewayPrototype).validateToken;
 const originalLockCredits = (GatewayService.prototype as unknown as GatewayPrototype).lockCredits;
 const originalConfirmCredits = (GatewayService.prototype as unknown as GatewayPrototype).confirmCredits;
+const originalProcessStreamRequest = (GatewayService.prototype as unknown as GatewayPrototype).processStreamRequest;
 
 afterEach(() => {
   (GatewayService.prototype as unknown as GatewayPrototype).validateToken = originalValidateToken;
   (GatewayService.prototype as unknown as GatewayPrototype).lockCredits = originalLockCredits;
   (GatewayService.prototype as unknown as GatewayPrototype).confirmCredits = originalConfirmCredits;
+  (GatewayService.prototype as unknown as GatewayPrototype).processStreamRequest = originalProcessStreamRequest;
 });
 
 describe('gatewayRoutes integration', () => {
@@ -115,5 +126,43 @@ describe('gatewayRoutes integration', () => {
       await app.close();
       await routingApp.close();
     }
+  });
+
+  test('returns SSE stream payload for /gateway/request when stream=true', async () => {
+    const app = Fastify({ logger: false });
+    app.decorate('kafka', { publish: async () => undefined } as any);
+    app.decorate('pg', { query: async () => ({ rows: [], rowCount: 0 }) } as any);
+    app.decorate('redis', {
+      incr: async () => 1,
+      expire: async () => 1,
+    } as any);
+
+    (GatewayService.prototype as unknown as GatewayPrototype).processStreamRequest = async function* () {
+      yield 'data: {"output":"hello"}\n\n';
+      yield 'data: [DONE]\n\n';
+    };
+
+    await app.register(gatewayRoutes, { prefix: '/gateway' });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/gateway/request',
+      headers: {
+        authorization: 'Bearer access-token',
+        'x-app-id': 'api-direct',
+      },
+      payload: {
+        model: 'gpt-4o',
+        stream: true,
+        messages: [{ role: 'user', content: 'hello' }],
+      },
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.headers['content-type'], 'text/event-stream');
+    assert.ok(response.body.includes('data: {"output":"hello"}'));
+    assert.ok(response.body.includes('data: [DONE]'));
+
+    await app.close();
   });
 });
