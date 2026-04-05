@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { ArrowLeft, Copy, Eye, EyeOff, RotateCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,8 +10,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { api, type AppUsageSummary, type DeveloperApp } from "@/lib/api";
 
-export default function AppDetailsPage({ params }: { params: { id: string } }) {
+export default function AppDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { id } = use(params);
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [showKey, setShowKey] = useState(false);
@@ -23,8 +24,8 @@ export default function AppDetailsPage({ params }: { params: { id: string } }) {
     const load = async () => {
       setLoading(true);
       try {
-        const [apps, usageRes] = await Promise.all([api.apps.list(), api.apps.usage(params.id)]);
-        const app = apps.find((item) => item.id === params.id) ?? null;
+        const [apps, usageRes] = await Promise.all([api.apps.list(), api.apps.usage(id)]);
+        const app = apps.find((item) => item.id === id) ?? null;
         setAppData(app);
         setUsage(usageRes);
       } catch (err) {
@@ -39,7 +40,7 @@ export default function AppDetailsPage({ params }: { params: { id: string } }) {
     };
 
     void load();
-  }, [params.id, toast]);
+  }, [id, toast]);
 
   const copyKey = async () => {
     if (!apiKey) return;
@@ -53,7 +54,7 @@ export default function AppDetailsPage({ params }: { params: { id: string } }) {
     }
 
     try {
-      const result = await api.apps.rotateKey(params.id);
+      const result = await api.apps.rotateKey(id);
       setApiKey(result.apiKey);
       setShowKey(true);
       toast({ title: "API key rotated", description: "Your new key is shown below." });
@@ -72,7 +73,7 @@ export default function AppDetailsPage({ params }: { params: { id: string } }) {
     }
 
     try {
-      await api.apps.delete(params.id);
+      await api.apps.delete(id);
       toast({ title: "App deleted", description: "The app was removed successfully." });
       router.push("/dev/apps");
     } catch (err) {
