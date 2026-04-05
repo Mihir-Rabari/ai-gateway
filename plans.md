@@ -336,3 +336,8 @@ Current backend gaps still remaining:
 - Gateway auth/app-key semantics still need a dedicated cleanup pass
 - API route tests are still incomplete
 - Some planning sections above still reflect target-state MVP claims rather than shipped-state reality
+
+Additional stabilization progress since this snapshot:
+
+- Gateway now returns explicit invalid app-key errors for bad developer keys and has unit coverage for first-party app bypass + key validation
+- Routing-service now has injectable provider clients for unit testing and coverage for primary routing, fallback behavior, and provider health reporting

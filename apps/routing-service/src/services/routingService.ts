@@ -17,6 +17,33 @@ interface RouteResult {
   provider: ProviderName;
 }
 
+interface OpenAiClientLike {
+  chat: {
+    completions: {
+      create: (...args: any[]) => Promise<any>;
+    };
+  };
+}
+
+interface AnthropicClientLike {
+  messages: {
+    create: (...args: any[]) => Promise<any>;
+  };
+}
+
+interface GoogleClientLike {
+  getGenerativeModel: (...args: any[]) => {
+    generateContent: (...innerArgs: any[]) => Promise<any>;
+    generateContentStream: (...innerArgs: any[]) => Promise<any>;
+  };
+}
+
+interface RoutingServiceDeps {
+  openaiClient?: OpenAiClientLike;
+  anthropicClient?: AnthropicClientLike;
+  googleClient?: GoogleClientLike;
+}
+
 // Fallback chain per model
 const FALLBACK_MAP: Record<string, string> = {
   'gpt-4o': 'gpt-3.5-turbo',
@@ -36,18 +63,19 @@ const MODEL_PROVIDER: Record<string, ProviderName> = {
 };
 
 export class RoutingService {
-  private readonly openai: OpenAI;
-  private readonly anthropic: Anthropic;
-  private readonly genAI: GoogleGenerativeAI;
+  private readonly openai: OpenAiClientLike;
+  private readonly anthropic: AnthropicClientLike;
+  private readonly genAI: GoogleClientLike;
   private readonly FAILURE_THRESHOLD = 5;
 
   constructor(
     private readonly kafkaPublish: (topic: string, msg: object) => Promise<void>,
     private readonly redis: Redis,
+    deps: RoutingServiceDeps = {},
   ) {
-    this.openai = new OpenAI({ apiKey: process.env['OPENAI_API_KEY'] ?? '' });
-    this.anthropic = new Anthropic({ apiKey: process.env['ANTHROPIC_API_KEY'] ?? '' });
-    this.genAI = new GoogleGenerativeAI(process.env['GOOGLE_AI_API_KEY'] ?? '');
+    this.openai = deps.openaiClient ?? new OpenAI({ apiKey: process.env['OPENAI_API_KEY'] ?? '' });
+    this.anthropic = deps.anthropicClient ?? new Anthropic({ apiKey: process.env['ANTHROPIC_API_KEY'] ?? '' });
+    this.genAI = deps.googleClient ?? new GoogleGenerativeAI(process.env['GOOGLE_AI_API_KEY'] ?? '');
   }
 
   async route(data: {
@@ -57,11 +85,7 @@ export class RoutingService {
     maxTokens?: number;
     temperature?: number;
     stream?: boolean;
-  }): Promise<RouteResult> {
-    if (data.stream) {
-      throw Errors.VALIDATION('Streaming is not yet implemented');
-    }
-
+  }): Promise<RouteResult | AsyncIterable<string>> {
     const provider = MODEL_PROVIDER[data.model];
     if (!provider) throw Errors.ROUTING_FAILED();
 
@@ -69,7 +93,7 @@ export class RoutingService {
 
     if (isPrimaryHealthy) {
       try {
-        const result = await this.callProvider(provider, data.model, data.messages, data.maxTokens, data.temperature);
+        const result = await this.callProvider(provider, data.model, data.messages, data.maxTokens, data.temperature, data.stream);
         void this.publishRoutingEvent('routing.selected', data.requestId, data.model, provider);
         await this.recordSuccess(provider);
         return result;
@@ -90,7 +114,7 @@ export class RoutingService {
     void this.publishRoutingEvent('routing.fallback', data.requestId, fallbackModel, fallbackProvider, `Primary ${data.model} failed or unhealthy`);
 
     try {
-      const result = await this.callProvider(fallbackProvider, fallbackModel, data.messages, data.maxTokens, data.temperature);
+      const result = await this.callProvider(fallbackProvider, fallbackModel, data.messages, data.maxTokens, data.temperature, data.stream);
       await this.recordSuccess(fallbackProvider);
       return result;
     } catch (fallbackErr) {
@@ -137,14 +161,15 @@ export class RoutingService {
     messages: Message[],
     maxTokens = 1024,
     temperature = 0.7,
-  ): Promise<RouteResult> {
+    stream = false,
+  ): Promise<RouteResult | AsyncIterable<string>> {
     switch (provider) {
       case 'openai':
-        return this.callOpenAI(model, messages, maxTokens, temperature);
+        return this.callOpenAI(model, messages, maxTokens, temperature, stream);
       case 'anthropic':
-        return this.callAnthropic(model, messages, maxTokens, temperature);
+        return this.callAnthropic(model, messages, maxTokens, temperature, stream);
       case 'google':
-        return this.callGemini(model, messages, maxTokens, temperature);
+        return this.callGemini(model, messages, maxTokens, temperature, stream);
       default:
         throw Errors.ROUTING_FAILED();
     }
@@ -155,7 +180,8 @@ export class RoutingService {
     messages: Message[],
     maxTokens: number,
     temperature: number,
-  ): Promise<RouteResult> {
+    stream: boolean,
+  ): Promise<RouteResult | AsyncIterable<string>> {
     const geminiModel = this.genAI.getGenerativeModel({ model });
 
     const contents = messages
@@ -169,6 +195,24 @@ export class RoutingService {
       .filter((m) => m.role === 'system')
       .map((m) => m.content)
       .join('\n');
+
+    if (stream) {
+      const resultStream = await geminiModel.generateContentStream({
+        contents,
+        ...(systemInstruction ? { systemInstruction } : {}),
+        generationConfig: { maxOutputTokens: maxTokens, temperature },
+      });
+
+      return (async function* () {
+        for await (const chunk of resultStream.stream) {
+          const chunkText = chunk.text();
+          if (chunkText) {
+            yield `data: ${JSON.stringify({ output: chunkText })}\n\n`;
+          }
+        }
+        yield `data: [DONE]\n\n`;
+      })();
+    }
 
     const response = await geminiModel.generateContent({
       contents,
@@ -194,7 +238,29 @@ export class RoutingService {
     messages: Message[],
     maxTokens: number,
     temperature: number,
-  ): Promise<RouteResult> {
+    stream: boolean,
+  ): Promise<RouteResult | AsyncIterable<string>> {
+    if (stream) {
+      const responseStream = await this.openai.chat.completions.create({
+        model,
+        messages,
+        max_tokens: maxTokens,
+        temperature,
+        stream: true,
+      });
+
+      return (async function* () {
+        for await (const chunk of responseStream) {
+          const content = chunk.choices[0]?.delta?.content || '';
+          if (content) {
+            yield `data: ${JSON.stringify({ output: content })}\n\n`;
+          }
+        }
+        // Ideally we'd send final usage tokens here, but OpenAI stream usage requires extra config
+        yield `data: [DONE]\n\n`;
+      })();
+    }
+
     const response = await this.openai.chat.completions.create({
       model,
       messages,
@@ -220,7 +286,8 @@ export class RoutingService {
     messages: Message[],
     maxTokens: number,
     temperature: number,
-  ): Promise<RouteResult> {
+    stream: boolean,
+  ): Promise<RouteResult | AsyncIterable<string>> {
     const systemMessages = messages
       .filter((m) => m.role === 'system')
       .map((m) => m.content)
@@ -230,6 +297,26 @@ export class RoutingService {
       .filter((m) => m.role !== 'system')
       .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
+    if (stream) {
+      const responseStream = await this.anthropic.messages.create({
+        model,
+        max_tokens: maxTokens,
+        temperature,
+        ...(systemMessages ? { system: systemMessages } : {}),
+        messages: conversationMessages,
+        stream: true,
+      });
+
+      return (async function* () {
+        for await (const chunk of responseStream) {
+          if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+            yield `data: ${JSON.stringify({ output: chunk.delta.text })}\n\n`;
+          }
+        }
+        yield `data: [DONE]\n\n`;
+      })();
+    }
+
     const response = await this.anthropic.messages.create({
       model,
       max_tokens: maxTokens,
@@ -238,7 +325,7 @@ export class RoutingService {
       messages: conversationMessages,
     });
 
-    const textBlock = response.content.find((b) => b.type === 'text');
+    const textBlock = response.content.find((b: { type: string }) => b.type === 'text');
     if (!textBlock || textBlock.type !== 'text') throw Errors.PROVIDER_ERROR('Empty response from Anthropic');
 
     return {
