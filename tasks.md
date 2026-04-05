@@ -118,9 +118,9 @@
 - [x] Provider health tracking (Redis-backed — mark unhealthy for 60s on failure)
 - [x] Streaming support (pass through SSE from provider)
 - [x] Model-to-provider mapping with proper fallback chain
-- [ ] Provider latency tracking (publish latency to Kafka)
+- [x] Provider latency tracking (publish latency to Kafka)
 - [x] Circuit breaker pattern (stop routing to provider after 5 consecutive failures)
-- [ ] Unit tests for RoutingService (mock OpenAI + Anthropic clients)
+- [x] Unit tests for RoutingService (mock OpenAI + Anthropic clients)
 - [ ] Integration test: real OpenAI call (with test API key)
 
 ---
@@ -299,3 +299,4 @@ Focus: backend-first completion and contract cleanup before the next frontend pa
 - [x] Re-run backend builds/tests and confirm `pnpm audit --prod --json` reports zero production vulnerabilities
 - [x] Add `/analytics/models` global model usage endpoint
 - [x] Add analytics batch buffer unit tests and wire analytics service into monorepo `test` pipeline
+- [x] Add latency timing to routing events for both primary and fallback provider selections

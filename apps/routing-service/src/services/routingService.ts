@@ -93,8 +93,10 @@ export class RoutingService {
 
     if (isPrimaryHealthy) {
       try {
+        const startedAt = Date.now();
         const result = await this.callProvider(provider, data.model, data.messages, data.maxTokens, data.temperature, data.stream);
-        void this.publishRoutingEvent('routing.selected', data.requestId, data.model, provider);
+        const latencyMs = Date.now() - startedAt;
+        void this.publishRoutingEvent('routing.selected', data.requestId, data.model, provider, undefined, latencyMs);
         await this.recordSuccess(provider);
         return result;
       } catch (err) {
@@ -111,10 +113,18 @@ export class RoutingService {
     const fallbackProvider = MODEL_PROVIDER[fallbackModel];
     if (fallbackProvider === undefined) throw Errors.ROUTING_FAILED();
 
-    void this.publishRoutingEvent('routing.fallback', data.requestId, fallbackModel, fallbackProvider, `Primary ${data.model} failed or unhealthy`);
-
     try {
+      const startedAt = Date.now();
       const result = await this.callProvider(fallbackProvider, fallbackModel, data.messages, data.maxTokens, data.temperature, data.stream);
+      const latencyMs = Date.now() - startedAt;
+      void this.publishRoutingEvent(
+        'routing.fallback',
+        data.requestId,
+        fallbackModel,
+        fallbackProvider,
+        `Primary ${data.model} failed or unhealthy`,
+        latencyMs,
+      );
       await this.recordSuccess(fallbackProvider);
       return result;
     } catch (fallbackErr) {
@@ -344,6 +354,7 @@ export class RoutingService {
     model: string,
     provider: ProviderName,
     reason?: string,
+    latencyMs?: number,
   ): Promise<void> {
     const event: RoutingEvent = {
       eventId: generateId(),
@@ -352,6 +363,7 @@ export class RoutingService {
       requestId,
       model,
       provider,
+      latencyMs,
       reason,
       timestamp: new Date().toISOString(),
       version: '1.0',

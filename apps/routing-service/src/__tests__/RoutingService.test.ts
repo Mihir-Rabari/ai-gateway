@@ -161,12 +161,19 @@ describe('RoutingService', () => {
     assert.equal('provider' in result ? result.provider : undefined, 'openai');
     assert.equal('output' in result ? result.output : undefined, 'openai-response');
     assert.equal(publishedEvents.length, 1);
+    const routingEvent = publishedEvents[0]?.msg as { type: string; latencyMs?: number };
+    assert.equal(routingEvent.type, 'routing.selected');
+    assert.ok(typeof routingEvent.latencyMs === 'number');
+    assert.ok((routingEvent.latencyMs ?? -1) >= 0);
   });
 
   test('falls back when the primary provider fails', async () => {
+    const publishedEvents: Array<{ topic: string; msg: object }> = [];
     const redis = createRedisMock();
     const service = new RoutingService(
-      async () => undefined,
+      async (topic, msg) => {
+        publishedEvents.push({ topic, msg });
+      },
       redis,
       {
         openaiClient: createOpenAiClient({
@@ -190,6 +197,12 @@ describe('RoutingService', () => {
     assert.equal('output' in result ? result.output : undefined, 'fallback-openai-response');
     const failureCount = await redis.get('provider:failures:openai');
     assert.equal(failureCount, null);
+    assert.equal(publishedEvents.length, 1);
+    const routingEvent = publishedEvents[0]?.msg as { type: string; latencyMs?: number; reason?: string };
+    assert.equal(routingEvent.type, 'routing.fallback');
+    assert.ok(typeof routingEvent.latencyMs === 'number');
+    assert.ok((routingEvent.latencyMs ?? -1) >= 0);
+    assert.ok(routingEvent.reason?.includes('Primary gpt-4o failed or unhealthy'));
   });
 
   test('returns routing failed when the primary and fallback attempts both fail', async () => {

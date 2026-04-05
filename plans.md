@@ -352,3 +352,4 @@ Still pending from the production audit:
 - Revalidated the backend pass with focused service builds/tests plus `pnpm test`, and `pnpm audit --prod --json` now reports zero production vulnerabilities
 - Added `/analytics/models` for global model usage breakdown so analytics API coverage matches the MVP task list
 - Extracted analytics batch buffering/mapping logic into a dedicated service module with unit tests, and wired analytics into the repo test run
+- Routing-service now measures per-call provider latency and includes `latencyMs` in published routing events for both selected primary paths and fallback paths

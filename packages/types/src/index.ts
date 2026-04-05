@@ -207,6 +207,7 @@ export interface RoutingEvent extends BaseEvent {
   requestId: string;
   model: string;
   provider: ProviderName;
+  latencyMs?: number;
   reason?: string;
 }
 
