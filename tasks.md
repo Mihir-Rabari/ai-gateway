@@ -55,7 +55,7 @@
 - [ ] GET /users/:id endpoint (internal — for gateway use)
 - [ ] Auth events consumer (listen to auth.events for audit log)
 - [x] Unit tests for authService (mock Redis + Postgres)
-- [ ] Integration test for full signup → login → refresh flow
+- [x] Integration test for full signup → login → refresh flow
 
 ---
 
@@ -300,3 +300,4 @@ Focus: backend-first completion and contract cleanup before the next frontend pa
 - [x] Add `/analytics/models` global model usage endpoint
 - [x] Add analytics batch buffer unit tests and wire analytics service into monorepo `test` pipeline
 - [x] Add latency timing to routing events for both primary and fallback provider selections
+- [x] Add auth-service integration-style signup/login/refresh flow test with refresh token rotation validation
