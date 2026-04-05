@@ -363,4 +363,4 @@ Validation snapshot (2026-04-05):
 
 - `pnpm test` passes across the monorepo after stabilizing test runner scripts for Windows `spawn EPERM`
 - `docker compose ps` currently fails because Docker Desktop daemon is not running in this environment
-- `pnpm build` still fails at `@ai-gateway/sdk-js` in this sandbox due `esbuild` child-process `spawn EPERM`; backend package builds are succeeding
+- `pnpm build` now passes across the full monorepo (including `@ai-gateway/sdk-js`)
