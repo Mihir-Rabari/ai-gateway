@@ -17,7 +17,7 @@ export default function ConsolePage() {
       setAuthToken(incomingToken);
       if (incomingRefresh) setRefreshToken(incomingRefresh);
       // Remove tokens from the URL immediately so they don't linger in browser history.
-      window.history.replaceState({}, "", "/");
+      window.history.replaceState({}, "", window.location.pathname);
     }
 
     if (incomingToken || getAuthToken()) {
