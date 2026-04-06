@@ -75,7 +75,7 @@ export default function AppDetailsPage({ params }: { params: Promise<{ id: strin
     try {
       await api.apps.delete(id);
       toast({ title: "App deleted", description: "The app was removed successfully." });
-      router.push("/dev/apps");
+      router.push("/apps");
     } catch (err) {
       toast({
         title: "Delete failed",
@@ -93,7 +93,7 @@ export default function AppDetailsPage({ params }: { params: Promise<{ id: strin
     <div className="space-y-8">
       <div>
         <Link
-          href="/dev/apps"
+          href="/apps"
           className="mb-4 inline-flex items-center text-sm font-medium text-white/50 transition-colors hover:text-white"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />

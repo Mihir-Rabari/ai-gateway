@@ -37,7 +37,7 @@ export default function AppsPage() {
           <h1 className="mb-2 text-3xl font-bold tracking-tight">Your Apps</h1>
           <p className="text-white/60">Manage registered applications and API keys.</p>
         </div>
-        <Link href="/dev/apps/new">
+        <Link href="/apps/new">
           <Button className="bg-white text-black hover:bg-white/90">Register App</Button>
         </Link>
       </div>
@@ -85,7 +85,7 @@ export default function AppsPage() {
                     {new Date(app.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Link href={`/dev/apps/${app.id}`}>
+                    <Link href={`/apps/${app.id}`}>
                       <Button variant="ghost" size="sm" className="text-white/70 hover:text-white">
                         Manage
                       </Button>

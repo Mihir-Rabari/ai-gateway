@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { ArrowUpRight, CreditCard, Activity, Zap, Server } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,14 +67,14 @@ export default function DashboardOverview() {
           <p className="mt-1 text-sm text-white/50">Live data from your account usage and credits.</p>
         </div>
         <div className="flex gap-2">
-          <Link href="/dev/docs">
+          <a href={`${process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3002"}/docs`}>
             <Button variant="outline" className="border-white/20 bg-white/5 text-white hover:bg-white/10">
               SDK Docs
             </Button>
-          </Link>
-          <Link href="/dev/apps">
-            <Button className="bg-white text-black hover:bg-white/90">Manage Apps</Button>
-          </Link>
+          </a>
+          <a href={process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3002"}>
+            <Button className="bg-white text-black hover:bg-white/90">Developer Console</Button>
+          </a>
         </div>
       </div>
 
@@ -184,9 +183,12 @@ export default function DashboardOverview() {
       <Card className="border-white/10 bg-[#0a0a0a]">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-white">Recent Credit Transactions</CardTitle>
-          <Link href="/dev/earnings" className="text-xs text-white/60 hover:text-white">
+          <a
+            href={`${process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3002"}/earnings`}
+            className="text-xs text-white/60 hover:text-white"
+          >
             View all <ArrowUpRight className="ml-1 inline h-3 w-3" />
-          </Link>
+          </a>
         </CardHeader>
         <CardContent>
           {loading ? (

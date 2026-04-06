@@ -8,12 +8,10 @@ import { useToast } from "@/hooks/use-toast";
 import { api, getAuthToken, type UserProfile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 
+const CONSOLE_URL = process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3002";
+
 const navLinks = [
   { href: "/dashboard", label: "Overview" },
-  { href: "/dev", label: "Developer Portal" },
-  { href: "/dev/apps", label: "Apps" },
-  { href: "/dev/earnings", label: "Earnings" },
-  { href: "/dev/docs", label: "Docs" },
 ];
 
 export default function DashboardLayout({
@@ -141,6 +139,12 @@ export default function DashboardLayout({
               <p className="mt-1 text-xs text-white/70">{user.creditBalance} credits</p>
             </div>
           ) : null}
+          <a
+            href={CONSOLE_URL}
+            className="block w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-center text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            Developer Console →
+          </a>
           <Button
             variant="outline"
             className="w-full border-white/20 bg-transparent text-white hover:bg-white/10"
@@ -160,9 +164,9 @@ export default function DashboardLayout({
             menu
           </button>
           <h1 className="text-sm font-medium text-white/70">Control Center</h1>
-          <Link href="/dev/apps/new">
-            <Button className="bg-white text-black hover:bg-white/90">New App</Button>
-          </Link>
+          <a href={CONSOLE_URL}>
+            <Button className="bg-white text-black hover:bg-white/90">Dev Console</Button>
+          </a>
         </header>
 
         <div className="flex-1 overflow-auto p-4 md:p-8">

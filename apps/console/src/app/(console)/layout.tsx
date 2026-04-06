@@ -7,14 +7,16 @@ import { Toaster } from "@/components/ui/toaster";
 import { Button } from "@/components/ui/button";
 import { api, getAuthToken, type UserProfile } from "@/lib/api";
 
+const WEB_URL = process.env.NEXT_PUBLIC_WEB_URL ?? "http://localhost:3000";
+
 const links = [
-  { href: "/dev", label: "Overview" },
-  { href: "/dev/apps", label: "Apps" },
-  { href: "/dev/earnings", label: "Earnings" },
-  { href: "/dev/docs", label: "Docs" },
+  { href: "/dashboard", label: "Overview" },
+  { href: "/apps", label: "Apps" },
+  { href: "/earnings", label: "Earnings" },
+  { href: "/docs", label: "Docs" },
 ];
 
-export default function DevLayout({ children }: { children: ReactNode }) {
+export default function ConsoleLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -50,7 +52,7 @@ export default function DevLayout({ children }: { children: ReactNode }) {
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black text-white">
-        <p className="text-sm text-white/60">Loading developer portal...</p>
+        <p className="text-sm text-white/60">Loading developer console...</p>
       </div>
     );
   }
@@ -59,11 +61,11 @@ export default function DevLayout({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen flex-col bg-black font-sans text-white">
       <nav className="border-b border-white/10 bg-[#0a0a0a]">
         <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
-          <Link href="/dev" className="flex items-center gap-2">
+          <Link href="/dashboard" className="flex items-center gap-2">
             <div className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-xs font-bold text-black">
               AI
             </div>
-            <span className="font-bold tracking-tight">Developer Portal</span>
+            <span className="font-bold tracking-tight">Developer Console</span>
           </Link>
           <div className="flex items-center gap-6 text-sm">
             {links.map((item) => (
@@ -79,12 +81,12 @@ export default function DevLayout({ children }: { children: ReactNode }) {
                 {item.label}
               </Link>
             ))}
-            <Link
-              href="/dashboard"
+            <a
+              href={WEB_URL}
               className="ml-2 text-xs text-white/40 transition-colors hover:text-white"
             >
               User Dashboard
-            </Link>
+            </a>
             <Button
               variant="outline"
               size="sm"

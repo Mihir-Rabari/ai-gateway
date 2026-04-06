@@ -28,7 +28,7 @@ export default function RegisterAppPage() {
         description: `${result.name} is ready. Save your API key now.`,
       });
       setTimeout(() => {
-        router.push(`/dev/apps/${result.id}`);
+        router.push(`/apps/${result.id}`);
       }, 1200);
     } catch (err) {
       toast({
@@ -107,7 +107,7 @@ export default function RegisterAppPage() {
               <Button type="submit" disabled={loading} className="bg-white text-black hover:bg-white/90">
                 {loading ? "Registering..." : "Register App"}
               </Button>
-              <Link href="/dev/apps">
+              <Link href="/apps">
                 <Button type="button" variant="outline" className="border-white/20 text-white hover:bg-white/5">
                   Cancel
                 </Button>
