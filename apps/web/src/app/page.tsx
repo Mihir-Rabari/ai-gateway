@@ -129,11 +129,11 @@ export default function LandingPage() {
                     <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Button>
                 </Link>
-                <Link href="/dev/docs">
+                <a href={`${process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3002"}/docs`}>
                   <Button size="lg" variant="outline" className="rounded-full border-slate-900/20 bg-white/80 px-7">
                     Read docs
                   </Button>
-                </Link>
+                </a>
               </div>
               <div className="mt-7 flex flex-wrap gap-6 text-sm text-slate-600">
                 <span className="inline-flex items-center gap-2">
@@ -317,11 +317,11 @@ export default function LandingPage() {
                     Create account
                   </Button>
                 </Link>
-                <Link href="/dev">
+                <a href={process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3002"}>
                   <Button size="lg" variant="outline" className="rounded-full border-white/60 bg-transparent text-white hover:bg-white/10">
-                    Open developer portal
+                    Open developer console
                   </Button>
-                </Link>
+                </a>
               </div>
             </CardContent>
           </Card>
@@ -338,9 +338,12 @@ export default function LandingPage() {
             <Link href="/privacy" className="transition-colors hover:text-slate-950">
               Privacy
             </Link>
-            <Link href="/dev/docs" className="transition-colors hover:text-slate-950">
+            <a
+              href={`${process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3002"}/docs`}
+              className="transition-colors hover:text-slate-950"
+            >
               Docs
-            </Link>
+            </a>
           </div>
         </div>
       </footer>

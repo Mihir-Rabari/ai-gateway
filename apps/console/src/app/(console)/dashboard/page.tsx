@@ -104,7 +104,7 @@ export default function DevOverview() {
                     <p className="truncate text-sm font-medium">{app.name}</p>
                     <p className="truncate text-xs text-white/40">{app.id}</p>
                   </div>
-                  <Link href={`/dev/apps/${app.id}`}>
+                  <Link href={`/apps/${app.id}`}>
                     <Button variant="ghost" size="sm" className="text-white/60 hover:text-white">
                       View
                     </Button>
@@ -112,7 +112,7 @@ export default function DevOverview() {
                 </div>
               ))
             )}
-            <Link href="/dev/apps/new" className="block pt-1">
+            <Link href="/apps/new" className="block pt-1">
               <Button variant="outline" className="w-full border-white/10 text-white/80 hover:bg-white/5">
                 Register New App
               </Button>
@@ -127,7 +127,7 @@ export default function DevOverview() {
           </CardHeader>
           <CardContent className="space-y-4">
             <Link
-              href="/dev/docs"
+              href="/docs"
               className="group flex items-center justify-between rounded-lg border border-white/5 bg-white/5 p-4 transition-colors hover:bg-white/10"
             >
               <div>
@@ -137,7 +137,7 @@ export default function DevOverview() {
               <ArrowRight className="h-4 w-4 text-white/40 group-hover:text-white" />
             </Link>
             <Link
-              href="/dev/earnings"
+              href="/earnings"
               className="group flex items-center justify-between rounded-lg border border-white/5 bg-white/5 p-4 transition-colors hover:bg-white/10"
             >
               <div>
