@@ -1,6 +1,10 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 const AUTH_URL = process.env.NEXT_PUBLIC_AUTH_URL ?? "http://localhost:3003/auth";
 
+// Deduplication lock: if multiple in-flight requests all hit 401 at the same time
+// only one refresh call is issued; all callers await the same promise.
+let _refreshLock: Promise<{ accessToken: string; refreshToken: string }> | null = null;
+
 type ApiFailure = {
   success: false;
   error?: {
@@ -159,7 +163,7 @@ const isApiEnvelope = <T>(value: unknown): value is ApiEnvelope<T> => {
 const fetchApi = async <T>(
   url: string,
   options: RequestInit = {},
-  config: { auth?: boolean } = {},
+  config: { auth?: boolean; skipRefresh?: boolean } = {},
 ): Promise<T> => {
   const shouldAttachAuth = config.auth ?? true;
   const token = shouldAttachAuth ? getAuthToken() : null;
@@ -186,10 +190,39 @@ const fetchApi = async <T>(
 
   if (!response.ok) {
     const error = payload as ApiFailure | null;
-    if (response.status === 401) {
+
+    // Silent refresh: on 401 for an authenticated request, try refreshing before giving up.
+    // skipRefresh prevents infinite loops when the refresh call itself returns 401.
+    if (response.status === 401 && shouldAttachAuth && !config.skipRefresh) {
+      const storedRefreshToken = getRefreshToken();
+      if (storedRefreshToken) {
+        try {
+          if (!_refreshLock) {
+            _refreshLock = fetchApi<{ accessToken: string; refreshToken: string }>(
+              `${AUTH_URL}/refresh`,
+              { method: "POST", body: JSON.stringify({ refreshToken: storedRefreshToken }) },
+              { auth: false, skipRefresh: true },
+            ).finally(() => {
+              _refreshLock = null;
+            });
+          }
+          const tokens = await _refreshLock;
+          setAuthToken(tokens.accessToken);
+          setRefreshToken(tokens.refreshToken);
+          // Retry the original request with the new access token.
+          return fetchApi<T>(url, options, { ...config, skipRefresh: true });
+        } catch {
+          // Refresh failed — session is unrecoverable.
+          clearAuthToken();
+          clearRefreshToken();
+          throw new ApiError(401, "Session expired. Please log in again.");
+        }
+      }
+      // No refresh token available — clear and throw.
       clearAuthToken();
       clearRefreshToken();
     }
+
     throw new ApiError(
       response.status,
       error?.error?.message ?? "Request failed",
@@ -238,7 +271,7 @@ export const api = {
       return fetchApi<{ accessToken: string; refreshToken: string }>(
         `${AUTH_URL}/refresh`,
         { method: "POST", body: JSON.stringify({ refreshToken }) },
-        { auth: false },
+        { auth: false, skipRefresh: true },
       );
     },
     logout: async () => {

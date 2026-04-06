@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
-import { api, getAuthToken, type UserProfile } from "@/lib/api";
+import { api, getAuthToken, getRefreshToken, type UserProfile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 
 const CONSOLE_URL = process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3002";
@@ -140,7 +140,7 @@ export default function DashboardLayout({
             </div>
           ) : null}
           <a
-            href={CONSOLE_URL}
+            href={`${CONSOLE_URL}?token=${encodeURIComponent(getAuthToken() ?? "")}&rt=${encodeURIComponent(getRefreshToken() ?? "")}`}
             className="block w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-center text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white"
           >
             Developer Console →
@@ -164,7 +164,7 @@ export default function DashboardLayout({
             menu
           </button>
           <h1 className="text-sm font-medium text-white/70">Control Center</h1>
-          <a href={CONSOLE_URL}>
+          <a href={`${CONSOLE_URL}?token=${encodeURIComponent(getAuthToken() ?? "")}&rt=${encodeURIComponent(getRefreshToken() ?? "")}`}>
             <Button className="bg-white text-black hover:bg-white/90">Dev Console</Button>
           </a>
         </header>
