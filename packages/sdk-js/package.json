@@ -30,6 +30,7 @@
     "build:index": "tsup src/index.ts --format esm,cjs --dts",
     "build:widget": "tsup src/widget.ts --format esm,iife --globalName AIGateway --outDir dist --dts",
     "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
+    "test": "tsc --noEmit false --outDir dist --declaration false --declarationMap false && node --test dist/index.test.js",
     "type-check": "tsc --noEmit",
     "prepublishOnly": "pnpm run build && pnpm run type-check"
   },

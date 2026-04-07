@@ -149,14 +149,22 @@ describe('AIGateway SDK', () => {
     const callArgs = windowMock.open.mock.calls[0].arguments as unknown as [string, string, string];
     const url = callArgs[0];
     const target = callArgs[1];
+    // URL should include both appId and the caller's origin for secure postMessage targeting
     assert.ok(url.startsWith('https://app.ai-gateway.io/auth/popup?appId=app_123'));
+    assert.ok(url.includes('origin='));
     assert.equal(target, 'ai-gateway-auth');
 
     // Find the message handler and call it
     const addEventListenerArgs = windowMock.addEventListener.mock.calls[0].arguments as unknown as [string, Function];
     const handleMessage = addEventListenerArgs[1];
 
-    // Simulate successful auth message
+    // Messages from a different origin must be ignored
+    handleMessage({
+      origin: 'https://evil.example.com',
+      data: { type: 'AI_GATEWAY_AUTH', accessToken: 'stolen_token', user: {} }
+    });
+
+    // Simulate successful auth message from the correct popup origin
     handleMessage({
       origin: 'https://app.ai-gateway.io',
       data: {
@@ -169,5 +177,61 @@ describe('AIGateway SDK', () => {
     const result = await signInPromise;
     assert.equal(result.token, 'mock_access_token');
     assert.equal(result.user.name, 'Test');
+  });
+
+  it('stream() yields SSE data chunks', async () => {
+    const ssePayload = 'data: chunk1\ndata: chunk2\ndata: [DONE]\n\n';
+    const encoder = new TextEncoder();
+    const encoded = encoder.encode(ssePayload);
+
+    // Build a minimal ReadableStream that emits the SSE payload
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoded);
+        controller.close();
+      },
+    });
+
+    const fetchMock = mock.fn(async () => {
+      return {
+        ok: true,
+        body: stream,
+      } as unknown as Response;
+    });
+
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const chunks: string[] = [];
+    for await (const chunk of ai.stream({ model: 'gpt-4o', messages: [{ role: 'user', content: 'Hi' }] })) {
+      chunks.push(chunk);
+    }
+
+    assert.deepEqual(chunks, ['chunk1', 'chunk2']);
+
+    // Verify request shape
+    assert.equal(fetchMock.mock.calls.length, 1);
+    const [reqUrl, reqInit] = fetchMock.mock.calls[0].arguments as unknown as [string, RequestInit];
+    assert.equal(reqUrl, 'https://api.ai-gateway.io/api/v1/chat');
+    const body = JSON.parse(reqInit.body as string);
+    assert.equal(body.stream, true);
+  });
+
+  it('stream() throws on HTTP error', async () => {
+    const fetchMock = mock.fn(async () => {
+      return {
+        ok: false,
+        json: async () => ({ error: { message: 'Insufficient credits' } }),
+      } as unknown as Response;
+    });
+
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await assert.rejects(
+      async () => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        for await (const _chunk of ai.stream({ model: 'gpt-4o', messages: [] })) { /* drain */ }
+      },
+      /AIGateway stream error: Insufficient credits/
+    );
   });
 });

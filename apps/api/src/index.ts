@@ -58,6 +58,9 @@ async function bootstrap() {
   const billingM = await import('./routes/v1/billing.js');
   await app.register(billingM.billingRoutes, { prefix: '/api/v1' });
 
+  const developersM = await import('./routes/v1/developers.js');
+  await app.register(developersM.developerRoutes, { prefix: '/api/v1' });
+
   await app.listen({ port: Number(process.env['API_PORT'] ?? 3001), host: '0.0.0.0' });
   logger.info(`🚀 API service running on port ${process.env['API_PORT'] ?? 3001}`);
 }

@@ -25,6 +25,8 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [isDeveloper, setIsDeveloper] = useState<boolean | null>(null);
+  const [enrolling, setEnrolling] = useState(false);
 
   useEffect(() => {
     const token = getAuthToken();
@@ -35,9 +37,13 @@ export default function DashboardLayout({
 
     const bootstrap = async () => {
       try {
-        const me = await api.auth.me();
-        const balance = await api.credits.getBalance();
+        const [me, balance, devStatus] = await Promise.all([
+          api.auth.me(),
+          api.credits.getBalance(),
+          api.developers.getStatus().catch(() => ({ isDeveloper: false, enrolledAt: null })),
+        ]);
         setUser({ ...me, creditBalance: balance.balance });
+        setIsDeveloper(devStatus.isDeveloper);
       } catch {
         router.replace("/login");
       } finally {
@@ -73,6 +79,26 @@ export default function DashboardLayout({
   const handleLogout = async () => {
     await api.auth.logout();
     router.replace("/login");
+  };
+
+  const handleBecomeDeveloper = async () => {
+    setEnrolling(true);
+    try {
+      await api.developers.enroll();
+      setIsDeveloper(true);
+      toast({
+        title: "Developer access enabled",
+        description: "You can now access the Developer Console.",
+      });
+    } catch (err) {
+      toast({
+        title: "Enrollment failed",
+        description: err instanceof Error ? err.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setEnrolling(false);
+    }
   };
 
   if (checkingAuth) {
@@ -139,12 +165,25 @@ export default function DashboardLayout({
               <p className="mt-1 text-xs text-white/70">{user.creditBalance} credits</p>
             </div>
           ) : null}
-          <a
-            href={`${CONSOLE_URL}?token=${encodeURIComponent(getAuthToken() ?? "")}&rt=${encodeURIComponent(getRefreshToken() ?? "")}`}
-            className="block w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-center text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            Developer Console →
-          </a>
+
+          {isDeveloper ? (
+            <a
+              href={`${CONSOLE_URL}?token=${encodeURIComponent(getAuthToken() ?? "")}&rt=${encodeURIComponent(getRefreshToken() ?? "")}`}
+              className="block w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-center text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              Developer Console →
+            </a>
+          ) : (
+            <Button
+              variant="outline"
+              className="w-full border-white/20 bg-transparent text-white hover:bg-white/10"
+              disabled={enrolling}
+              onClick={handleBecomeDeveloper}
+            >
+              {enrolling ? "Enrolling…" : "Become a Developer"}
+            </Button>
+          )}
+
           <Button
             variant="outline"
             className="w-full border-white/20 bg-transparent text-white hover:bg-white/10"
@@ -164,9 +203,11 @@ export default function DashboardLayout({
             menu
           </button>
           <h1 className="text-sm font-medium text-white/70">Control Center</h1>
-          <a href={`${CONSOLE_URL}?token=${encodeURIComponent(getAuthToken() ?? "")}&rt=${encodeURIComponent(getRefreshToken() ?? "")}`}>
-            <Button className="bg-white text-black hover:bg-white/90">Dev Console</Button>
-          </a>
+          {isDeveloper && (
+            <a href={`${CONSOLE_URL}?token=${encodeURIComponent(getAuthToken() ?? "")}&rt=${encodeURIComponent(getRefreshToken() ?? "")}`}>
+              <Button className="bg-white text-black hover:bg-white/90">Dev Console</Button>
+            </a>
+          )}
         </header>
 
         <div className="flex-1 overflow-auto p-4 md:p-8">
