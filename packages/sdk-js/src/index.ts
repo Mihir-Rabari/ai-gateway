@@ -120,6 +120,71 @@ export class AIGateway {
   }
 
   /**
+   * Stream a chat response token-by-token using Server-Sent Events.
+   *
+   * @param options - Chat configuration (same as `chat()`)
+   * @returns An async iterable that yields raw SSE data strings
+   * @throws {Error} When insufficient credits, provider error, or network failure
+   *
+   * @example
+   * for await (const chunk of ai.stream({ model: 'gpt-4o', messages: [...] })) {
+   *   process.stdout.write(chunk);
+   * }
+   */
+  async *stream(options: ChatOptions): AsyncIterable<string> {
+    const res = await fetch(`${this.baseUrl}/api/v1/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: this.getAuthHeader(),
+        'X-App-Id': this.appId,
+      },
+      body: JSON.stringify({
+        model: options.model,
+        messages: options.messages,
+        maxTokens: options.maxTokens,
+        temperature: options.temperature,
+        stream: true,
+      }),
+    });
+
+    if (!res.ok) {
+      let message = 'Unknown error';
+      try {
+        const json = await res.json() as { error?: { message: string } };
+        message = json.error?.message ?? message;
+      } catch { /* ignore parse errors */ }
+      throw new Error(`AIGateway stream error: ${message}`);
+    }
+
+    if (!res.body) {
+      throw new Error('AIGateway: No response body for streaming');
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        // Parse Server-Sent Event lines — each SSE data line is prefixed with "data: "
+        for (const line of chunk.split('\n')) {
+          if (line.startsWith('data: ')) {
+            const payload = line.slice(6).trim();
+            if (payload && payload !== '[DONE]') {
+              yield payload;
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  }
+
+  /**
    * Get the current user's credit balance and plan.
    *
    * @returns The credit balance and plan ID
@@ -160,11 +225,24 @@ export class AIGateway {
     const width = options.width ?? 420;
     const height = options.height ?? 560;
 
+    // Derive the expected message origin from the popup URL so we can strictly
+    // validate inbound postMessages instead of using a fragile startsWith check.
+    let expectedOrigin: string;
+    try {
+      expectedOrigin = new URL(url).origin;
+    } catch {
+      throw new Error('AIGateway: Invalid popupUrl provided to signIn()');
+    }
+
     const left = Math.round((window.screen.width - width) / 2);
     const top = Math.round((window.screen.height - height) / 2);
 
+    // Pass our own origin so the popup can send the postMessage to the correct
+    // target origin instead of using the insecure wildcard '*'.
+    const popupSrc = `${url}?appId=${encodeURIComponent(options.appId)}&origin=${encodeURIComponent(window.location.origin)}`;
+
     const popup = window.open(
-      `${url}?appId=${options.appId}`,
+      popupSrc,
       'ai-gateway-auth',
       `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=no`
     );
@@ -174,6 +252,9 @@ export class AIGateway {
     }
 
     return new Promise((resolve, reject) => {
+      // Declare early so cleanup() can reference it.
+      let pollClosed: ReturnType<typeof setInterval>;
+
       const timeout = setTimeout(() => {
         reject(new Error('AIGateway: Auth timed out (2 minutes)'));
         cleanup();
@@ -181,12 +262,13 @@ export class AIGateway {
 
       function cleanup() {
         clearTimeout(timeout);
+        clearInterval(pollClosed);
         window.removeEventListener('message', handleMessage);
       }
 
       function handleMessage(event: MessageEvent) {
-        // Only accept messages from our popup
-        if (!url.startsWith(event.origin) && event.origin !== window.location.origin) return;
+        // Only accept messages from the popup's origin.
+        if (event.origin !== expectedOrigin) return;
 
         const data = event.data as { type?: string; accessToken?: string; user?: unknown };
         if (data.type === 'AI_GATEWAY_AUTH' && data.accessToken) {
@@ -201,9 +283,8 @@ export class AIGateway {
       window.addEventListener('message', handleMessage);
 
       // Detect if popup was closed without auth
-      const pollClosed = setInterval(() => {
+      pollClosed = setInterval(() => {
         if (popup.closed) {
-          clearInterval(pollClosed);
           cleanup();
           reject(new Error('AIGateway: Auth popup was closed'));
         }

@@ -332,4 +332,10 @@ export const api = {
     },
     cancel: async () => fetchApi<Subscription>("/api/v1/billing/cancel", { method: "POST" }),
   },
+  developers: {
+    getStatus: async () =>
+      fetchApi<{ isDeveloper: boolean; enrolledAt: string | null }>("/api/v1/developers/status"),
+    enroll: async () =>
+      fetchApi<{ enrolled: boolean }>("/api/v1/developers/enroll", { method: "POST" }),
+  },
 };

@@ -60,6 +60,17 @@ CREATE INDEX IF NOT EXISTS idx_credit_txn_user_id ON credit_transactions (user_i
 CREATE INDEX IF NOT EXISTS idx_credit_txn_created_at ON credit_transactions (created_at DESC);
 
 -- ──────────────────────────────────────────────
+-- Developers (users who have enrolled as developers)
+-- ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS developers (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  enrolled_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_developers_user_id ON developers (user_id);
+
+-- ──────────────────────────────────────────────
 -- Registered Apps (Developer Apps)
 -- ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS registered_apps (
