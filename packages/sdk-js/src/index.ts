@@ -133,12 +133,17 @@ export class AIGateway {
    * @param config.storage   - Custom token storage (default: in-memory)
    */
   constructor(config: AIGatewayConfig) {
-    this.clientId = config.clientId ?? config.appId ?? '';
+    const clientId = config.clientId ?? config.appId ?? '';
+    if (!clientId) {
+      throw new Error('AIGateway: clientId (or appId) is required');
+    }
+    this.clientId = clientId;
     this.redirectUri = config.redirectUri ?? '';
     this.baseUrl = config.baseUrl ?? 'https://api.ai-gateway.io';
     this.authUrl = config.authUrl ?? 'https://auth.ai-gateway.io';
     this.storage = config.storage ?? new MemoryStorage();
-    this.appId = config.appId ?? config.clientId ?? '';
+    // Keep legacy appId only when explicitly provided, don't conflate with clientId
+    this.appId = config.appId ?? '';
     this.apiKey = config.apiKey;
   }
 

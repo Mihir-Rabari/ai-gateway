@@ -19,6 +19,14 @@ export interface AuthCodeData {
 
 const AUTH_CODE_TTL_SECONDS = 5 * 60; // 5 minutes
 
+function parseRedirectUris(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw as string[];
+  if (typeof raw === 'string') {
+    try { return JSON.parse(raw) as string[]; } catch { return []; }
+  }
+  return [];
+}
+
 export class OAuthRepository {
   constructor(
     private readonly db: Pool,
@@ -49,12 +57,7 @@ export class OAuthRepository {
       name: row.name,
       clientId: row.client_id,
       clientSecretHash: row.client_secret_hash,
-      redirectUris: Array.isArray(row.redirect_uris)
-        ? row.redirect_uris
-        : ((): string[] => {
-            try { return JSON.parse(String(row.redirect_uris) || '[]') as string[]; }
-            catch { return []; }
-          })(),
+      redirectUris: parseRedirectUris(row.redirect_uris),
     };
   }
 

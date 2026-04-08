@@ -25,9 +25,9 @@ function buildLoginPage(opts: {
   state: string;
   error?: string;
 }): string {
-  const escapedAppName = opts.appName.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const escapedAppName = htmlAttrEscape(opts.appName);
   const errorHtml = opts.error
-    ? `<div class="error">${opts.error.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`
+    ? `<div class="error">${htmlAttrEscape(opts.error)}</div>`
     : '';
 
   return `<!DOCTYPE html>
@@ -166,7 +166,7 @@ function buildErrorPage(message: string): string {
 <body>
   <div class="card">
     <h1>Authorization Failed</h1>
-    <p>${message.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+    <p>${htmlAttrEscape(message)}</p>
   </div>
 </body>
 </html>`;
