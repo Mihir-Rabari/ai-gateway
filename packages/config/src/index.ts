@@ -138,3 +138,16 @@ export const KAFKA_TOPICS = {
   ROUTING: 'routing.events',
   ANALYTICS: 'analytics.events',
 } as const;
+
+// ─────────────────────────────────────────
+// First-party App IDs
+// Requests originating from these IDs are not routed through a developer
+// app and therefore do not earn developer wallet commission.
+// ─────────────────────────────────────────
+
+export const FIRST_PARTY_APP_IDS = new Set([
+  'unknown',
+  'api-direct',
+  'web-direct',
+  'web-dashboard',
+]);

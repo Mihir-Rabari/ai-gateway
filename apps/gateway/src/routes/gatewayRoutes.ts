@@ -12,6 +12,7 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
       kafkaPublish: fastify.kafka.publish.bind(fastify.kafka),
       pgPool: fastify.pg,
       redis: fastify.redis,
+      clientSecretEncryptionKey: process.env['CLIENT_SECRET_ENCRYPTION_KEY'],
     });
 
   // POST /gateway/request
@@ -45,7 +46,7 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
     async (
       req: FastifyRequest<{
         Body: { model: string; messages: Message[]; maxTokens?: number; temperature?: number; stream?: boolean; };
-        Headers: { authorization?: string; 'x-app-id'?: string; 'x-api-key'?: string; 'x-app-key'?: string };
+        Headers: { authorization?: string; 'x-app-id'?: string; 'x-api-key'?: string; 'x-app-key'?: string; 'x-app-token'?: string };
       }>,
       reply: FastifyReply,
     ) => {
@@ -61,12 +62,14 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
         const token = authHeader.slice(7);
         const appId = req.headers['x-app-id'] ?? 'unknown';
         const appApiKey = req.headers['x-api-key'] ?? req.headers['x-app-key'];
+        const appJwt = req.headers['x-app-token'] as string | undefined;
 
         if (req.body.stream) {
           const stream = await getService().processStreamRequest({
             token,
             appId,
             appApiKey,
+            appJwt,
             model: req.body.model,
             messages: req.body.messages,
             maxTokens: req.body.maxTokens,
@@ -98,6 +101,7 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
           token,
           appId,
           appApiKey,
+          appJwt,
           model: req.body.model,
           messages: req.body.messages,
           maxTokens: req.body.maxTokens,

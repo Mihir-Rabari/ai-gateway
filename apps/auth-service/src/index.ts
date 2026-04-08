@@ -8,6 +8,7 @@ import { redisPlugin } from './plugins/redis.js';
 import { kafkaPlugin } from './plugins/kafka.js';
 import { authRoutes } from './routes/authRoutes.js';
 import { internalRoutes } from './routes/internalRoutes.js';
+import { oauthRoutes } from './routes/oauthRoutes.js';
 import { startAuthAuditConsumer } from './events/authAuditConsumer.js';
 
 const logger = createLogger('auth-service');
@@ -59,6 +60,7 @@ async function bootstrap() {
   // ─── Routes ────────────────────────────────────
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(internalRoutes, { prefix: '/internal/auth' });
+  await app.register(oauthRoutes, { prefix: '/oauth' });
 
   // ─── Health Check ──────────────────────────────
   app.get('/health', async () => ({ status: 'ok', service: 'auth-service' }));

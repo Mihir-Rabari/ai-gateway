@@ -149,4 +149,75 @@ describe('GatewayService', () => {
       (err: unknown) => (err as { code?: string }).code === 'GATEWAY_000',
     );
   });
+
+  test('accepts developer app requests authenticated via a signed X-App-Token JWT', async () => {
+    const pgPool = {
+      // Return a row with a fake encrypted secret; decryption is injected below
+      query: async () => ({ rows: [{ client_secret_enc: 'enc-secret' }], rowCount: 1 }),
+    } as unknown as Pool;
+
+    const service = new GatewayService({
+      authServiceUrl: 'http://auth-service',
+      creditServiceUrl: 'http://credit-service',
+      routingServiceUrl: 'http://routing-service',
+      kafkaPublish: async () => undefined,
+      pgPool,
+      redis: createRedisMock(),
+      clientSecretEncryptionKey: 'a'.repeat(64), // 32-byte hex key
+    }, {
+      httpFetch: createFetchMock(),
+      // Injected decryptSecret returns the raw secret
+      decryptSecret: (_enc, _key) => 'my-client-secret',
+      // Injected verifyJwt always passes (JWT construction tested separately in utils)
+      verifyJwt: (_token, _secret) => ({ clientId: 'client_test', iat: 0, exp: 9999999999 }),
+    });
+
+    // Build a minimal JWT whose payload contains a clientId so the gateway can look it up
+    const payloadB64 = Buffer.from(JSON.stringify({ clientId: 'client_test', iat: 0, exp: 9999999999 })).toString('base64url');
+    const fakeAppJwt = `aGVhZGVy.${payloadB64}.c2lnbmF0dXJl`;
+
+    const result = await service.processRequest({
+      token: 'access-token',
+      appId: 'app-123',
+      appJwt: fakeAppJwt,
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: 'hello' }],
+    });
+
+    assert.equal(result.output, 'hello');
+  });
+
+  test('rejects X-App-Token when the verifyJwt check throws', async () => {
+    const pgPool = {
+      query: async () => ({ rows: [{ client_secret_enc: 'enc-secret' }], rowCount: 1 }),
+    } as unknown as Pool;
+
+    const service = new GatewayService({
+      authServiceUrl: 'http://auth-service',
+      creditServiceUrl: 'http://credit-service',
+      routingServiceUrl: 'http://routing-service',
+      kafkaPublish: async () => undefined,
+      pgPool,
+      redis: createRedisMock(),
+      clientSecretEncryptionKey: 'a'.repeat(64),
+    }, {
+      httpFetch: createFetchMock(),
+      decryptSecret: (_enc, _key) => 'my-client-secret',
+      verifyJwt: () => { throw new Error('Invalid JWT signature'); },
+    });
+
+    const payloadB64 = Buffer.from(JSON.stringify({ clientId: 'client_test', iat: 0, exp: 9999999999 })).toString('base64url');
+    const fakeAppJwt = `aGVhZGVy.${payloadB64}.d3Jvbmctc2ln`;
+
+    await assert.rejects(
+      () => service.processRequest({
+        token: 'access-token',
+        appId: 'app-123',
+        appJwt: fakeAppJwt,
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: 'hello' }],
+      }),
+      (err: unknown) => (err as { code?: string }).code === 'GATEWAY_000',
+    );
+  });
 });
