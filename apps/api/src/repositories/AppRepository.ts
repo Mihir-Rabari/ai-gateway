@@ -59,11 +59,13 @@ export class AppRepository {
     clientId: string,
     clientSecretHash: string,
     redirectUris: string[],
+    clientSecretEnc: string | null,
   ): Promise<void> {
     await client.query(
-      `INSERT INTO registered_apps (id, developer_id, name, description, client_id, client_secret_hash, redirect_uris)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [appId, developerId, name, description, clientId, clientSecretHash, serializeRedirectUris(redirectUris)],
+      `INSERT INTO registered_apps
+         (id, developer_id, name, description, client_id, client_secret_hash, redirect_uris, client_secret_enc)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [appId, developerId, name, description, clientId, clientSecretHash, serializeRedirectUris(redirectUris), clientSecretEnc],
     );
   }
 

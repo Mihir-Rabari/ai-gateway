@@ -27,6 +27,7 @@ export const chatRoutes: FastifyPluginAsync = async (fastify) => {
     const authHeader = req.headers['authorization'] as string;
     const body = req.body as { appId?: string };
     const incomingAppKey = (req.headers['x-api-key'] ?? req.headers['x-app-key']) as string | undefined;
+    const incomingAppToken = req.headers['x-app-token'] as string | undefined;
     const res = await fetch(`${gatewayUrl}/gateway/request`, {
       method: 'POST',
       headers: {
@@ -34,6 +35,7 @@ export const chatRoutes: FastifyPluginAsync = async (fastify) => {
         Authorization: authHeader,
         'X-App-Id': body.appId ?? 'api-direct',
         ...(incomingAppKey ? { 'X-Api-Key': incomingAppKey } : {}),
+        ...(incomingAppToken ? { 'X-App-Token': incomingAppToken } : {}),
       },
       body: JSON.stringify(req.body),
     });

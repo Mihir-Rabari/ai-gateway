@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS registered_apps (
   description         TEXT,
   client_id           TEXT UNIQUE,
   client_secret_hash  TEXT,
+  client_secret_enc   TEXT,
   redirect_uris       JSONB NOT NULL DEFAULT '[]',
   is_active           BOOLEAN NOT NULL DEFAULT true,
   created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),

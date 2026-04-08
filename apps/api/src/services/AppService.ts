@@ -1,5 +1,5 @@
 import { AppRepository } from '../repositories/AppRepository.js';
-import { generateId } from '@ai-gateway/utils';
+import { generateId, encryptClientSecret } from '@ai-gateway/utils';
 import bcrypt from 'bcrypt';
 
 export class AppService {
@@ -20,8 +20,13 @@ export class AppService {
     const rawClientSecret = `secret_${generateId()}${generateId()}`;
     const clientSecretHash = await bcrypt.hash(rawClientSecret, 10);
 
+    // Encrypt the raw secret for later retrieval during JWT verification.
+    // Requires CLIENT_SECRET_ENCRYPTION_KEY (64-char hex / 32-byte AES key).
+    const encKey = process.env['CLIENT_SECRET_ENCRYPTION_KEY'];
+    const clientSecretEnc = encKey ? encryptClientSecret(rawClientSecret, encKey) : null;
+
     await this.repo.withTransaction(async (client) => {
-      await this.repo.createApp(client, appId, developerId, name, description ?? null, clientId, clientSecretHash, redirectUris);
+      await this.repo.createApp(client, appId, developerId, name, description ?? null, clientId, clientSecretHash, redirectUris, clientSecretEnc);
       await this.repo.createApiKey(client, keyId, appId, keyHash);
     });
 

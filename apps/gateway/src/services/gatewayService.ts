@@ -1,6 +1,9 @@
 import { fetch } from 'undici';
 import bcrypt from 'bcrypt';
-import { generateId, Errors, calculateCredits, createLogger, GatewayError, withRetry } from '@ai-gateway/utils';
+import {
+  generateId, Errors, calculateCredits, createLogger, GatewayError, withRetry,
+  decryptClientSecret, verifyAppJwt, type AppJwtPayload,
+} from '@ai-gateway/utils';
 import { KAFKA_TOPICS } from '@ai-gateway/config';
 import type { GatewayRequest, GatewayResponse, UsageEvent } from '@ai-gateway/types';
 import type { Pool } from 'pg';
@@ -15,6 +18,8 @@ interface ServiceClients {
   kafkaPublish: (topic: string, msg: object) => Promise<void>;
   pgPool: Pool;
   redis: Redis;
+  /** AES-256 key (64-char hex) for decrypting stored client secrets. Optional. */
+  clientSecretEncryptionKey?: string;
 }
 
 interface ValidatedUser {
@@ -39,6 +44,10 @@ type AppAccessResult = 'allowed' | 'invalid_key' | 'forbidden';
 interface GatewayServiceDeps {
   httpFetch?: typeof fetch;
   compareHash?: (plain: string, hash: string) => Promise<boolean>;
+  /** Injected for unit-testing; defaults to the utils helper. */
+  decryptSecret?: (enc: string, keyHex: string) => string;
+  /** Injected for unit-testing; defaults to the utils helper. */
+  verifyJwt?: (token: string, secret: string) => AppJwtPayload;
 }
 
 export class GatewayService {
@@ -63,6 +72,7 @@ export class GatewayService {
     token: string;
     appId: string;
     appApiKey?: string;
+    appJwt?: string;
     model: string;
     messages: GatewayRequest['messages'];
     maxTokens?: number;
@@ -87,7 +97,7 @@ export class GatewayService {
     }
 
     // Step 3: Validate app context
-    const appAccess = await this.validateAppAccess(input.appId, input.appApiKey);
+    const appAccess = await this.validateAppAccess(input.appId, input.appApiKey, input.appJwt);
     if (appAccess !== 'allowed') {
       throw appAccess === 'invalid_key' ? Errors.INVALID_APP_KEY() : Errors.FORBIDDEN();
     }
@@ -161,6 +171,7 @@ export class GatewayService {
     token: string;
     appId: string;
     appApiKey?: string;
+    appJwt?: string;
     model: string;
     messages: GatewayRequest['messages'];
     maxTokens?: number;
@@ -178,7 +189,7 @@ export class GatewayService {
     if (currentUsage === 1) await this.clients.redis.expire(rateLimitKey, 60);
     if (currentUsage > limit) throw new GatewayError('RATE_LIMIT_EXCEEDED', 'Rate limit exceeded', 429);
 
-    const appAccess = await this.validateAppAccess(input.appId, input.appApiKey);
+    const appAccess = await this.validateAppAccess(input.appId, input.appApiKey, input.appJwt);
     if (appAccess !== 'allowed') {
       throw appAccess === 'invalid_key' ? Errors.INVALID_APP_KEY() : Errors.FORBIDDEN();
     }
@@ -241,11 +252,58 @@ export class GatewayService {
     return 10;
   }
 
-  private async validateAppAccess(appId: string, appApiKey?: string): Promise<AppAccessResult> {
+  private async validateAppAccess(
+    appId: string,
+    appApiKey?: string,
+    appJwt?: string,
+  ): Promise<AppAccessResult> {
     if (!appId || FIRST_PARTY_APP_IDS.has(appId)) {
       return 'allowed';
     }
 
+    // ── JWT-based app authentication ──────────────────────────────────────
+    // When the developer's app sends X-App-Token (a short-lived HS256 JWT
+    // signed with their client secret), verify it using the stored encrypted
+    // secret. This avoids long-lived API keys in transit.
+    if (appJwt) {
+      const encKey = this.clients.clientSecretEncryptionKey;
+      if (encKey) {
+        try {
+          // Decode the payload without verifying first to extract clientId
+          const jwtParts = appJwt.split('.');
+          if (jwtParts.length === 3) {
+            const rawPayload = Buffer.from(jwtParts[1]!, 'base64url').toString('utf8');
+            const { clientId } = JSON.parse(rawPayload) as { clientId?: string };
+
+            if (clientId) {
+              const row = await this.clients.pgPool.query<{ client_secret_enc: string | null }>(
+                `SELECT client_secret_enc FROM registered_apps
+                 WHERE client_id = $1 AND is_active = true`,
+                [clientId],
+              );
+
+              const enc = row.rows[0]?.client_secret_enc ?? null;
+              if (enc) {
+                const decryptFn = this.deps.decryptSecret ?? decryptClientSecret;
+                const verifyFn = this.deps.verifyJwt ?? verifyAppJwt;
+                try {
+                  const secret = decryptFn(enc, encKey);
+                  verifyFn(appJwt, secret); // throws on invalid sig or expiry
+                  return 'allowed';
+                } catch {
+                  return 'invalid_key';
+                }
+              }
+            }
+          }
+        } catch {
+          return 'invalid_key';
+        }
+      }
+      // If encryption key not configured, fall through to API-key path
+    }
+
+    // ── Legacy API-key authentication ─────────────────────────────────────
     if (appApiKey) {
       const result = await this.clients.pgPool.query(
         `SELECT ak.key_hash

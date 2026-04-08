@@ -118,6 +118,11 @@ export class AIGateway {
   private readonly authUrl: string;
   private readonly storage: TokenStorage;
 
+  // Stored after handleCallback() for signing X-App-Token JWTs on each request.
+  // ⚠️  Only safe in server-side (Node.js) environments — never expose client
+  //     secrets in browser code or commit them to source control.
+  private clientSecret: string | undefined;
+
   // Legacy API-key mode
   /** @deprecated */
   private readonly appId: string;
@@ -216,6 +221,10 @@ export class AIGateway {
 
     const result = await this.exchangeCode(code, clientSecret);
 
+    // Keep the secret in-memory so each subsequent AI request can be signed
+    // with a short-lived X-App-Token JWT (server-side environments only).
+    this.clientSecret = clientSecret;
+
     await this.storage.set(STORAGE_KEYS.ACCESS_TOKEN, result.accessToken);
     await this.storage.set(STORAGE_KEYS.REFRESH_TOKEN, result.refreshToken);
     await this.storage.set(STORAGE_KEYS.USER, JSON.stringify(result.user));
@@ -313,12 +322,14 @@ export class AIGateway {
    * });
    */
   async chat(options: ChatOptions): Promise<ChatResult> {
+    const appToken = await this.signAppToken();
     const res = await fetch(`${this.baseUrl}/api/v1/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: await this.getAuthHeader(),
         'X-App-Id': this.clientId || this.appId,
+        ...(appToken ? { 'X-App-Token': appToken } : {}),
       },
       body: JSON.stringify({
         model: options.model,
@@ -352,12 +363,14 @@ export class AIGateway {
    * }
    */
   async *stream(options: ChatOptions): AsyncIterable<string> {
+    const appToken = await this.signAppToken();
     const res = await fetch(`${this.baseUrl}/api/v1/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: await this.getAuthHeader(),
         'X-App-Id': this.clientId || this.appId,
+        ...(appToken ? { 'X-App-Token': appToken } : {}),
       },
       body: JSON.stringify({
         model: options.model,
@@ -433,6 +446,55 @@ export class AIGateway {
     const token = stored ?? this.legacyAccessToken ?? this.apiKey;
     if (!token) throw new Error('AIGateway: No access token. Call signIn() and handleCallback() first.');
     return `Bearer ${token}`;
+  }
+
+  /**
+   * Build a short-lived HS256 JWT signed with the stored client secret.
+   *
+   * Sent as `X-App-Token` on each AI request so the gateway can verify
+   * the request originates from the legitimate developer app.
+   *
+   * Returns `undefined` when no client secret is available (e.g. pure
+   * browser flows where the secret was never stored).
+   */
+  private async signAppToken(): Promise<string | undefined> {
+    if (!this.clientSecret || !this.clientId) return undefined;
+    if (typeof crypto === 'undefined' || !crypto.subtle) return undefined;
+
+    const now = Math.floor(Date.now() / 1000);
+    const header = this.base64urlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    const payload = this.base64urlEncode(JSON.stringify({
+      clientId: this.clientId,
+      iat: now,
+      exp: now + 300, // 5-minute lifetime
+    }));
+    const signingInput = `${header}.${payload}`;
+
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(this.clientSecret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign'],
+    );
+    const sigBuf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signingInput));
+    return `${signingInput}.${this.base64urlEncodeBuffer(sigBuf)}`;
+  }
+
+  /** Encode a UTF-8 string as base64url (no padding). */
+  private base64urlEncode(str: string): string {
+    const bytes = new TextEncoder().encode(str);
+    let binary = '';
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return btoa(binary).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  }
+
+  /** Encode a raw ArrayBuffer as base64url (no padding). */
+  private base64urlEncodeBuffer(buf: ArrayBuffer): string {
+    let binary = '';
+    const bytes = new Uint8Array(buf);
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return btoa(binary).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
   }
 
   private generateState(): string {
