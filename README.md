@@ -84,6 +84,32 @@ pnpm --filter @ai-gateway/api db:migrate
 pnpm dev
 ```
 
+### Start all services with PM2 (recommended for persistent processes)
+
+Install PM2 globally if you haven't already:
+```bash
+npm install -g pm2
+```
+
+**Development** — starts all services with hot-reload (`tsx watch` / `next dev`):
+```bash
+pnpm pm2:dev
+```
+
+**Production** — starts all services from compiled output (`node dist/index.js` / `next start`):
+```bash
+pnpm build        # build all services first
+pnpm pm2:start
+```
+
+**Useful PM2 commands:**
+```bash
+pnpm pm2:status   # view status of all processes
+pnpm pm2:logs     # tail logs from all services
+pnpm pm2:stop     # stop all services
+pnpm pm2:delete   # remove all services from PM2
+```
+
 ## Build Phases
 
 ### Phase 1 (Core MVP)
