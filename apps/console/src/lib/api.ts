@@ -69,6 +69,8 @@ export type DeveloperApp = {
   id: string;
   name: string;
   description?: string | null;
+  clientId?: string | null;
+  redirectUris?: string[];
   isActive: boolean;
   createdAt: string;
 };
@@ -299,10 +301,24 @@ export const api = {
   },
   apps: {
     list: async () => fetchApi<DeveloperApp[]>("/api/v1/apps"),
-    create: async (name: string, description?: string) => {
-      return fetchApi<{ id: string; name: string; description?: string; apiKey: string }>(
+    create: async (name: string, description?: string, redirectUris?: string[]) => {
+      return fetchApi<{
+        id: string;
+        name: string;
+        description?: string;
+        apiKey: string;
+        clientId: string;
+        clientSecret: string;
+        redirectUris: string[];
+      }>(
         "/api/v1/apps",
-        { method: "POST", body: JSON.stringify({ name, description }) },
+        { method: "POST", body: JSON.stringify({ name, description, redirectUris: redirectUris ?? [] }) },
+      );
+    },
+    updateRedirectUris: async (appId: string, redirectUris: string[]) => {
+      return fetchApi<{ redirectUris: string[] }>(
+        `/api/v1/apps/${appId}/redirect-uris`,
+        { method: "PUT", body: JSON.stringify({ redirectUris }) },
       );
     },
     rotateKey: async (appId: string) => {

@@ -20,6 +20,10 @@ export default function AppDetailsPage({ params }: { params: Promise<{ id: strin
   const [appData, setAppData] = useState<DeveloperApp | null>(null);
   const [usage, setUsage] = useState<AppUsageSummary | null>(null);
 
+  // Redirect URIs editor
+  const [redirectUrisRaw, setRedirectUrisRaw] = useState("");
+  const [savingUris, setSavingUris] = useState(false);
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -28,6 +32,9 @@ export default function AppDetailsPage({ params }: { params: Promise<{ id: strin
         const app = apps.find((item) => item.id === id) ?? null;
         setAppData(app);
         setUsage(usageRes);
+        if (app?.redirectUris) {
+          setRedirectUrisRaw(app.redirectUris.join("\n"));
+        }
       } catch (err) {
         toast({
           title: "Failed to load app",
@@ -42,17 +49,15 @@ export default function AppDetailsPage({ params }: { params: Promise<{ id: strin
     void load();
   }, [id, toast]);
 
-  const copyKey = async () => {
-    if (!apiKey) return;
-    await navigator.clipboard.writeText(apiKey);
-    toast({ title: "API key copied", description: "Copied to clipboard." });
+  const copyText = async (value: string, label: string) => {
+    await navigator.clipboard.writeText(value);
+    toast({ title: `${label} copied`, description: "Copied to clipboard." });
   };
 
   const rotateKey = async () => {
     if (!window.confirm("Rotate key now? This will immediately invalidate the previous key.")) {
       return;
     }
-
     try {
       const result = await api.apps.rotateKey(id);
       setApiKey(result.apiKey);
@@ -67,11 +72,31 @@ export default function AppDetailsPage({ params }: { params: Promise<{ id: strin
     }
   };
 
+  const saveRedirectUris = async () => {
+    const uris = redirectUrisRaw
+      .split("\n")
+      .map((u) => u.trim())
+      .filter(Boolean);
+    setSavingUris(true);
+    try {
+      await api.apps.updateRedirectUris(id, uris);
+      setAppData((prev) => (prev ? { ...prev, redirectUris: uris } : prev));
+      toast({ title: "Redirect URIs saved", description: `${uris.length} URI(s) saved.` });
+    } catch (err) {
+      toast({
+        title: "Failed to save redirect URIs",
+        description: err instanceof Error ? err.message : "Unexpected error",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingUris(false);
+    }
+  };
+
   const deleteApp = async () => {
     if (!window.confirm("Delete this app? This action is irreversible.")) {
       return;
     }
-
     try {
       await api.apps.delete(id);
       toast({ title: "App deleted", description: "The app was removed successfully." });
@@ -102,16 +127,17 @@ export default function AppDetailsPage({ params }: { params: Promise<{ id: strin
         <div className="flex items-start justify-between">
           <div>
             <h1 className="mb-2 text-3xl font-bold tracking-tight">App Details</h1>
-            <p className="text-white/60">Rotate keys and inspect usage for this app.</p>
+            <p className="text-white/60">Manage credentials and redirect URIs for this app.</p>
           </div>
         </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
+        {/* ── Application Info ── */}
         <Card className="border-white/10 bg-[#0a0a0a]">
           <CardHeader>
             <CardTitle>Application Info</CardTitle>
-            <CardDescription className="text-white/40">Data from registered apps service.</CardDescription>
+            <CardDescription className="text-white/40">Basic app metadata.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {loading ? (
@@ -134,6 +160,24 @@ export default function AppDetailsPage({ params }: { params: Promise<{ id: strin
                     {appData.id}
                   </p>
                 </div>
+                {appData.clientId && (
+                  <div>
+                    <p className="text-sm text-white/60">Client ID</p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <p className="flex-1 truncate rounded border border-white/10 bg-black p-2 font-mono text-xs text-white/80">
+                        {appData.clientId}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => copyText(appData.clientId!, "Client ID")}
+                        className="rounded border border-white/10 bg-white/5 p-2 text-white/60 hover:bg-white/10 hover:text-white"
+                        title="Copy Client ID"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <div>
                   <p className="text-sm text-white/60">Description</p>
                   <p className="mt-1 text-sm text-white/80">{appData.description || "-"}</p>
@@ -143,9 +187,10 @@ export default function AppDetailsPage({ params }: { params: Promise<{ id: strin
           </CardContent>
         </Card>
 
+        {/* ── API Key ── */}
         <Card className="border-white/10 bg-[#0a0a0a]">
           <CardHeader>
-            <CardTitle>API Configuration</CardTitle>
+            <CardTitle>API Key</CardTitle>
             <CardDescription className="text-white/40">Rotate to issue a fresh API key.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -164,7 +209,7 @@ export default function AppDetailsPage({ params }: { params: Promise<{ id: strin
                 </button>
                 <button
                   type="button"
-                  onClick={copyKey}
+                  onClick={() => copyText(apiKey, "API Key")}
                   className="rounded-r-md border border-l-0 border-white/10 bg-white/5 px-4 text-white/70 hover:bg-white/10 hover:text-white"
                 >
                   <Copy className="h-4 w-4" />
@@ -192,6 +237,40 @@ export default function AppDetailsPage({ params }: { params: Promise<{ id: strin
         </Card>
       </div>
 
+      {/* ── OAuth Redirect URIs ── */}
+      <Card className="border-white/10 bg-[#0a0a0a]">
+        <CardHeader>
+          <CardTitle>OAuth Redirect URIs</CardTitle>
+          <CardDescription className="text-white/40">
+            URIs that users may be redirected to after authorization. Must match exactly what your SDK sends.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {loading ? (
+            <Skeleton className="h-20 w-full bg-white/10" />
+          ) : (
+            <>
+              <p className="text-xs text-white/40">One URI per line.</p>
+              <textarea
+                value={redirectUrisRaw}
+                onChange={(e) => setRedirectUrisRaw(e.target.value)}
+                placeholder={"http://localhost:3000/callback\nhttps://myapp.com/callback"}
+                rows={4}
+                className="w-full resize-none rounded-md border border-white/10 bg-black px-3 py-2 font-mono text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20"
+              />
+              <Button
+                onClick={saveRedirectUris}
+                disabled={savingUris}
+                className="bg-white text-black hover:bg-white/90"
+              >
+                {savingUris ? "Saving…" : "Save Redirect URIs"}
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Usage Stats ── */}
       <Card className="border-white/10 bg-[#0a0a0a]">
         <CardHeader>
           <CardTitle>Usage Stats</CardTitle>
