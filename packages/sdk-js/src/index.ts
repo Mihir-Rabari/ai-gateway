@@ -94,7 +94,12 @@ const STORAGE_KEYS = {
   USER: 'ai_gw_user',
 } as const;
 
-/** Number of random bytes used for OAuth CSRF state generation (192 bits of entropy). */
+/**
+ * Number of random bytes used for OAuth CSRF state generation.
+ * 24 bytes = 192 bits of entropy, which exceeds the OWASP CSRF prevention
+ * recommendation of ≥ 128 bits (OWASP CSRF Cheat Sheet, "Synchronizer Token
+ * Pattern") and is sufficient to make brute-force guessing infeasible.
+ */
 const STATE_ENTROPY_BYTES = 24;
 
 /**
