@@ -15,7 +15,8 @@ const app = Fastify({ logger: false });
 
 async function bootstrap() {
   await app.register(cors, {
-    origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000'],
+    origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000', 'http://localhost:3009'],
+    credentials: true,
   });
 
   await app.register(rateLimit, {

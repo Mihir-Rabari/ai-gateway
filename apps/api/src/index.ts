@@ -14,7 +14,7 @@ async function bootstrap() {
 
   // CORS
   await app.register(cors, {
-    origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000'],
+    origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000', 'http://localhost:3009'],
     credentials: true,
   });
 
