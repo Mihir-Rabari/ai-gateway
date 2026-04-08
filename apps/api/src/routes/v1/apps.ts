@@ -26,14 +26,19 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
         properties: {
           name: { type: 'string', minLength: 1, maxLength: 255 },
           description: { type: 'string' },
+          redirectUris: {
+            type: 'array',
+            items: { type: 'string', format: 'uri' },
+            default: [],
+          },
         },
       },
     },
   }, async (req, reply) => {
-    const { name, description } = req.body as { name: string; description?: string };
+    const { name, description, redirectUris } = req.body as { name: string; description?: string; redirectUris?: string[] };
 
     try {
-      const appData = await appService.registerApp(req.userId, name, description);
+      const appData = await appService.registerApp(req.userId, name, description, redirectUris ?? []);
       return reply.send(ok(appData));
     } catch (err) {
       fastify.log.error(err, 'Failed to create app');
@@ -114,6 +119,44 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
     } catch (err) {
       fastify.log.error(err, 'Failed to rotate API key');
       return reply.status(500).send(fail({ name: 'Error', code: 'APP_ROTATE_KEY_ERR', message: 'Failed to rotate API key', statusCode: 500 }));
+    }
+  });
+
+  fastify.put('/apps/:id/redirect-uris', {
+    preHandler: [requireAuth],
+    schema: {
+      tags: ['Developer Apps'],
+      description: 'Update the list of allowed OAuth redirect URIs for an app',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: { id: { type: 'string' } },
+      },
+      body: {
+        type: 'object',
+        required: ['redirectUris'],
+        properties: {
+          redirectUris: {
+            type: 'array',
+            items: { type: 'string', format: 'uri' },
+          },
+        },
+      },
+    },
+  }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { redirectUris } = req.body as { redirectUris: string[] };
+
+    try {
+      const success = await appService.updateRedirectUris(id, req.userId, redirectUris);
+      if (!success) {
+        return reply.status(404).send(fail({ name: 'NotFoundError', code: 'APP_NOT_FOUND', message: 'App not found', statusCode: 404 }));
+      }
+      return reply.send(ok({ redirectUris }));
+    } catch (err) {
+      fastify.log.error(err, 'Failed to update redirect URIs');
+      return reply.status(500).send(fail({ name: 'Error', code: 'APP_UPDATE_REDIRECT_ERR', message: 'Failed to update redirect URIs', statusCode: 500 }));
     }
   });
 

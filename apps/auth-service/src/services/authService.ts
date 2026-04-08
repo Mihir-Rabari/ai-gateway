@@ -169,6 +169,16 @@ export class AuthService {
   }
 
   // ─────────────────────────────────────────
+  // Issue Tokens for User ID (used by OAuth)
+  // ─────────────────────────────────────────
+
+  async issueTokensForUser(userId: string): Promise<{ accessToken: string; refreshToken: string }> {
+    const user = await this.userRepo.findById(userId);
+    if (!user) throw Errors.USER_NOT_FOUND();
+    return this.issueTokens(user.id, user.email, user.planId);
+  }
+
+  // ─────────────────────────────────────────
   // Internal — Issue Tokens
   // ─────────────────────────────────────────
 

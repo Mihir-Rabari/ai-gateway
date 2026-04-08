@@ -9,18 +9,31 @@ export class AppService {
     this.repo = repo;
   }
 
-  async registerApp(developerId: string, name: string, description?: string) {
+  async registerApp(developerId: string, name: string, description?: string, redirectUris: string[] = []) {
     const appId = generateId();
     const rawApiKey = `agk_${generateId()}${generateId()}`;
     const keyId = generateId();
     const keyHash = await bcrypt.hash(rawApiKey, 10);
 
+    // OAuth credentials
+    const clientId = `client_${generateId()}`;
+    const rawClientSecret = `secret_${generateId()}${generateId()}`;
+    const clientSecretHash = await bcrypt.hash(rawClientSecret, 10);
+
     await this.repo.withTransaction(async (client) => {
-      await this.repo.createApp(client, appId, developerId, name, description ?? null);
+      await this.repo.createApp(client, appId, developerId, name, description ?? null, clientId, clientSecretHash, redirectUris);
       await this.repo.createApiKey(client, keyId, appId, keyHash);
     });
 
-    return { id: appId, name, description, apiKey: rawApiKey };
+    return {
+      id: appId,
+      name,
+      description,
+      apiKey: rawApiKey,
+      clientId,
+      clientSecret: rawClientSecret,
+      redirectUris,
+    };
   }
 
   async listApps(developerId: string) {
@@ -52,5 +65,9 @@ export class AppService {
     }
 
     return { apiKey: rawApiKey };
+  }
+
+  async updateRedirectUris(appId: string, developerId: string, redirectUris: string[]) {
+    return this.repo.updateRedirectUris(appId, developerId, redirectUris);
   }
 }
