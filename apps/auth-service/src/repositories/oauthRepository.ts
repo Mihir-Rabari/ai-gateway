@@ -49,7 +49,12 @@ export class OAuthRepository {
       name: row.name,
       clientId: row.client_id,
       clientSecretHash: row.client_secret_hash,
-      redirectUris: Array.isArray(row.redirect_uris) ? row.redirect_uris : JSON.parse(String(row.redirect_uris) || '[]'),
+      redirectUris: Array.isArray(row.redirect_uris)
+        ? row.redirect_uris
+        : ((): string[] => {
+            try { return JSON.parse(String(row.redirect_uris) || '[]') as string[]; }
+            catch { return []; }
+          })(),
     };
   }
 

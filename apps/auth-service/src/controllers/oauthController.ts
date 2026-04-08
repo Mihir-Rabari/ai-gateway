@@ -8,6 +8,15 @@ const logger = createLogger('oauth-controller');
 
 const HTML_CONTENT_TYPE = 'text/html; charset=utf-8';
 
+function htmlAttrEscape(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 function buildLoginPage(opts: {
   appName: string;
   clientId: string;
@@ -125,10 +134,10 @@ function buildLoginPage(opts: {
     <div class="app-badge">${escapedAppName}</div>
     ${errorHtml}
     <form method="POST" action="/oauth/authorize/submit" autocomplete="on">
-      <input type="hidden" name="client_id" value="${encodeURIComponent(opts.clientId)}" />
-      <input type="hidden" name="redirect_uri" value="${encodeURIComponent(opts.redirectUri)}" />
-      <input type="hidden" name="scope" value="${encodeURIComponent(opts.scope)}" />
-      <input type="hidden" name="state" value="${encodeURIComponent(opts.state)}" />
+      <input type="hidden" name="client_id" value="${htmlAttrEscape(opts.clientId)}" />
+      <input type="hidden" name="redirect_uri" value="${htmlAttrEscape(opts.redirectUri)}" />
+      <input type="hidden" name="scope" value="${htmlAttrEscape(opts.scope)}" />
+      <input type="hidden" name="state" value="${htmlAttrEscape(opts.state)}" />
       <label for="email">Email</label>
       <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email" />
       <label for="password">Password</label>
@@ -240,11 +249,11 @@ export class OAuthController {
       password,
     } = req.body;
 
-    // Decode URL-encoded hidden fields (form sends encodeURIComponent values)
-    const clientId = client_id ? decodeURIComponent(client_id) : '';
-    const redirectUri = redirect_uri ? decodeURIComponent(redirect_uri) : '';
-    const decodedScope = scope ? decodeURIComponent(scope) : 'basic';
-    const decodedState = state ? decodeURIComponent(state) : '';
+    // Fields are HTML-escaped in the form — use as-is (Fastify body parser handles URL-form-encoded values)
+    const clientId = client_id ?? '';
+    const redirectUri = redirect_uri ?? '';
+    const decodedScope = scope ?? 'basic';
+    const decodedState = state ?? '';
 
     if (!clientId || !redirectUri || !email || !password) {
       return reply

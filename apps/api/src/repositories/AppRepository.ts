@@ -10,6 +10,24 @@ export interface AppRow {
   createdAt: Date;
 }
 
+/** Serialize redirect URIs to a JSONB-compatible string. */
+function serializeRedirectUris(uris: string[]): string {
+  return JSON.stringify(uris);
+}
+
+/** Parse redirect URIs from a JSONB column (may come as array or JSON string). */
+function parseRedirectUris(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw as string[];
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw) as string[];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 export class AppRepository {
   private pool: Pool;
 
@@ -45,7 +63,7 @@ export class AppRepository {
     await client.query(
       `INSERT INTO registered_apps (id, developer_id, name, description, client_id, client_secret_hash, redirect_uris)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [appId, developerId, name, description, clientId, clientSecretHash, JSON.stringify(redirectUris)],
+      [appId, developerId, name, description, clientId, clientSecretHash, serializeRedirectUris(redirectUris)],
     );
   }
 
@@ -67,9 +85,7 @@ export class AppRepository {
     );
     return result.rows.map((r) => ({
       ...r,
-      redirectUris: Array.isArray(r.redirectUris)
-        ? r.redirectUris
-        : JSON.parse(String(r.redirectUris) || '[]'),
+      redirectUris: parseRedirectUris(r.redirectUris),
     }));
   }
 
@@ -99,7 +115,7 @@ export class AppRepository {
   async updateRedirectUris(appId: string, developerId: string, redirectUris: string[]): Promise<boolean> {
     const result = await this.pool.query(
       `UPDATE registered_apps SET redirect_uris = $1 WHERE id = $2 AND developer_id = $3 AND is_active = true RETURNING id`,
-      [JSON.stringify(redirectUris), appId, developerId],
+      [serializeRedirectUris(redirectUris), appId, developerId],
     );
     return result.rowCount !== null && result.rowCount > 0;
   }

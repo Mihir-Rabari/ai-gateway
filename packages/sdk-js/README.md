@@ -246,12 +246,21 @@ const ai = new AIGateway({
 <button onClick={() => ai.signIn()}>Sign in with AI Gateway</button>
 
 // Callback page (/callback route)
+// Option A: Call handleCallback() if you can safely pass clientSecret from env
+//   (suitable for server-rendered apps or backends)
 useEffect(() => {
-  // Call your backend to exchange the code (keep clientSecret server-side)
+  ai.handleCallback(import.meta.env.VITE_CLIENT_SECRET)
+    .then(() => navigate('/dashboard'))
+    .catch(console.error);
+}, []);
+
+// Option B: Send the code to your own backend, receive the access token
+//   (recommended for SPAs — keeps clientSecret off the browser)
+useEffect(() => {
   fetch('/api/auth/callback?url=' + encodeURIComponent(location.href))
     .then(r => r.json())
-    .then(({ tokens }) => {
-      ai.setToken(tokens.accessToken);
+    .then(({ accessToken }) => {
+      ai.setToken(accessToken); // manually set the token received from backend
       navigate('/dashboard');
     });
 }, []);

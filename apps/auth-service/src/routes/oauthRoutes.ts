@@ -4,6 +4,10 @@ import { OAuthController } from '../controllers/oauthController.js';
 export async function oauthRoutes(fastify: FastifyInstance) {
   const controller = new OAuthController(fastify.pg, fastify.redis);
 
+  // Note: All routes below inherit the global rate limit configured in index.ts.
+  // The `config.rateLimit` overrides here apply *stricter* per-route limits on
+  // top of the global limit, which is why these sensitive endpoints are protected.
+
   // GET /oauth/authorize — show the login/consent page
   fastify.get(
     '/authorize',

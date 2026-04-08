@@ -219,6 +219,9 @@ export class AIGateway {
    * Clear all stored tokens and sign the user out.
    */
   async signOut(): Promise<void> {
+    // Capture the token before clearing so we can call the server logout endpoint
+    const token = await this.storage.get(STORAGE_KEYS.ACCESS_TOKEN) ?? this.legacyAccessToken;
+
     await this.storage.remove(STORAGE_KEYS.ACCESS_TOKEN);
     await this.storage.remove(STORAGE_KEYS.REFRESH_TOKEN);
     await this.storage.remove(STORAGE_KEYS.USER);
@@ -226,7 +229,6 @@ export class AIGateway {
 
     // Best-effort server logout (ignore errors)
     try {
-      const token = await this.storage.get(STORAGE_KEYS.ACCESS_TOKEN);
       if (token) {
         await fetch(`${this.baseUrl}/auth/logout`, {
           method: 'POST',
@@ -426,13 +428,12 @@ export class AIGateway {
   }
 
   private generateState(): string {
-    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-      const arr = new Uint8Array(24);
-      crypto.getRandomValues(arr);
-      return Array.from(arr, (b) => b.toString(16).padStart(2, '0')).join('');
+    if (typeof crypto === 'undefined' || !crypto.getRandomValues) {
+      throw new Error('AIGateway: Web Crypto API is required for CSRF state generation. Use a modern browser or Node.js 15+.');
     }
-    // Fallback for environments without Web Crypto (e.g., old Node.js)
-    return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    const arr = new Uint8Array(24);
+    crypto.getRandomValues(arr);
+    return Array.from(arr, (b) => b.toString(16).padStart(2, '0')).join('');
   }
 
   /**
