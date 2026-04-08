@@ -213,7 +213,14 @@ await ai.signIn();`}
   );
 }
 
-/** Fixed bullet count for hidden secrets — intentionally independent of value length to avoid leaking secret length. */
+/**
+ * Fixed bullet count for hidden secrets.
+ * Using a constant instead of the actual value length prevents side-channel
+ * leaks (e.g., an attacker cannot infer secret length from the rendered UI).
+ * 24 bullets were chosen to fit comfortably in the UI without truncation while
+ * being visually distinct from typical short values (< 8 chars) and very long
+ * ones (> 60 chars), so no length information is conveyed to an observer.
+ */
 const HIDDEN_SECRET_BULLETS = 24;
 
 function CredentialRow({

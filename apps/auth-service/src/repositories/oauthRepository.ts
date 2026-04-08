@@ -17,7 +17,10 @@ export interface AuthCodeData {
   scope: string;
 }
 
-const AUTH_CODE_TTL_SECONDS = 5 * 60; // 5 minutes
+// Authorization code TTL — 5 minutes.
+// Per RFC 6749 §4.1.2: "Authorization codes MUST be short lived" and
+// "MUST be single-use". Single-use enforcement is in consumeAuthCode().
+const AUTH_CODE_TTL_SECONDS = 5 * 60;
 
 function parseRedirectUris(raw: unknown): string[] {
   if (Array.isArray(raw)) return raw as string[];

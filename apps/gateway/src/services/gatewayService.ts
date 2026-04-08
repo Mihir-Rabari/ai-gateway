@@ -4,7 +4,7 @@ import {
   generateId, Errors, calculateCredits, createLogger, GatewayError, withRetry,
   decryptClientSecret, verifyAppJwt, type AppJwtPayload,
 } from '@ai-gateway/utils';
-import { KAFKA_TOPICS } from '@ai-gateway/config';
+import { KAFKA_TOPICS, FIRST_PARTY_APP_IDS } from '@ai-gateway/config';
 import type { GatewayRequest, GatewayResponse, UsageEvent } from '@ai-gateway/types';
 import type { Pool } from 'pg';
 import type Redis from 'ioredis';
@@ -37,7 +37,7 @@ interface RoutingResult {
   provider: string;
 }
 
-const FIRST_PARTY_APP_IDS = new Set(['unknown', 'api-direct', 'web-direct', 'web-dashboard']);
+// FIRST_PARTY_APP_IDS is imported from @ai-gateway/config
 
 type AppAccessResult = 'allowed' | 'invalid_key' | 'forbidden';
 
@@ -269,30 +269,40 @@ export class GatewayService {
       const encKey = this.clients.clientSecretEncryptionKey;
       if (encKey) {
         try {
-          // Decode the payload without verifying first to extract clientId
+          // The payload is decoded before signature verification only to extract
+          // the clientId needed for the DB lookup. The extracted clientId is used
+          // solely as a lookup key (parameterised query); the full token is then
+          // passed to verifyFn which performs the cryptographic check.
+          // Any invalid JSON or missing fields are caught by the outer try/catch.
           const jwtParts = appJwt.split('.');
-          if (jwtParts.length === 3) {
+          if (jwtParts.length !== 3) return 'invalid_key';
+
+          let clientId: string | undefined;
+          try {
             const rawPayload = Buffer.from(jwtParts[1]!, 'base64url').toString('utf8');
-            const { clientId } = JSON.parse(rawPayload) as { clientId?: string };
+            ({ clientId } = JSON.parse(rawPayload) as { clientId?: string });
+          } catch {
+            // Malformed base64url or JSON — reject immediately
+            return 'invalid_key';
+          }
 
-            if (clientId) {
-              const row = await this.clients.pgPool.query<{ client_secret_enc: string | null }>(
-                `SELECT client_secret_enc FROM registered_apps
-                 WHERE client_id = $1 AND is_active = true`,
-                [clientId],
-              );
+          if (clientId) {
+            const row = await this.clients.pgPool.query<{ client_secret_enc: string | null }>(
+              `SELECT client_secret_enc FROM registered_apps
+               WHERE client_id = $1 AND is_active = true`,
+              [clientId],
+            );
 
-              const enc = row.rows[0]?.client_secret_enc ?? null;
-              if (enc) {
-                const decryptFn = this.deps.decryptSecret ?? decryptClientSecret;
-                const verifyFn = this.deps.verifyJwt ?? verifyAppJwt;
-                try {
-                  const secret = decryptFn(enc, encKey);
-                  verifyFn(appJwt, secret); // throws on invalid sig or expiry
-                  return 'allowed';
-                } catch {
-                  return 'invalid_key';
-                }
+            const enc = row.rows[0]?.client_secret_enc ?? null;
+            if (enc) {
+              const decryptFn = this.deps.decryptSecret ?? decryptClientSecret;
+              const verifyFn = this.deps.verifyJwt ?? verifyAppJwt;
+              try {
+                const secret = decryptFn(enc, encKey);
+                verifyFn(appJwt, secret); // throws on invalid sig or expiry
+                return 'allowed';
+              } catch {
+                return 'invalid_key';
               }
             }
           }

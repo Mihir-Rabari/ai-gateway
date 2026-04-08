@@ -1,5 +1,6 @@
 import { generateId } from '@ai-gateway/utils';
 import type { BillingEvent, AuthEvent, UsageEvent } from '@ai-gateway/types';
+import { FIRST_PARTY_APP_IDS } from '@ai-gateway/config';
 
 type Queryable = {
   query: (sql: string, params?: unknown[]) => Promise<unknown>;
@@ -20,7 +21,6 @@ export async function processUsageEvent(
   // Flat commission: 1 credit per successful AI request, regardless of token count.
   // Only applies to third-party developer apps (first-party app IDs like
   // 'api-direct' or 'unknown' are skipped because they have no linked developer).
-  const FIRST_PARTY_APP_IDS = new Set(['unknown', 'api-direct', 'web-direct', 'web-dashboard']);
   if (FIRST_PARTY_APP_IDS.has(event.appId)) return;
 
   const COMMISSION_PER_REQUEST = 1;

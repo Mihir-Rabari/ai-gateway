@@ -98,6 +98,12 @@ const STORAGE_KEYS = {
 const STATE_ENTROPY_BYTES = 24;
 
 /**
+ * Lifetime of a signed X-App-Token JWT in seconds.
+ * Short-lived to limit the blast radius of a leaked token in transit.
+ */
+const APP_TOKEN_EXPIRY_SECONDS = 300; // 5 minutes
+
+/**
  * AI Gateway SDK Client
  *
  * Implements a Google OAuth-style authentication and AI request pipeline.
@@ -214,7 +220,15 @@ export class AIGateway {
     }
 
     const storedState = await this.storage.get(STORAGE_KEYS.OAUTH_STATE);
+    // Enforce CSRF protection:
+    // - If we stored a state but the callback omitted it → reject (state may have been stripped by an attacker).
+    // - If both are present and they differ → reject.
+    if (storedState && !state) {
+      await this.storage.remove(STORAGE_KEYS.OAUTH_STATE);
+      throw new Error('AIGateway: OAuth state missing from callback — possible CSRF attack');
+    }
     if (state && storedState && state !== storedState) {
+      await this.storage.remove(STORAGE_KEYS.OAUTH_STATE);
       throw new Error('AIGateway: OAuth state mismatch — possible CSRF attack');
     }
     await this.storage.remove(STORAGE_KEYS.OAUTH_STATE);
@@ -466,7 +480,7 @@ export class AIGateway {
     const payload = this.base64urlEncode(JSON.stringify({
       clientId: this.clientId,
       iat: now,
-      exp: now + 300, // 5-minute lifetime
+      exp: now + APP_TOKEN_EXPIRY_SECONDS,
     }));
     const signingInput = `${header}.${payload}`;
 
