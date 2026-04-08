@@ -8,80 +8,26 @@
 
 const isDev = process.env.NODE_ENV !== "production";
 
+const BACKEND_PROD_ENTRY = "dist/index.js";
+
 const backendServices = [
-  {
-    name: "api",
-    cwd: "./apps/api",
-    script: isDev ? "pnpm" : "node",
-    args: isDev ? "dev" : "dist/index.js",
-    watch: false,
-    env: { NODE_ENV: "development" },
-    env_production: { NODE_ENV: "production" },
-  },
-  {
-    name: "gateway",
-    cwd: "./apps/gateway",
-    script: isDev ? "pnpm" : "node",
-    args: isDev ? "dev" : "dist/index.js",
-    watch: false,
-    env: { NODE_ENV: "development" },
-    env_production: { NODE_ENV: "production" },
-  },
-  {
-    name: "auth-service",
-    cwd: "./apps/auth-service",
-    script: isDev ? "pnpm" : "node",
-    args: isDev ? "dev" : "dist/index.js",
-    watch: false,
-    env: { NODE_ENV: "development" },
-    env_production: { NODE_ENV: "production" },
-  },
-  {
-    name: "billing-service",
-    cwd: "./apps/billing-service",
-    script: isDev ? "pnpm" : "node",
-    args: isDev ? "dev" : "dist/index.js",
-    watch: false,
-    env: { NODE_ENV: "development" },
-    env_production: { NODE_ENV: "production" },
-  },
-  {
-    name: "credit-service",
-    cwd: "./apps/credit-service",
-    script: isDev ? "pnpm" : "node",
-    args: isDev ? "dev" : "dist/index.js",
-    watch: false,
-    env: { NODE_ENV: "development" },
-    env_production: { NODE_ENV: "production" },
-  },
-  {
-    name: "routing-service",
-    cwd: "./apps/routing-service",
-    script: isDev ? "pnpm" : "node",
-    args: isDev ? "dev" : "dist/index.js",
-    watch: false,
-    env: { NODE_ENV: "development" },
-    env_production: { NODE_ENV: "production" },
-  },
-  {
-    name: "analytics-service",
-    cwd: "./apps/analytics-service",
-    script: isDev ? "pnpm" : "node",
-    args: isDev ? "dev" : "dist/index.js",
-    watch: false,
-    env: { NODE_ENV: "development" },
-    env_production: { NODE_ENV: "production" },
-  },
-  {
-    name: "worker",
-    cwd: "./apps/worker",
-    script: isDev ? "pnpm" : "node",
-    args: isDev ? "dev" : "dist/index.js",
-    watch: false,
-    env: { NODE_ENV: "development" },
-    env_production: { NODE_ENV: "production" },
-  },
-];
+  "api",
+  "gateway",
+  "auth-service",
+  "billing-service",
+  "credit-service",
+  "routing-service",
+  "analytics-service",
+  "worker",
+].map((name) => ({
+  name,
+  cwd: `./apps/${name}`,
+  script: isDev ? "pnpm" : "node",
+  args: isDev ? "dev" : BACKEND_PROD_ENTRY,
+  watch: false,
+  env: { NODE_ENV: "development" },
+  env_production: { NODE_ENV: "production" },
+}));
 
 const frontendApps = [
   {
