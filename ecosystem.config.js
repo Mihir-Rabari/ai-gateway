@@ -7,6 +7,7 @@
 //   Logs:         pnpm pm2:logs
 
 const isDev = process.env.NODE_ENV !== "production";
+const pnpmCmd = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 
 const BACKEND_PROD_ENTRY = "dist/index.js";
 
@@ -22,7 +23,7 @@ const backendServices = [
 ].map((name) => ({
   name,
   cwd: `./apps/${name}`,
-  script: isDev ? "pnpm" : "node",
+  script: isDev ? pnpmCmd : "node",
   args: isDev ? "dev" : BACKEND_PROD_ENTRY,
   watch: false,
   env: { NODE_ENV: "development" },
@@ -33,7 +34,7 @@ const frontendApps = [
   {
     name: "web",
     cwd: "./apps/web",
-    script: "pnpm",
+    script: pnpmCmd,
     args: isDev ? "dev" : "start",
     watch: false,
     env: { NODE_ENV: "development" },
@@ -42,7 +43,7 @@ const frontendApps = [
   {
     name: "console",
     cwd: "./apps/console",
-    script: "pnpm",
+    script: pnpmCmd,
     args: isDev ? "dev" : "start",
     watch: false,
     env: { NODE_ENV: "development" },
