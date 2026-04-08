@@ -215,12 +215,11 @@ await ai.signIn();`}
 
 /**
  * Fixed bullet count for hidden secrets.
- * Using a constant instead of the actual value length prevents side-channel
- * leaks (e.g., an attacker cannot infer secret length from the rendered UI).
- * 24 bullets were chosen empirically: they fill the typical credential row
- * width without truncation and are visually distinct from both short values
- * (< 8 chars) and very long ones (> 60 chars), so no length information is
- * conveyed to an observer.
+ * Using a constant display length (rather than the actual value length) avoids
+ * visual inconsistency between different secret lengths. The actual secret value
+ * is still available via the reveal button, clipboard copy, and DOM attributes,
+ * so this is a UI polish choice, not a security control.
+ * 24 bullets were chosen to fill the typical credential row width without truncation.
  */
 const HIDDEN_SECRET_BULLETS = 24;
 
