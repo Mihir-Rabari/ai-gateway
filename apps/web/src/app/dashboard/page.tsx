@@ -67,12 +67,12 @@ export default function DashboardOverview() {
           <p className="mt-1 text-sm text-white/50">Live data from your account usage and credits.</p>
         </div>
         <div className="flex gap-2">
-          <a href={`${process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3002"}/docs`}>
+          <a href={`${process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009"}/docs`}>
             <Button variant="outline" className="border-white/20 bg-white/5 text-white hover:bg-white/10">
               SDK Docs
             </Button>
           </a>
-          <a href={process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3002"}>
+          <a href={process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009"}>
             <Button className="bg-white text-black hover:bg-white/90">Developer Console</Button>
           </a>
         </div>
@@ -184,7 +184,7 @@ export default function DashboardOverview() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-white">Recent Credit Transactions</CardTitle>
           <a
-            href={`${process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3002"}/earnings`}
+            href={`${process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009"}/earnings`}
             className="text-xs text-white/60 hover:text-white"
           >
             View all <ArrowUpRight className="ml-1 inline h-3 w-3" />
