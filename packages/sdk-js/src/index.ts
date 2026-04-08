@@ -94,6 +94,9 @@ const STORAGE_KEYS = {
   USER: 'ai_gw_user',
 } as const;
 
+/** Number of random bytes used for OAuth CSRF state generation (192 bits of entropy). */
+const STATE_ENTROPY_BYTES = 24;
+
 /**
  * AI Gateway SDK Client
  *
@@ -436,7 +439,7 @@ export class AIGateway {
     if (typeof crypto === 'undefined' || !crypto.getRandomValues) {
       throw new Error('AIGateway: Web Crypto API is required for CSRF state generation. Use a modern browser or Node.js 15+.');
     }
-    const arr = new Uint8Array(24);
+    const arr = new Uint8Array(STATE_ENTROPY_BYTES);
     crypto.getRandomValues(arr);
     return Array.from(arr, (b) => b.toString(16).padStart(2, '0')).join('');
   }

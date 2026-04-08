@@ -213,6 +213,9 @@ await ai.signIn();`}
   );
 }
 
+/** Fixed bullet count for hidden secrets — intentionally independent of value length to avoid leaking secret length. */
+const HIDDEN_SECRET_BULLETS = 24;
+
 function CredentialRow({
   label,
   value,
@@ -233,7 +236,7 @@ function CredentialRow({
       <p className="text-sm text-white/60">{label}</p>
       <div className="flex items-center gap-2">
         <div className="flex flex-1 items-center overflow-hidden rounded-l-md border border-white/10 bg-black px-3 py-2 font-mono text-xs text-white/80 min-h-[38px]">
-          <span className="truncate">{revealed ? value : "•".repeat(24)}</span>
+          <span className="truncate">{revealed ? value : "•".repeat(HIDDEN_SECRET_BULLETS)}</span>
         </div>
         {secret && (
           <button
