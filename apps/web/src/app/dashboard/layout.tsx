@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { api, getAuthToken, getRefreshToken, type UserProfile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 
-const CONSOLE_URL = process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3002";
+const CONSOLE_URL = process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009";
 
 const navLinks = [
   { href: "/dashboard", label: "Overview" },
