@@ -83,6 +83,11 @@ export interface SignInResult {
   user: UserResult;
 }
 
+export interface RefreshResult {
+  accessToken: string;
+  refreshToken: string;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Storage keys
 // ─────────────────────────────────────────────────────────────────────────────
@@ -179,8 +184,19 @@ export class AIGateway {
    * @throws {Error} If running outside a browser environment
    */
   async signIn(): Promise<void> {
+    const signInUrl = await this.getSignInUrl();
     if (typeof window === 'undefined') {
       throw new Error('AIGateway.signIn() can only be called in a browser environment');
+    }
+    window.location.href = signInUrl;
+  }
+
+  /**
+   * Build the OAuth authorize URL and persist the anti-CSRF state token.
+   */
+  async getSignInUrl(): Promise<string> {
+    if (typeof window === 'undefined') {
+      throw new Error('AIGateway.getSignInUrl() can only be called in a browser environment');
     }
     if (!this.clientId) {
       throw new Error('AIGateway: clientId is required for signIn()');
@@ -192,14 +208,23 @@ export class AIGateway {
     const state = this.generateState();
     await this.storage.set(STORAGE_KEYS.OAUTH_STATE, state);
 
-    const url = new URL(`${this.authUrl}/oauth/authorize`);
+    const url = new URL(`${this.getOAuthBaseUrl()}/oauth/authorize`);
     url.searchParams.set('client_id', this.clientId);
     url.searchParams.set('redirect_uri', this.redirectUri);
     url.searchParams.set('response_type', 'code');
     url.searchParams.set('scope', 'basic');
     url.searchParams.set('state', state);
+    return url.toString();
+  }
 
-    window.location.href = url.toString();
+  /**
+   * Check whether a URL currently contains OAuth callback parameters.
+   */
+  hasAuthCallback(url?: string): boolean {
+    const href = url ?? (typeof window !== 'undefined' ? window.location.href : '');
+    if (!href) return false;
+    const params = new URL(href).searchParams;
+    return params.has('code');
   }
 
   /**
@@ -266,12 +291,43 @@ export class AIGateway {
     // Best-effort server logout (ignore errors)
     try {
       if (token) {
-        await fetch(`${this.baseUrl}/auth/logout`, {
+        await fetch(`${this.getAuthApiBaseUrl()}/logout`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
         });
       }
     } catch { /* ignore */ }
+  }
+
+  /**
+   * Refresh an expired session using the stored refresh token.
+   */
+  async refreshSession(): Promise<RefreshResult> {
+    const refreshToken = await this.storage.get(STORAGE_KEYS.REFRESH_TOKEN);
+    if (!refreshToken) {
+      throw new Error('AIGateway: No refresh token available');
+    }
+
+    const res = await fetch(`${this.getAuthApiBaseUrl()}/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    const json = await res.json() as {
+      success: boolean;
+      data?: RefreshResult;
+      error?: { message?: string };
+    };
+
+    if (!json.success || !json.data) {
+      throw new Error(`AIGateway: Session refresh failed - ${json.error?.message ?? 'Unknown error'}`);
+    }
+
+    await this.storage.set(STORAGE_KEYS.ACCESS_TOKEN, json.data.accessToken);
+    await this.storage.set(STORAGE_KEYS.REFRESH_TOKEN, json.data.refreshToken);
+
+    return json.data;
   }
 
   /**
@@ -467,6 +523,14 @@ export class AIGateway {
     return `Bearer ${token}`;
   }
 
+  private getOAuthBaseUrl(): string {
+    return this.authUrl.replace(/\/auth\/?$/, '');
+  }
+
+  private getAuthApiBaseUrl(): string {
+    return /\/auth\/?$/.test(this.authUrl) ? this.authUrl.replace(/\/$/, '') : `${this.authUrl.replace(/\/$/, '')}/auth`;
+  }
+
   /**
    * Build a short-lived HS256 JWT signed with the stored client secret.
    *
@@ -530,7 +594,7 @@ export class AIGateway {
    * In a production app, call this from your backend to keep clientSecret safe.
    */
   private async exchangeCode(code: string, clientSecret: string): Promise<SignInResult> {
-    const res = await fetch(`${this.authUrl}/oauth/token`, {
+    const res = await fetch(`${this.getOAuthBaseUrl()}/oauth/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

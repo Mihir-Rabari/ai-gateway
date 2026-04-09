@@ -188,6 +188,29 @@ describe('AIGateway SDK', () => {
     assert.equal(body.grant_type, 'authorization_code');
   });
 
+  it('getSignInUrl() builds an OAuth authorize URL and stores state', async () => {
+    const windowMock = {
+      location: { href: 'http://localhost:3000', origin: 'http://localhost:3000' },
+    };
+    global.window = windowMock as unknown as typeof window;
+
+    const oauthAi = new AIGateway({
+      clientId: 'client_abc',
+      redirectUri: 'http://localhost:3000/callback',
+      authUrl: 'https://auth.ai-gateway.io/auth',
+    });
+
+    const signInUrl = await oauthAi.getSignInUrl();
+    const parsed = new URL(signInUrl);
+
+    assert.equal(parsed.origin, 'https://auth.ai-gateway.io');
+    assert.equal(parsed.pathname, '/oauth/authorize');
+    assert.equal(parsed.searchParams.get('client_id'), 'client_abc');
+    assert.equal(parsed.searchParams.get('redirect_uri'), 'http://localhost:3000/callback');
+    assert.equal(parsed.searchParams.get('response_type'), 'code');
+    assert.ok(parsed.searchParams.get('state'));
+  });
+
   it('handleCallback() throws on state mismatch', async () => {
     const oauthAi = new AIGateway({
       clientId: 'client_abc',
@@ -218,6 +241,16 @@ describe('AIGateway SDK', () => {
     );
   });
 
+  it('hasAuthCallback() detects code params', () => {
+    const oauthAi = new AIGateway({
+      clientId: 'client_abc',
+      redirectUri: 'http://localhost:3000/callback',
+    });
+
+    assert.equal(oauthAi.hasAuthCallback('http://localhost:3000/callback?code=abc123'), true);
+    assert.equal(oauthAi.hasAuthCallback('http://localhost:3000/callback'), false);
+  });
+
   it('isAuthenticated() returns false when no token', async () => {
     const fresh = new AIGateway({ clientId: 'x', redirectUri: 'http://localhost/cb' });
     assert.equal(await fresh.isAuthenticated(), false);
@@ -227,6 +260,60 @@ describe('AIGateway SDK', () => {
     const fresh = new AIGateway({ clientId: 'x', redirectUri: 'http://localhost/cb' });
     fresh.setToken('tok');
     assert.equal(await fresh.isAuthenticated(), true);
+  });
+
+  it('refreshSession() exchanges the stored refresh token', async () => {
+    const fetchMock = mock.fn(async () => {
+      return {
+        json: async () => ({
+          success: true,
+          data: {
+            accessToken: 'new_access_tok',
+            refreshToken: 'new_refresh_tok',
+          },
+        }),
+      } as Response;
+    });
+
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const oauthAi = new AIGateway({
+      clientId: 'client_abc',
+      redirectUri: 'http://localhost:3000/callback',
+      authUrl: 'https://auth.ai-gateway.io',
+    });
+
+    const storage = (oauthAi as unknown as { storage: { set: (k: string, v: string) => void; get: (k: string) => string | null } }).storage;
+    storage.set('ai_gw_refresh_token', 'refresh_123');
+
+    const result = await oauthAi.refreshSession();
+
+    assert.equal(result.accessToken, 'new_access_tok');
+    assert.equal(result.refreshToken, 'new_refresh_tok');
+    assert.equal(fetchMock.mock.calls.length, 1);
+    const [reqUrl, reqInit] = fetchMock.mock.calls[0].arguments as unknown as [string, RequestInit];
+    assert.equal(reqUrl, 'https://auth.ai-gateway.io/auth/refresh');
+    assert.equal(JSON.parse(reqInit.body as string).refreshToken, 'refresh_123');
+    assert.equal(storage.get('ai_gw_access_token'), 'new_access_tok');
+  });
+
+  it('signOut() calls the auth service logout endpoint', async () => {
+    const fetchMock = mock.fn(async () => ({ ok: true }) as Response);
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const oauthAi = new AIGateway({
+      clientId: 'client_abc',
+      redirectUri: 'http://localhost:3000/callback',
+      authUrl: 'https://auth.ai-gateway.io',
+    });
+    const storage = (oauthAi as unknown as { storage: { set: (k: string, v: string) => void } }).storage;
+    storage.set('ai_gw_access_token', 'access_123');
+
+    await oauthAi.signOut();
+
+    const [reqUrl, reqInit] = fetchMock.mock.calls[0].arguments as unknown as [string, RequestInit];
+    assert.equal(reqUrl, 'https://auth.ai-gateway.io/auth/logout');
+    assert.equal((reqInit.headers as Record<string, string>).Authorization, 'Bearer access_123');
   });
 
   it('signIn() opens popup and resolves on postMessage (static legacy)', async () => {

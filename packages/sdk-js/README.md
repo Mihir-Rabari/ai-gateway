@@ -1,11 +1,11 @@
-# @ai-gateway/sdk-js
+# @mihirrabari/ai-gateway
 
 JavaScript/TypeScript SDK for AI Gateway — OAuth-style authentication + AI request pipeline.
 
 ## Install
 
 ```bash
-npm install @ai-gateway/sdk-js
+npm install @mihirrabari/ai-gateway
 ```
 
 ---
@@ -13,7 +13,7 @@ npm install @ai-gateway/sdk-js
 ## Quick Start (OAuth flow — recommended)
 
 ```typescript
-import { AIGateway } from '@ai-gateway/sdk-js';
+import { AIGateway } from '@mihirrabari/ai-gateway';
 
 // 1. Initialize with your OAuth credentials
 const ai = new AIGateway({
@@ -230,7 +230,7 @@ const ai = new AIGateway({
 
 ```tsx
 // App.tsx
-import { AIGateway } from '@ai-gateway/sdk-js';
+import { AIGateway } from '@mihirrabari/ai-gateway';
 
 const ai = new AIGateway({
   clientId: import.meta.env.VITE_CLIENT_ID,

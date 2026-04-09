@@ -1,11 +1,11 @@
 {
-  "name": "@ai-gateway/sdk-js",
-  "version": "0.0.1",
+  "name": "@mihirrabari/ai-gateway",
+  "version": "0.0.2",
   "description": "JavaScript SDK for AI Gateway",
   "type": "module",
   "sideEffects": false,
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
@@ -17,12 +17,12 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     },
     "./widget": {
       "types": "./dist/widget.d.ts",
-      "import": "./dist/widget.mjs"
+      "import": "./dist/widget.js"
     }
   },
   "scripts": {
@@ -30,7 +30,7 @@
     "build:index": "tsup src/index.ts --format esm,cjs --dts",
     "build:widget": "tsup src/widget.ts --format esm,iife --globalName AIGateway --outDir dist --dts",
     "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
-    "test": "tsc --noEmit false --outDir dist --declaration false --declarationMap false && node --test dist/index.test.js",
+    "test": "tsc --noEmit false --outDir dist --declaration false --declarationMap false && node --test dist/*.test.js",
     "type-check": "tsc --noEmit",
     "prepublishOnly": "pnpm run build && pnpm run type-check"
   },

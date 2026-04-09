@@ -123,7 +123,7 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
       models: [
         'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo',
         'claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307',
-        'gemini-1.5-pro', 'gemini-1.5-flash',
+        'gemini-2.5-pro', 'gemini-2.5-flash',
       ],
     }));
   });
