@@ -169,14 +169,23 @@ const fetchApi = async <T>(
 ): Promise<T> => {
   const shouldAttachAuth = config.auth ?? true;
   const token = shouldAttachAuth ? getAuthToken() : null;
+  const hasJsonBody =
+    options.body !== undefined &&
+    options.body !== null &&
+    !(options.body instanceof FormData);
+  const headers = new Headers(options.headers ?? {});
+
+  if (hasJsonBody && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
 
   const response = await fetch(resolveUrl(url), {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
+    headers,
   });
 
   const text = await response.text();
