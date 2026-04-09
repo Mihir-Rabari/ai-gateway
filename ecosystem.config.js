@@ -8,6 +8,15 @@
 
 const isDev = process.env.NODE_ENV !== "production";
 const pnpmCmd = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+const isWin = process.platform === "win32";
+const scriptCmd = isWin ? "cmd.exe" : pnpmCmd;
+const makeArgs = (dev, entry) => {
+  if (dev) {
+    return isWin ? ["/c", pnpmCmd, "run", "dev"] : ["run", "dev"];
+  }
+  // production: run the built entry
+  return isWin ? ["/c", pnpmCmd, entry] : [entry];
+};
 
 const BACKEND_PROD_ENTRY = "dist/index.js";
 
@@ -20,49 +29,51 @@ const backendServices = [
   "routing-service",
   "analytics-service",
   "worker",
-].map((name) => ({
-  name,
-  cwd: `./apps/${name}`,
-  // In dev on Windows spawn cmd.exe to run pnpm.cmd. On Unix call pnpm directly.
-  script: isDev
-    ? (process.platform === "win32" ? "cmd" : pnpmCmd)
-    : "node",
-  args: isDev
-    ? (process.platform === "win32" ? ["/c", pnpmCmd, "run", "dev"] : ["run", "dev"])
-    : BACKEND_PROD_ENTRY,
-  watch: false,
-  // When spawning cmd on Windows, tell PM2 not to use Node interpreter
-  interpreter: isDev && process.platform === "win32" ? "none" : "node",
-  env: { NODE_ENV: "development" },
-  env_production: { NODE_ENV: "production" },
-}));
+].map((name) => {
+  if (isDev) {
+    return {
+      name,
+      cwd: `./apps/${name}`,
+      script: scriptCmd,
+      args: makeArgs(true, BACKEND_PROD_ENTRY),
+      watch: false,
+      interpreter: isWin ? "none" : "node",
+      env: { NODE_ENV: "development" },
+      env_production: { NODE_ENV: "production" },
+    };
+  }
+
+  // production: run built JS with node directly
+  return {
+    name,
+    cwd: `./apps/${name}`,
+    script: "node",
+    args: [BACKEND_PROD_ENTRY],
+    watch: false,
+    interpreter: "node",
+    env: { NODE_ENV: "production" },
+    env_production: { NODE_ENV: "production" },
+  };
+});
 
 const frontendApps = [
   {
     name: "web",
     cwd: "./apps/web",
-    script: isDev
-      ? (process.platform === "win32" ? "cmd" : pnpmCmd)
-      : "node",
-    args: isDev
-      ? (process.platform === "win32" ? ["/c", pnpmCmd, "run", "dev"] : ["run", "dev"])
-      : "start",
+    script: isDev ? scriptCmd : "node",
+    args: isDev ? makeArgs(true, BACKEND_PROD_ENTRY) : ["start"],
     watch: false,
-    interpreter: isDev && process.platform === "win32" ? "none" : "node",
+    interpreter: isWin ? "none" : "node",
     env: { NODE_ENV: "development" },
     env_production: { NODE_ENV: "production" },
   },
   {
     name: "console",
     cwd: "./apps/console",
-    script: isDev
-      ? (process.platform === "win32" ? "cmd" : pnpmCmd)
-      : "node",
-    args: isDev
-      ? (process.platform === "win32" ? ["/c", pnpmCmd, "run", "dev"] : ["run", "dev"])
-      : "start",
+    script: isDev ? scriptCmd : "node",
+    args: isDev ? makeArgs(true, BACKEND_PROD_ENTRY) : ["start"],
     watch: false,
-    interpreter: isDev && process.platform === "win32" ? "none" : "node",
+    interpreter: isWin ? "none" : "node",
     env: { NODE_ENV: "development" },
     env_production: { NODE_ENV: "production" },
   },
