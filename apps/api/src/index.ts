@@ -14,10 +14,16 @@ async function bootstrap() {
 
   // CORS
   await app.register(cors, {
-    origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000', 'http://localhost:3009'],
-    credentials: true,
+    origin: '*',
+    credentials: false,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: [
+      'Content-Type', 'Authorization',
+      'X-App-Id', 'x-app-id',
+      'X-App-Token', 'x-app-token',
+      'X-Api-Key', 'x-api-key',
+      'X-App-Key', 'x-app-key',
+    ],
   });
 
   // Rate limiting

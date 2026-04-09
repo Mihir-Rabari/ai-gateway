@@ -405,8 +405,9 @@ export class GatewayService {
       if (data.stream) {
         if (!res.body) throw Errors.ROUTING_FAILED();
         async function* streamGenerator() {
+          const decoder = new TextDecoder();
           for await (const chunk of res.body! as any) {
-             yield Buffer.isBuffer(chunk) ? chunk.toString() : String(chunk);
+            yield decoder.decode(chunk, { stream: true });
           }
         }
         return streamGenerator();

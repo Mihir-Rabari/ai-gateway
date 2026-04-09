@@ -109,19 +109,24 @@ function sanitizeCallbackUrl(): void {
 }
 
 async function hydrateSession(): Promise<void> {
+  console.log("[ExampleApp] Hydrating session...");
   const isAuthenticated = await ai.isAuthenticated();
   if (!isAuthenticated) {
+    console.log("[ExampleApp] No active session found.");
     return;
   }
 
   try {
     const user = await ai.getUser();
     state.user = user;
+    console.log("[ExampleApp] Session restored for user:", user?.email);
 
     if (user) {
       try {
         state.credits = await ai.getCredits();
+        console.log("[ExampleApp] Credits loaded:", state.credits.balance);
       } catch {
+        console.warn("[ExampleApp] Could not load credits.");
         setStatus("Signed in, but credit balance could not be loaded yet.", "neutral");
       }
       return;
@@ -198,6 +203,7 @@ async function handleSignIn(): Promise<void> {
     return;
   }
 
+  console.log("[ExampleApp] Initiating sign-in redirect...");
   state.authBusy = true;
   setStatus("Redirecting you to the AI Gateway consent screen...", "neutral");
   render();
@@ -205,6 +211,7 @@ async function handleSignIn(): Promise<void> {
   try {
     await ai.signIn();
   } catch (error) {
+    console.error("[ExampleApp] Sign-in redirect failed:", error);
     state.authBusy = false;
     setStatus(error instanceof Error ? error.message : "Failed to start sign-in.", "error");
     render();
@@ -266,6 +273,7 @@ async function handleChatSubmit(): Promise<void> {
     let finalAssistantText = "";
     let sawStreamChunk = false;
 
+    console.log(`[ExampleApp] Starting stream for model: ${state.model}`);
     for await (const rawChunk of ai.stream({
       model: state.model,
       messages: chatMessages,
@@ -275,6 +283,7 @@ async function handleChatSubmit(): Promise<void> {
       try {
         const parsed = JSON.parse(rawChunk) as { output?: string };
         if (parsed.output) {
+          console.log("[ExampleApp] Received chunk:", parsed.output);
           sawStreamChunk = true;
           finalAssistantText += parsed.output;
           nextAssistantMessage.content = finalAssistantText;
@@ -284,6 +293,7 @@ async function handleChatSubmit(): Promise<void> {
         // Ignore malformed chunks and keep the stream alive.
       }
     }
+    console.log("[ExampleApp] Stream completed successfully.");
 
     if (!sawStreamChunk) {
       throw new Error("The stream completed without returning any text.");
@@ -357,7 +367,7 @@ function renderSidebar(): string {
       <div class="stat-grid">
         <div class="stat">
           <span class="stat-label">SDK package</span>
-          <span class="stat-value">@mihirrabari/ai-gateway@0.0.2</span>
+          <span class="stat-value">@mihirrabari/ai-gateway@0.0.3</span>
         </div>
         <div class="stat">
           <span class="stat-label">Gemini model</span>

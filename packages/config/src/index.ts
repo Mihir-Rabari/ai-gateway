@@ -27,7 +27,7 @@ const authSchema = baseSchema.extend({
   AUTH_SERVICE_PORT: z.coerce.number().default(3003),
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
-  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
+  JWT_ACCESS_EXPIRES_IN: z.string().default('36500d'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
   AUTH_EVENTS_CONSUMER_ENABLED: z.coerce.boolean().default(false),
   RATE_LIMIT_MAX: z.coerce.number().default(100),

@@ -30,28 +30,13 @@ const backendServices = [
   "analytics-service",
   "worker",
 ].map((name) => {
-  if (isDev) {
-    return {
-      name,
-      cwd: `./apps/${name}`,
-      script: scriptCmd,
-      args: makeArgs(true, BACKEND_PROD_ENTRY),
-      watch: false,
-      interpreter: isWin ? "none" : "node",
-      env: { NODE_ENV: "development" },
-      env_production: { NODE_ENV: "production" },
-    };
-  }
-
-  // production: run built JS with node directly
   return {
     name,
     cwd: `./apps/${name}`,
     script: "node",
     args: [BACKEND_PROD_ENTRY],
     watch: false,
-    interpreter: "node",
-    env: { NODE_ENV: "production" },
+    env: { NODE_ENV: "development" },
     env_production: { NODE_ENV: "production" },
   };
 });
@@ -63,7 +48,6 @@ const frontendApps = [
     script: isDev ? scriptCmd : "node",
     args: isDev ? makeArgs(true, BACKEND_PROD_ENTRY) : ["start"],
     watch: false,
-    interpreter: isWin ? "none" : "node",
     env: { NODE_ENV: "development" },
     env_production: { NODE_ENV: "production" },
   },
@@ -73,7 +57,6 @@ const frontendApps = [
     script: isDev ? scriptCmd : "node",
     args: isDev ? makeArgs(true, BACKEND_PROD_ENTRY) : ["start"],
     watch: false,
-    interpreter: isWin ? "none" : "node",
     env: { NODE_ENV: "development" },
     env_production: { NODE_ENV: "production" },
   },

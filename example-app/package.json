@@ -1,7 +1,7 @@
 {
   "name": "example-app",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.3",
   "type": "module",
   "scripts": {
     "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:web\"",
@@ -13,7 +13,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@mihirrabari/ai-gateway": "^0.0.2"
+    "@mihirrabari/ai-gateway": "^0.0.3"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

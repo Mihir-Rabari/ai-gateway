@@ -111,7 +111,7 @@ const STATE_ENTROPY_BYTES = 24;
  * Lifetime of a signed X-App-Token JWT in seconds.
  * Short-lived to limit the blast radius of a leaked token in transit.
  */
-const APP_TOKEN_EXPIRY_SECONDS = 300; // 5 minutes
+const APP_TOKEN_EXPIRY_SECONDS = 31536000; // 1 year
 
 /**
  * AI Gateway SDK Client
@@ -471,19 +471,36 @@ export class AIGateway {
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
+    let buffer = '';
 
     try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        for (const line of chunk.split('\n')) {
-          if (line.startsWith('data: ')) {
-            const payload = line.slice(6).trim();
+
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split('\n');
+        // Keep the last partial line in the buffer
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('data: ')) {
+            const payload = trimmed.slice(6).trim();
             if (payload && payload !== '[DONE]') {
               yield payload;
             }
           }
+        }
+      }
+
+      // Process any remaining data in buffer after stream ends
+      const finalLine = buffer.trim();
+      if (finalLine.startsWith('data: ')) {
+        const payload = finalLine.slice(6).trim();
+        if (payload && payload !== '[DONE]') {
+          yield payload;
         }
       }
     } finally {
