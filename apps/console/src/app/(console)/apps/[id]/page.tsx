@@ -1,26 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { use, useEffect, useState } from "react";
-import { ArrowLeft, Copy, Eye, EyeOff, RotateCw, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { Copy, Eye, EyeOff, RotateCw, Trash2 } from "lucide-react";
 import { api, type AppUsageSummary, type DeveloperApp } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import { Badge, Button, Field, InlineMessage, ShellSection, SkeletonBlock, Surface, TextArea } from "@/components/console/system";
 
-export default function AppDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+export default function AppDetailsPage() {
+  const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { id } = use(params);
   const { toast } = useToast();
+  const id = params.id;
   const [loading, setLoading] = useState(true);
   const [showKey, setShowKey] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [appData, setAppData] = useState<DeveloperApp | null>(null);
   const [usage, setUsage] = useState<AppUsageSummary | null>(null);
-
-  // Redirect URIs editor
   const [redirectUrisRaw, setRedirectUrisRaw] = useState("");
   const [savingUris, setSavingUris] = useState(false);
 
@@ -29,18 +26,12 @@ export default function AppDetailsPage({ params }: { params: Promise<{ id: strin
       setLoading(true);
       try {
         const [apps, usageRes] = await Promise.all([api.apps.list(), api.apps.usage(id)]);
-        const app = apps.find((item) => item.id === id) ?? null;
+        const app = apps.find((entry) => entry.id === id) ?? null;
         setAppData(app);
         setUsage(usageRes);
-        if (app?.redirectUris) {
-          setRedirectUrisRaw(app.redirectUris.join("\n"));
-        }
+        setRedirectUrisRaw(app?.redirectUris?.join("\n") ?? "");
       } catch (err) {
-        toast({
-          title: "Failed to load app",
-          description: err instanceof Error ? err.message : "Unexpected error",
-          variant: "destructive",
-        });
+        toast({ title: "Failed to load app", description: err instanceof Error ? err.message : "Unexpected error", variant: "destructive" });
       } finally {
         setLoading(false);
       }
@@ -55,266 +46,56 @@ export default function AppDetailsPage({ params }: { params: Promise<{ id: strin
   };
 
   const rotateKey = async () => {
-    if (!window.confirm("Rotate key now? This will immediately invalidate the previous key.")) {
-      return;
-    }
+    if (!window.confirm("Rotate the API key now? The previous key will stop working immediately.")) return;
     try {
       const result = await api.apps.rotateKey(id);
       setApiKey(result.apiKey);
       setShowKey(true);
-      toast({ title: "API key rotated", description: "Your new key is shown below." });
+      toast({ title: "API key rotated", description: "The new key is now visible on screen." });
     } catch (err) {
-      toast({
-        title: "Key rotation failed",
-        description: err instanceof Error ? err.message : "Unexpected error",
-        variant: "destructive",
-      });
+      toast({ title: "Key rotation failed", description: err instanceof Error ? err.message : "Unexpected error", variant: "destructive" });
     }
   };
 
   const saveRedirectUris = async () => {
-    const uris = redirectUrisRaw
-      .split("\n")
-      .map((u) => u.trim())
-      .filter(Boolean);
+    const uris = redirectUrisRaw.split("\n").map((entry) => entry.trim()).filter(Boolean);
     setSavingUris(true);
     try {
       await api.apps.updateRedirectUris(id, uris);
-      setAppData((prev) => (prev ? { ...prev, redirectUris: uris } : prev));
-      toast({ title: "Redirect URIs saved", description: `${uris.length} URI(s) saved.` });
+      setAppData((current) => (current ? { ...current, redirectUris: uris } : current));
+      toast({ title: "Redirect URIs saved", description: `${uris.length} URI(s) updated.` });
     } catch (err) {
-      toast({
-        title: "Failed to save redirect URIs",
-        description: err instanceof Error ? err.message : "Unexpected error",
-        variant: "destructive",
-      });
+      toast({ title: "Save failed", description: err instanceof Error ? err.message : "Unexpected error", variant: "destructive" });
     } finally {
       setSavingUris(false);
     }
   };
 
   const deleteApp = async () => {
-    if (!window.confirm("Delete this app? This action is irreversible.")) {
-      return;
-    }
+    if (!window.confirm("Delete this app? This cannot be undone.")) return;
     try {
       await api.apps.delete(id);
-      toast({ title: "App deleted", description: "The app was removed successfully." });
+      toast({ title: "App deleted", description: "The application has been removed." });
       router.push("/apps");
     } catch (err) {
-      toast({
-        title: "Delete failed",
-        description: err instanceof Error ? err.message : "Unexpected error",
-        variant: "destructive",
-      });
+      toast({ title: "Delete failed", description: err instanceof Error ? err.message : "Unexpected error", variant: "destructive" });
     }
   };
 
   const usageRows = usage?.rows ?? [];
-  const totalCredits = usageRows.reduce((acc, row) => acc + Number(row.total_credits || 0), 0);
-  const totalRequests = usageRows.reduce((acc, row) => acc + Number(row.total_requests || 0), 0);
+  const totalCredits = usageRows.reduce((sum, row) => sum + Number(row.total_credits || 0), 0);
+  const totalRequests = usageRows.reduce((sum, row) => sum + Number(row.total_requests || 0), 0);
 
   return (
-    <div className="space-y-8">
-      <div>
-        <Link
-          href="/apps"
-          className="mb-4 inline-flex items-center text-sm font-medium text-white/50 transition-colors hover:text-white"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Apps
-        </Link>
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="mb-2 text-3xl font-bold tracking-tight">App Details</h1>
-            <p className="text-white/60">Manage credentials and redirect URIs for this app.</p>
-          </div>
-        </div>
+    <div className="space-y-6">
+      <ShellSection eyebrow="App detail" title={appData?.name ?? "Application detail"} description="Inspect credentials, edit redirect URIs, and review analytics for this app." action={<Link href="/apps"><Button variant="secondary">Back to apps</Button></Link>} />
+      {!loading && !appData ? <InlineMessage tone="danger">App not found or you no longer have access to it.</InlineMessage> : null}
+      <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+        <Surface className="p-6 md:p-7"><p className="text-[11px] uppercase tracking-[0.28em] text-white/38">Identity</p>{loading ? <div className="mt-8 space-y-3"><SkeletonBlock className="h-12" /><SkeletonBlock className="h-20" /><SkeletonBlock className="h-12" /></div> : appData ? <div className="mt-8 space-y-4"><div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4"><p className="text-[11px] uppercase tracking-[0.2em] text-white/38">App ID</p><p className="mt-3 break-all font-mono text-sm text-white/82">{appData.id}</p></div><div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4"><p className="text-[11px] uppercase tracking-[0.2em] text-white/38">Client ID</p><div className="mt-3 flex items-center gap-3"><p className="min-w-0 flex-1 break-all font-mono text-sm text-white/82">{appData.clientId ?? "Unavailable"}</p>{appData.clientId ? <Button variant="secondary" onClick={() => copyText(appData.clientId!, "Client ID")}><Copy className="h-4 w-4" />Copy</Button> : null}</div></div><div className="flex items-center gap-2"><Badge tone="success">Active</Badge><Badge>Created {new Date(appData.createdAt).toLocaleDateString()}</Badge></div></div> : null}</Surface>
+        <Surface className="p-6 md:p-7"><p className="text-[11px] uppercase tracking-[0.28em] text-white/38">Credentials</p><div className="mt-8 space-y-4"><div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4"><p className="text-[11px] uppercase tracking-[0.2em] text-white/38">Visible API key</p><div className="mt-3 flex items-center gap-3"><p className="min-w-0 flex-1 break-all font-mono text-sm text-white/82">{apiKey ? (showKey ? apiKey : "•".repeat(24)) : "Rotate the key to generate a fresh visible value"}</p><button type="button" onClick={() => setShowKey((current) => !current)} className="rounded-full border border-white/10 bg-white/[0.04] p-3 text-white/66 transition hover:bg-white/[0.08] hover:text-white">{showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button><Button variant="secondary" onClick={() => copyText(apiKey, "API Key")} disabled={!apiKey}><Copy className="h-4 w-4" />Copy</Button></div></div><div className="flex flex-wrap gap-3"><Button variant="secondary" onClick={rotateKey}><RotateCw className="h-4 w-4" />Rotate key</Button><Button variant="danger" onClick={deleteApp}><Trash2 className="h-4 w-4" />Delete app</Button></div></div></Surface>
       </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* ── Application Info ── */}
-        <Card className="border-white/10 bg-[#0a0a0a]">
-          <CardHeader>
-            <CardTitle>Application Info</CardTitle>
-            <CardDescription className="text-white/40">Basic app metadata.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {loading ? (
-              <>
-                <Skeleton className="h-5 w-40 bg-white/10" />
-                <Skeleton className="h-4 w-full bg-white/10" />
-                <Skeleton className="h-4 w-48 bg-white/10" />
-              </>
-            ) : !appData ? (
-              <p className="text-sm text-white/50">App not found or you no longer have access.</p>
-            ) : (
-              <>
-                <div>
-                  <p className="text-sm text-white/60">App Name</p>
-                  <p className="mt-1 text-lg font-medium">{appData.name}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-white/60">App ID</p>
-                  <p className="mt-1 rounded border border-white/10 bg-black p-2 font-mono text-xs text-white/80">
-                    {appData.id}
-                  </p>
-                </div>
-                {appData.clientId && (
-                  <div>
-                    <p className="text-sm text-white/60">Client ID</p>
-                    <div className="mt-1 flex items-center gap-2">
-                      <p className="flex-1 truncate rounded border border-white/10 bg-black p-2 font-mono text-xs text-white/80">
-                        {appData.clientId}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => copyText(appData.clientId!, "Client ID")}
-                        className="rounded border border-white/10 bg-white/5 p-2 text-white/60 hover:bg-white/10 hover:text-white"
-                        title="Copy Client ID"
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm text-white/60">Description</p>
-                  <p className="mt-1 text-sm text-white/80">{appData.description || "-"}</p>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* ── API Key ── */}
-        <Card className="border-white/10 bg-[#0a0a0a]">
-          <CardHeader>
-            <CardTitle>API Key</CardTitle>
-            <CardDescription className="text-white/40">Rotate to issue a fresh API key.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <p className="mb-2 text-sm text-white/60">Current Visible Key</p>
-              <div className="flex">
-                <div className="flex flex-1 items-center overflow-hidden rounded-l-md border border-white/10 bg-black px-3 font-mono text-sm">
-                  {apiKey ? (showKey ? apiKey : "********************************") : "Rotate to generate a new key"}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowKey((prev) => !prev)}
-                  className="border border-l-0 border-white/10 bg-white/5 px-4 text-white/70 hover:bg-white/10 hover:text-white"
-                >
-                  {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => copyText(apiKey, "API Key")}
-                  className="rounded-r-md border border-l-0 border-white/10 bg-white/5 px-4 text-white/70 hover:bg-white/10 hover:text-white"
-                >
-                  <Copy className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex gap-4 border-t border-white/5 pt-4">
-              <Button
-                onClick={rotateKey}
-                variant="outline"
-                className="border-yellow-500/20 text-yellow-400 hover:bg-yellow-500/10"
-              >
-                <RotateCw className="mr-2 h-4 w-4" /> Rotate Key
-              </Button>
-              <Button
-                onClick={deleteApp}
-                variant="outline"
-                className="border-red-500/20 text-red-400 hover:bg-red-500/10"
-              >
-                <Trash2 className="mr-2 h-4 w-4" /> Delete App
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ── OAuth Redirect URIs ── */}
-      <Card className="border-white/10 bg-[#0a0a0a]">
-        <CardHeader>
-          <CardTitle>OAuth Redirect URIs</CardTitle>
-          <CardDescription className="text-white/40">
-            URIs that users may be redirected to after authorization. Must match exactly what your SDK sends.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {loading ? (
-            <Skeleton className="h-20 w-full bg-white/10" />
-          ) : (
-            <>
-              <p className="text-xs text-white/40">One URI per line.</p>
-              <textarea
-                value={redirectUrisRaw}
-                onChange={(e) => setRedirectUrisRaw(e.target.value)}
-                placeholder={"http://localhost:3000/callback\nhttps://myapp.com/callback"}
-                rows={4}
-                className="w-full resize-none rounded-md border border-white/10 bg-black px-3 py-2 font-mono text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20"
-              />
-              <Button
-                onClick={saveRedirectUris}
-                disabled={savingUris}
-                className="bg-white text-black hover:bg-white/90"
-              >
-                {savingUris ? "Saving…" : "Save Redirect URIs"}
-              </Button>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* ── Usage Stats ── */}
-      <Card className="border-white/10 bg-[#0a0a0a]">
-        <CardHeader>
-          <CardTitle>Usage Stats</CardTitle>
-          <CardDescription className="text-white/40">
-            Aggregated from analytics-service for this app.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <Skeleton className="h-28 w-full bg-white/10" />
-          ) : usageRows.length === 0 ? (
-            <p className="text-sm text-white/50">No usage events recorded yet for this app.</p>
-          ) : (
-            <div className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-lg border border-white/10 bg-black/40 p-3">
-                  <p className="text-xs text-white/50">Total Requests</p>
-                  <p className="mt-1 text-xl font-semibold text-white">{totalRequests.toLocaleString()}</p>
-                </div>
-                <div className="rounded-lg border border-white/10 bg-black/40 p-3">
-                  <p className="text-xs text-white/50">Total Credits</p>
-                  <p className="mt-1 text-xl font-semibold text-white">{totalCredits.toLocaleString()}</p>
-                </div>
-              </div>
-
-              {usageRows.map((row) => (
-                <div
-                  key={row.model}
-                  className="flex items-center justify-between rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm"
-                >
-                  <div>
-                    <p className="text-white">{row.model}</p>
-                    <p className="text-xs text-white/50">avg latency {Math.round(row.avg_latency_ms || 0)} ms</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-white">{Number(row.total_requests || 0).toLocaleString()} req</p>
-                    <p className="text-xs text-white/50">{Number(row.total_credits || 0).toLocaleString()} credits</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <Surface className="p-6 md:p-7"><p className="text-[11px] uppercase tracking-[0.28em] text-white/38">OAuth redirect URIs</p><div className="mt-8 space-y-4"><Field label="Allowed redirect URIs" hint="One URI per line"><TextArea value={redirectUrisRaw} onChange={(event) => setRedirectUrisRaw(event.target.value)} placeholder={"http://localhost:3000/callback\nhttps://myapp.com/callback"} /></Field><Button busy={savingUris} onClick={saveRedirectUris}>{savingUris ? "Saving" : "Save redirect URIs"}</Button></div></Surface>
+      <Surface className="p-6 md:p-7"><div className="flex items-center justify-between gap-3"><div><p className="text-[11px] uppercase tracking-[0.28em] text-white/38">Usage</p><h2 className="mt-3 font-display text-3xl tracking-[-0.05em] text-white">Traffic summary</h2></div><div className="flex items-center gap-2 text-sm text-white/48"><span>{totalRequests.toLocaleString()} requests</span><span>{totalCredits.toLocaleString()} credits</span></div></div>{loading ? <div className="mt-8 space-y-3"><SkeletonBlock className="h-16" /><SkeletonBlock className="h-16" /><SkeletonBlock className="h-16" /></div> : usageRows.length === 0 ? <p className="mt-8 text-sm text-white/50">No usage events have been recorded for this app yet.</p> : <div className="mt-8 space-y-3">{usageRows.map((row) => <div key={row.model} className="flex flex-col gap-3 rounded-[22px] border border-white/10 bg-white/[0.03] px-4 py-4 md:flex-row md:items-center md:justify-between"><div><p className="font-medium text-white">{row.model}</p><p className="mt-1 text-sm text-white/44">Average latency {Math.round(row.avg_latency_ms || 0)} ms</p></div><div className="text-sm text-white/60 md:text-right"><p>{Number(row.total_requests || 0).toLocaleString()} requests</p><p className="mt-1">{Number(row.total_credits || 0).toLocaleString()} credits</p></div></div>)}</div>}</Surface>
     </div>
   );
 }

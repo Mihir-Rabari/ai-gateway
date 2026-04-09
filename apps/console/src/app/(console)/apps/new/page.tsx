@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+import { Eye, EyeOff } from "lucide-react";
 import { api } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import { Button, Field, InlineMessage, ShellSection, Surface, TextArea, TextInput } from "@/components/console/system";
 
 type CreatedApp = {
   id: string;
@@ -22,38 +21,20 @@ export default function RegisterAppPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
-  const [desc, setDesc] = useState("");
+  const [description, setDescription] = useState("");
   const [redirectUrisRaw, setRedirectUrisRaw] = useState("");
   const [created, setCreated] = useState<CreatedApp | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setLoading(true);
     try {
-      // Parse redirect URIs — one per line, ignore empty lines
-      const redirectUris = redirectUrisRaw
-        .split("\n")
-        .map((u) => u.trim())
-        .filter(Boolean);
-
-      const result = await api.apps.create(name, desc || undefined, redirectUris);
-      setCreated({
-        id: result.id,
-        name: result.name,
-        apiKey: result.apiKey,
-        clientId: result.clientId,
-        clientSecret: result.clientSecret,
-      });
-      toast({
-        title: "App registered",
-        description: `${result.name} is ready. Save your credentials now — secrets are shown only once.`,
-      });
+      const redirectUris = redirectUrisRaw.split("\n").map((entry) => entry.trim()).filter(Boolean);
+      const result = await api.apps.create(name, description || undefined, redirectUris);
+      setCreated({ id: result.id, name: result.name, apiKey: result.apiKey, clientId: result.clientId, clientSecret: result.clientSecret });
+      toast({ title: "App registered", description: `${result.name} is ready. Store the secret values now because they are only shown once.` });
     } catch (err) {
-      toast({
-        title: "Failed to register app",
-        description: err instanceof Error ? err.message : "Unexpected error",
-        variant: "destructive",
-      });
+      toast({ title: "Registration failed", description: err instanceof Error ? err.message : "Unexpected error", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -61,208 +42,49 @@ export default function RegisterAppPage() {
 
   const copy = async (value: string, label: string) => {
     await navigator.clipboard.writeText(value);
-    toast({ title: `${label} copied`, description: "Store it securely." });
+    toast({ title: `${label} copied`, description: "Stored in clipboard." });
   };
 
   if (created) {
     return (
-      <div className="mx-auto mt-8 max-w-2xl space-y-8">
-        <div>
-          <h1 className="mb-2 text-3xl font-bold tracking-tight">App Registered 🎉</h1>
-          <p className="text-white/60">
-            Save your credentials below — the <span className="text-yellow-400">client secret</span> and{" "}
-            <span className="text-yellow-400">API key</span> are shown <strong>only once</strong>.
-          </p>
-        </div>
-
-        <Card className="border-white/10 bg-[#0a0a0a]">
-          <CardHeader>
-            <CardTitle>OAuth Credentials</CardTitle>
-            <CardDescription className="text-white/40">
-              Use these to integrate the AI Gateway SDK in your application.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <CredentialRow label="Client ID" value={created.clientId} onCopy={() => copy(created.clientId, "Client ID")} />
-            <CredentialRow
-              label="Client Secret"
-              value={created.clientSecret}
-              secret
-              onCopy={() => copy(created.clientSecret, "Client Secret")}
-              warning="This is shown only once. Store it in a secure secret manager."
-            />
-            <CredentialRow
-              label="API Key (legacy)"
-              value={created.apiKey}
-              secret
-              onCopy={() => copy(created.apiKey, "API Key")}
-              warning="This is shown only once."
-            />
-
-            <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 p-3 mt-4">
-              <p className="text-xs text-indigo-300 font-medium mb-2">Quick Start</p>
-              <pre className="text-xs text-white/80 overflow-x-auto whitespace-pre-wrap break-all">
-{`import { AIGateway } from '@ai-gateway/sdk-js';
-
-const ai = new AIGateway({
-  clientId: '${created.clientId}',
-  redirectUri: 'http://localhost:3000/callback',
-});
-
-await ai.signIn();`}
-              </pre>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="flex gap-4">
-          <Button
-            onClick={() => router.push(`/apps/${created.id}`)}
-            className="bg-white text-black hover:bg-white/90"
-          >
-            Go to App Details
-          </Button>
-          <Link href="/apps">
-            <Button variant="outline" className="border-white/20 text-white hover:bg-white/5">
-              Back to Apps
-            </Button>
-          </Link>
-        </div>
+      <div className="space-y-6">
+        <ShellSection eyebrow="New app" title="Credentials issued" description="This is the only time the client secret and API key are shown in full. Save them before leaving this screen." action={<Button onClick={() => router.push(`/apps/${created.id}`)}>Open app detail</Button>} />
+        <InlineMessage tone="warning">Client secret and API key are write-once display values. Store them in a secret manager before you navigate away.</InlineMessage>
+        <Surface className="p-6 md:p-7"><div className="space-y-4"><CredentialRow label="Client ID" value={created.clientId} onCopy={() => copy(created.clientId, "Client ID")} /><CredentialRow label="Client Secret" value={created.clientSecret} secret onCopy={() => copy(created.clientSecret, "Client Secret")} /><CredentialRow label="API Key" value={created.apiKey} secret onCopy={() => copy(created.apiKey, "API Key")} /></div></Surface>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto mt-8 max-w-2xl space-y-8">
-      <div>
-        <h1 className="mb-2 text-3xl font-bold tracking-tight">Register New App</h1>
-        <p className="text-white/60">
-          Create a developer app and get your OAuth credentials instantly.
-        </p>
-      </div>
-
-      <Card className="border-white/10 bg-[#0a0a0a]">
-        <form onSubmit={handleSubmit}>
-          <CardHeader>
-            <CardTitle>Application Details</CardTitle>
-            <CardDescription className="text-white/40">
-              Only app name is required. Add redirect URIs to enable the OAuth flow.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-medium text-white/80">
-                App Name <span className="text-red-400">*</span>
-              </label>
-              <Input
-                id="name"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="My Awesome App"
-                className="border-white/10 bg-black text-white placeholder:text-white/30 focus-visible:ring-white/20"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="desc" className="text-sm font-medium text-white/80">
-                Description
-              </label>
-              <Input
-                id="desc"
-                value={desc}
-                onChange={(e) => setDesc(e.target.value)}
-                placeholder="What does this app do?"
-                className="border-white/10 bg-black text-white placeholder:text-white/30 focus-visible:ring-white/20"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="redirectUris" className="text-sm font-medium text-white/80">
-                Redirect URIs
-              </label>
-              <p className="text-xs text-white/40">
-                One URI per line. Required for the OAuth sign-in flow. You can add more later.
-              </p>
-              <textarea
-                id="redirectUris"
-                value={redirectUrisRaw}
-                onChange={(e) => setRedirectUrisRaw(e.target.value)}
-                placeholder={
-                  "http://localhost:3000/callback\nhttps://myapp.com/callback"
-                }
-                rows={3}
-                className="w-full rounded-md border border-white/10 bg-black px-3 py-2 font-mono text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20 resize-none"
-              />
-            </div>
-
-            <div className="flex gap-4 border-t border-white/5 pt-4">
-              <Button type="submit" disabled={loading} className="bg-white text-black hover:bg-white/90">
-                {loading ? "Registering..." : "Register App"}
-              </Button>
-              <Link href="/apps">
-                <Button type="button" variant="outline" className="border-white/20 text-white hover:bg-white/5">
-                  Cancel
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
+    <div className="space-y-6">
+      <ShellSection eyebrow="Create" title="Register a new app" description="Issue fresh developer credentials and define the first redirect URIs for your OAuth flow." />
+      <Surface className="p-6 md:p-7">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <Field label="App name" hint="Required"><TextInput value={name} onChange={(event) => setName(event.target.value)} placeholder="My AI product" required /></Field>
+          <Field label="Description" hint="Optional"><TextInput value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Short summary of what the app does" /></Field>
+          <Field label="Redirect URIs" hint="One per line"><TextArea value={redirectUrisRaw} onChange={(event) => setRedirectUrisRaw(event.target.value)} placeholder={"http://localhost:3000/callback\nhttps://myapp.com/callback"} /></Field>
+          <div className="flex flex-wrap gap-3"><Button type="submit" busy={loading}>{loading ? "Registering" : "Register app"}</Button><Link href="/apps"><Button variant="secondary">Cancel</Button></Link></div>
         </form>
-      </Card>
+      </Surface>
     </div>
   );
 }
 
-/**
- * Fixed bullet count for hidden secrets.
- * Using a constant display length (rather than the actual value length) avoids
- * visual inconsistency between different secret lengths. The actual secret value
- * is still available via the reveal button, clipboard copy, and DOM attributes,
- * so this is a UI polish choice, not a security control.
- * 24 bullets were chosen to fill the typical credential row width without truncation.
- */
-const HIDDEN_SECRET_BULLETS = 24;
-
-function CredentialRow({
-  label,
-  value,
-  secret = false,
-  onCopy,
-  warning,
-}: {
-  label: string;
-  value: string;
-  secret?: boolean;
-  onCopy: () => void;
-  warning?: string;
-}) {
+function CredentialRow({ label, value, secret = false, onCopy }: { label: string; value: string; secret?: boolean; onCopy: () => void; }) {
   const [revealed, setRevealed] = useState(!secret);
 
   return (
-    <div className="space-y-1">
-      <p className="text-sm text-white/60">{label}</p>
-      <div className="flex items-center gap-2">
-        <div className="flex flex-1 items-center overflow-hidden rounded-l-md border border-white/10 bg-black px-3 py-2 font-mono text-xs text-white/80 min-h-[38px]">
-          <span className="truncate">{revealed ? value : "•".repeat(HIDDEN_SECRET_BULLETS)}</span>
+    <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">{label}</p>
+          <p className="mt-3 break-all font-mono text-sm text-white/82">{revealed ? value : "•".repeat(24)}</p>
         </div>
-        {secret && (
-          <button
-            type="button"
-            onClick={() => setRevealed((v) => !v)}
-            className="border border-l-0 border-white/10 bg-white/5 px-3 py-2 text-xs text-white/60 hover:bg-white/10 hover:text-white"
-          >
-            {revealed ? "Hide" : "Show"}
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={onCopy}
-          className="rounded-r-md border border-l-0 border-white/10 bg-white/5 px-3 py-2 text-xs text-white/60 hover:bg-white/10 hover:text-white"
-        >
-          Copy
-        </button>
+        <div className="flex items-center gap-2">
+          {secret ? <button type="button" onClick={() => setRevealed((current) => !current)} className="rounded-full border border-white/10 bg-white/[0.04] p-3 text-white/66 transition hover:bg-white/[0.08] hover:text-white">{revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button> : null}
+          <Button variant="secondary" onClick={onCopy}>Copy</Button>
+        </div>
       </div>
-      {warning && <p className="text-xs text-yellow-400/80">{warning}</p>}
     </div>
   );
 }
