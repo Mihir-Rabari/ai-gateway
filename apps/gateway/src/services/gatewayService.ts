@@ -1,5 +1,6 @@
 import { fetch } from 'undici';
 import bcrypt from 'bcrypt';
+import { createHash } from 'crypto';
 import {
   generateId, Errors, calculateCredits, createLogger, GatewayError, withRetry,
   decryptClientSecret, verifyAppJwt, type AppJwtPayload,
@@ -8,6 +9,7 @@ import { KAFKA_TOPICS, FIRST_PARTY_APP_IDS } from '@ai-gateway/config';
 import type { GatewayRequest, GatewayResponse, UsageEvent } from '@ai-gateway/types';
 import type { Pool } from 'pg';
 import type Redis from 'ioredis';
+import { CircuitBreaker } from './circuitBreaker.js';
 
 const logger = createLogger('gateway-service');
 
@@ -20,6 +22,8 @@ interface ServiceClients {
   redis: Redis;
   /** AES-256 key (64-char hex) for decrypting stored client secrets. Optional. */
   clientSecretEncryptionKey?: string;
+  /** TTL in seconds for the validated-token Redis cache. Default: 60. */
+  tokenCacheTtlSeconds?: number;
 }
 
 interface ValidatedUser {
@@ -51,6 +55,10 @@ interface GatewayServiceDeps {
 }
 
 export class GatewayService {
+  private readonly authBreaker = new CircuitBreaker({ serviceName: 'Auth service' });
+  private readonly creditBreaker = new CircuitBreaker({ serviceName: 'Credit service' });
+  private readonly routingBreaker = new CircuitBreaker({ serviceName: 'Routing service' });
+
   constructor(
     private readonly clients: ServiceClients,
     private readonly deps: GatewayServiceDeps = {},
@@ -126,7 +134,7 @@ export class GatewayService {
 
       routingResult = (await Promise.race([routingPromise, timeoutPromise])) as RoutingResult;
     } catch (err) {
-      await this.releaseCredits(user.userId, requestId).catch(() => undefined);
+      await this.releaseCredits(user.userId, requestId);
       const latencyMs = Date.now() - startTime;
       void this.publishUsageEvent(
         requestId, user.userId, input.appId, input.model, 'openai',
@@ -232,7 +240,7 @@ export class GatewayService {
       );
 
     } catch (err) {
-      await this.releaseCredits(user.userId, requestId).catch(() => undefined);
+      await this.releaseCredits(user.userId, requestId);
       const latencyMs = Date.now() - startTime;
       void this.publishUsageEvent(
         requestId, user.userId, input.appId, input.model, 'openai',
@@ -343,11 +351,21 @@ export class GatewayService {
   }
 
   private async validateToken(token: string): Promise<ValidatedUser> {
-    const res = await this.httpFetch(`${this.clients.authServiceUrl}/internal/auth/validate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
-    });
+    // Check Redis cache before calling the auth service.
+    // The token is hashed (SHA-256) so the raw bearer token is never stored as a Redis key.
+    const cacheKey = `auth:token:${createHash('sha256').update(token).digest('hex')}`;
+    const cached = await this.clients.redis.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached) as ValidatedUser;
+    }
+
+    const res = await this.authBreaker.execute(() =>
+      this.httpFetch(`${this.clients.authServiceUrl}/internal/auth/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      }),
+    );
 
     const json = await res.json() as {
       success: boolean;
@@ -355,15 +373,22 @@ export class GatewayService {
       error?: { code: string; message: string };
     };
     if (!json.success || !json.data) throw Errors.INVALID_TOKEN();
+
+    // Cache the validated user data so subsequent requests skip the auth service call.
+    const ttl = this.clients.tokenCacheTtlSeconds ?? 60;
+    await this.clients.redis.set(cacheKey, JSON.stringify(json.data), 'EX', ttl);
+
     return json.data;
   }
 
   private async lockCredits(userId: string, requestId: string, amount: number): Promise<void> {
-    const res = await this.httpFetch(`${this.clients.creditServiceUrl}/credits/lock`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, requestId, amount }),
-    });
+    const res = await this.creditBreaker.execute(() =>
+      this.httpFetch(`${this.clients.creditServiceUrl}/credits/lock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, requestId, amount }),
+      }),
+    );
     const json = await res.json() as { success: boolean; error?: { code: string; statusCode: number } };
     if (!json.success) {
       const code = json.error?.code ?? 'CREDIT_001';
@@ -372,19 +397,23 @@ export class GatewayService {
   }
 
   private async confirmCredits(userId: string, requestId: string): Promise<void> {
-    await this.httpFetch(`${this.clients.creditServiceUrl}/credits/confirm`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, requestId }),
-    });
+    await this.creditBreaker.execute(() =>
+      this.httpFetch(`${this.clients.creditServiceUrl}/credits/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, requestId }),
+      }),
+    );
   }
 
   private async releaseCredits(userId: string, requestId: string): Promise<void> {
-    await this.httpFetch(`${this.clients.creditServiceUrl}/credits/release`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, requestId }),
-    });
+    await this.creditBreaker.execute(() =>
+      this.httpFetch(`${this.clients.creditServiceUrl}/credits/release`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, requestId }),
+      }),
+    ).catch(() => undefined);
   }
 
   private async routeRequest(data: {
@@ -395,32 +424,34 @@ export class GatewayService {
     temperature?: number;
     stream?: boolean;
   }): Promise<RoutingResult | AsyncGenerator<string>> {
-    return withRetry<RoutingResult | AsyncGenerator<string>>(async () => {
-      const res = await this.httpFetch(`${this.clients.routingServiceUrl}/internal/routing/route`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+    return this.routingBreaker.execute(() =>
+      withRetry<RoutingResult | AsyncGenerator<string>>(async () => {
+        const res = await this.httpFetch(`${this.clients.routingServiceUrl}/internal/routing/route`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
 
-      if (data.stream) {
-        if (!res.body) throw Errors.ROUTING_FAILED();
-        async function* streamGenerator() {
-          const decoder = new TextDecoder();
-          for await (const chunk of res.body! as any) {
-            yield decoder.decode(chunk, { stream: true });
+        if (data.stream) {
+          if (!res.body) throw Errors.ROUTING_FAILED();
+          async function* streamGenerator() {
+            const decoder = new TextDecoder();
+            for await (const chunk of res.body! as any) {
+              yield decoder.decode(chunk, { stream: true });
+            }
           }
+          return streamGenerator();
         }
-        return streamGenerator();
-      }
 
-      const json = await res.json() as {
-        success: boolean;
-        data?: RoutingResult;
-        error?: { code: string; message: string };
-      };
-      if (!json.success || !json.data) throw Errors.ROUTING_FAILED();
-      return json.data;
-    });
+        const json = await res.json() as {
+          success: boolean;
+          data?: RoutingResult;
+          error?: { code: string; message: string };
+        };
+        if (!json.success || !json.data) throw Errors.ROUTING_FAILED();
+        return json.data;
+      }),
+    );
   }
 
   private publishUsageEvent(
