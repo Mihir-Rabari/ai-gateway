@@ -1,5 +1,6 @@
 import { generateId } from '@ai-gateway/utils';
 import type { BillingEvent, AuthEvent, UsageEvent } from '@ai-gateway/types';
+import { FIRST_PARTY_APP_IDS } from '@ai-gateway/config';
 
 type Queryable = {
   query: (sql: string, params?: unknown[]) => Promise<unknown>;
@@ -17,7 +18,12 @@ export async function processUsageEvent(
 ): Promise<void> {
   if (event.type !== 'usage.request.completed') return;
 
-  const appEarning = Math.floor(event.creditsDeducted * 0.2);
+  // Flat commission: 1 credit per successful AI request, regardless of token count.
+  // Only applies to third-party developer apps (first-party app IDs like
+  // 'api-direct' or 'unknown' are skipped because they have no linked developer).
+  if (FIRST_PARTY_APP_IDS.has(event.appId)) return;
+
+  const COMMISSION_PER_REQUEST = 1;
 
   await db.query(
     `WITH ins AS (
@@ -27,10 +33,10 @@ export async function processUsageEvent(
     )
     UPDATE dev_wallets SET balance = balance + $4, total_earned = total_earned + $4, updated_at = NOW()
     WHERE developer_id = (SELECT developer_id FROM registered_apps WHERE id = $2)`,
-    [idFactory(), event.appId, event.requestId, appEarning],
+    [idFactory(), event.appId, event.requestId, COMMISSION_PER_REQUEST],
   );
 
-  logger.info({ requestId: event.requestId, appId: event.appId, earning: appEarning }, 'Revenue split processed');
+  logger.info({ requestId: event.requestId, appId: event.appId, earning: COMMISSION_PER_REQUEST }, 'Revenue split processed');
 }
 
 export async function processAuthEvent(

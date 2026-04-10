@@ -60,19 +60,54 @@ CREATE INDEX IF NOT EXISTS idx_credit_txn_user_id ON credit_transactions (user_i
 CREATE INDEX IF NOT EXISTS idx_credit_txn_created_at ON credit_transactions (created_at DESC);
 
 -- ──────────────────────────────────────────────
+-- Developers (users who have enrolled as developers)
+-- ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS developers (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  enrolled_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_developers_user_id ON developers (user_id);
+
+-- ──────────────────────────────────────────────
 -- Registered Apps (Developer Apps)
 -- ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS registered_apps (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  developer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  name         TEXT NOT NULL,
-  description  TEXT,
-  is_active    BOOLEAN NOT NULL DEFAULT true,
-  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  developer_id        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name                TEXT NOT NULL,
+  description         TEXT,
+  client_id           TEXT UNIQUE,
+  client_secret_hash  TEXT,
+  client_secret_enc   TEXT,
+  redirect_uris       JSONB NOT NULL DEFAULT '[]',
+  is_active           BOOLEAN NOT NULL DEFAULT true,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- ──────────────────────────────────────────────
+-- OAuth Authorization Codes (short-lived, stored in Redis)
+-- This table is kept for audit/idempotency; primary TTL is Redis.
+-- ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS oauth_codes (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code         TEXT UNIQUE NOT NULL,
+  client_id    TEXT NOT NULL,
+  user_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  redirect_uri TEXT NOT NULL,
+  scope        TEXT NOT NULL DEFAULT 'basic',
+  used_at      TIMESTAMPTZ,
+  expires_at   TIMESTAMPTZ NOT NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_oauth_codes_code ON oauth_codes (code);
+CREATE INDEX IF NOT EXISTS idx_oauth_codes_expires_at ON oauth_codes (expires_at);
+
 CREATE INDEX IF NOT EXISTS idx_apps_developer_id ON registered_apps (developer_id);
+CREATE INDEX IF NOT EXISTS idx_apps_client_id ON registered_apps (client_id) WHERE client_id IS NOT NULL;
 
 -- Active API Keys
 CREATE TABLE IF NOT EXISTS api_keys (

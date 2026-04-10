@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pm2 logs:*)",
+      "Bash(pm2 restart:*)",
+      "Bash(pm2 status:*)",
+      "Bash(pm2 delete:*)",
+      "Bash(pm2 start:*)",
+      "Bash(pnpm -v)",
+      "Bash(pm2 -v)",
+      "Bash(pnpm pm2:dev)",
+      "Bash(pm2 kill:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(pm2 show:*)",
+      "Bash(*)"
+    ]
+  }
+}

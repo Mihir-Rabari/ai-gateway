@@ -14,7 +14,7 @@ describe('worker handlers', () => {
       type: 'usage.request.completed',
       requestId: 'req-1',
       userId: 'user-1',
-      appId: 'app-1',
+      appId: 'app-1', // third-party app ID
       model: 'gpt-4o',
       provider: 'openai',
       tokensInput: 10,
@@ -35,8 +35,39 @@ describe('worker handlers', () => {
 
     assert.equal(queries.length, 1);
     assert.equal((queries[0]?.params ?? [])[0], 'wallet-txn-1');
-    assert.equal((queries[0]?.params ?? [])[3], 5);
+    // Flat 1 credit per successful request
+    assert.equal((queries[0]?.params ?? [])[3], 1);
     assert.equal(logs.length, 1);
+  });
+
+  test('processUsageEvent skips first-party app IDs (no developer to credit)', async () => {
+    const queries: Array<{ sql: string; params?: unknown[] }> = [];
+
+    const event: UsageEvent = {
+      eventId: 'evt-3',
+      topic: 'usage.events',
+      type: 'usage.request.completed',
+      requestId: 'req-3',
+      userId: 'user-1',
+      appId: 'api-direct', // first-party
+      model: 'gpt-4o',
+      provider: 'openai',
+      tokensInput: 10,
+      tokensOutput: 20,
+      tokensTotal: 30,
+      creditsDeducted: 25,
+      latencyMs: 100,
+      timestamp: new Date().toISOString(),
+      version: '1.0',
+    };
+
+    await processUsageEvent(
+      { query: async (sql, params) => { queries.push({ sql, params }); } },
+      event,
+      { info: () => undefined },
+    );
+
+    assert.equal(queries.length, 0, 'No DB write for first-party app IDs');
   });
 
   test('processAuthEvent stores normalized user audit events', async () => {

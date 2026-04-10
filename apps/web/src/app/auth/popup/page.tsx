@@ -21,9 +21,13 @@ export default function AuthPopupPage() {
       setAuthToken(res.accessToken);
       setRefreshToken(res.refreshToken);
       if (typeof window !== 'undefined' && window.opener) {
+        // Use the origin passed by the SDK so the postMessage is restricted to
+        // the correct opener origin instead of the insecure wildcard '*'.
+        const params = new URLSearchParams(window.location.search);
+        const callbackOrigin = params.get('origin') ?? '*';
         window.opener.postMessage(
           { type: 'AI_GATEWAY_AUTH', accessToken: res.accessToken, user: res.user },
-          '*'
+          callbackOrigin
         );
         window.close();
       } else {

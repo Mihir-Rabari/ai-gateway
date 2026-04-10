@@ -225,7 +225,7 @@ describe('RoutingService', () => {
       () =>
         service.route({
           requestId: 'req-fail',
-          model: 'gemini-1.5-pro',
+          model: 'gemini-2.5-pro',
           messages: [{ role: 'user', content: 'hello' }],
         }),
       (err: unknown) => (err as { code?: string }).code === 'GATEWAY_002',

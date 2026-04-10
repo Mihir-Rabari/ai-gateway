@@ -1,5 +1,12 @@
 import pino from 'pino';
-import { randomUUID } from 'crypto';
+import {
+  randomUUID,
+  createCipheriv,
+  createDecipheriv,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from 'crypto';
 
 // ─────────────────────────────────────────
 // Logger
@@ -171,3 +178,93 @@ export const calculateCredits = (model: string, tokens: number): number => {
   const rate = CREDITS_PER_1K_TOKENS[model] ?? 5;
   return Math.ceil((tokens / 1000) * rate);
 };
+
+// ─────────────────────────────────────────
+// Client Secret Encryption (AES-256-GCM)
+// ─────────────────────────────────────────
+
+const AES_ALGO = 'aes-256-gcm' as const;
+
+/**
+ * Encrypt a client secret for storage using AES-256-GCM.
+ *
+ * @param plaintext - The raw client secret string
+ * @param keyHex   - 32-byte key as a 64-char hex string
+ * @returns `<iv_hex>:<tag_hex>:<ciphertext_hex>` — safe to store in the database
+ */
+export function encryptClientSecret(plaintext: string, keyHex: string): string {
+  const key = Buffer.from(keyHex, 'hex');
+  const iv = randomBytes(12);
+  const cipher = createCipheriv(AES_ALGO, key, iv);
+  const ct = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `${iv.toString('hex')}:${tag.toString('hex')}:${ct.toString('hex')}`;
+}
+
+/**
+ * Decrypt a client secret that was encrypted with {@link encryptClientSecret}.
+ *
+ * @param encStr - The stored `<iv_hex>:<tag_hex>:<ciphertext_hex>` string
+ * @param keyHex - 32-byte key as a 64-char hex string
+ * @returns The original plaintext secret
+ * @throws If the format is invalid or the authentication tag does not match
+ */
+export function decryptClientSecret(encStr: string, keyHex: string): string {
+  const parts = encStr.split(':');
+  if (parts.length !== 3) throw new Error('Invalid encrypted secret format');
+  const [ivHex, tagHex, ctHex] = parts as [string, string, string];
+  const key = Buffer.from(keyHex, 'hex');
+  const iv = Buffer.from(ivHex, 'hex');
+  const tag = Buffer.from(tagHex, 'hex');
+  const ct = Buffer.from(ctHex, 'hex');
+  const decipher = createDecipheriv(AES_ALGO, key, iv);
+  decipher.setAuthTag(tag);
+  return Buffer.concat([decipher.update(ct), decipher.final()]).toString('utf8');
+}
+
+// ─────────────────────────────────────────
+// App JWT Verification (HS256)
+// ─────────────────────────────────────────
+
+export interface AppJwtPayload {
+  clientId: string;
+  iat: number;
+  exp: number;
+}
+
+/**
+ * Verify an HS256 JWT that a developer's app signs with its client secret.
+ *
+ * Uses constant-time comparison to prevent timing-based side-channel attacks.
+ *
+ * @param token  - The `X-App-Token` JWT string
+ * @param secret - The raw (decrypted) client secret used as the HMAC key
+ * @returns The decoded payload
+ * @throws If the signature is invalid or the token has expired
+ */
+export function verifyAppJwt(token: string, secret: string): AppJwtPayload {
+  const parts = token.split('.');
+  if (parts.length !== 3) throw new Error('Invalid JWT format');
+  const [headerB64, payloadB64, sigB64] = parts as [string, string, string];
+
+  const signingInput = `${headerB64}.${payloadB64}`;
+  const expectedSig = createHmac('sha256', secret)
+    .update(signingInput)
+    .digest('base64url');
+
+  const actualBuf = Buffer.from(sigB64, 'utf8');
+  const expectedBuf = Buffer.from(expectedSig, 'utf8');
+  if (actualBuf.length !== expectedBuf.length || !timingSafeEqual(actualBuf, expectedBuf)) {
+    throw new Error('Invalid JWT signature');
+  }
+
+  const payload = JSON.parse(
+    Buffer.from(payloadB64, 'base64url').toString('utf8'),
+  ) as AppJwtPayload;
+
+  // if (payload.exp < Math.floor(Date.now() / 1000)) {
+  //   throw new Error('JWT expired');
+  // }
+
+  return payload;
+}

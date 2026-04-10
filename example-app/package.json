@@ -1,0 +1,23 @@
+{
+  "name": "example-app",
+  "private": true,
+  "version": "0.0.3",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:web": "vite",
+    "dev:server": "node --env-file-if-exists=.env --watch server.mjs",
+    "build": "vite build",
+    "preview": "vite preview",
+    "smoke": "node smoke.mjs",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mihirrabari/ai-gateway": "^0.0.3"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.9"
+  }
+}

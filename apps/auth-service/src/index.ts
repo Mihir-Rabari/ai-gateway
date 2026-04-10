@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import formbody from '@fastify/formbody';
 import rateLimit from '@fastify/rate-limit';
 import { getAuthConfig } from '@ai-gateway/config';
 import { createLogger } from '@ai-gateway/utils';
@@ -8,6 +9,7 @@ import { redisPlugin } from './plugins/redis.js';
 import { kafkaPlugin } from './plugins/kafka.js';
 import { authRoutes } from './routes/authRoutes.js';
 import { internalRoutes } from './routes/internalRoutes.js';
+import { oauthRoutes } from './routes/oauthRoutes.js';
 import { startAuthAuditConsumer } from './events/authAuditConsumer.js';
 
 const logger = createLogger('auth-service');
@@ -28,8 +30,12 @@ async function bootstrap() {
 
   // ─── Plugins ───────────────────────────────────
   await app.register(cors, {
-    origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000'],
+    origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000', 'http://localhost:3009'],
+    credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
+  await app.register(formbody);
 
   await app.register(postgresPlugin);
   await app.register(redisPlugin);
@@ -58,6 +64,7 @@ async function bootstrap() {
   // ─── Routes ────────────────────────────────────
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(internalRoutes, { prefix: '/internal/auth' });
+  await app.register(oauthRoutes, { prefix: '/oauth' });
 
   // ─── Health Check ──────────────────────────────
   app.get('/health', async () => ({ status: 'ok', service: 'auth-service' }));

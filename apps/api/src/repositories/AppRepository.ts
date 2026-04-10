@@ -1,5 +1,33 @@
 import { Pool, PoolClient } from 'pg';
 
+export interface AppRow {
+  id: string;
+  name: string;
+  description: string | null;
+  clientId: string | null;
+  redirectUris: string[];
+  isActive: boolean;
+  createdAt: Date;
+}
+
+/** Serialize redirect URIs to a JSONB-compatible string. */
+function serializeRedirectUris(uris: string[]): string {
+  return JSON.stringify(uris);
+}
+
+/** Parse redirect URIs from a JSONB column (may come as array or JSON string). */
+function parseRedirectUris(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw as string[];
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw) as string[];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 export class AppRepository {
   private pool: Pool;
 
@@ -27,36 +55,46 @@ export class AppRepository {
     appId: string,
     developerId: string,
     name: string,
-    description: string | null
+    description: string | null,
+    clientId: string,
+    clientSecretHash: string,
+    redirectUris: string[],
+    clientSecretEnc: string | null,
   ): Promise<void> {
     await client.query(
-      `INSERT INTO registered_apps (id, developer_id, name, description) VALUES ($1, $2, $3, $4)`,
-      [appId, developerId, name, description]
+      `INSERT INTO registered_apps
+         (id, developer_id, name, description, client_id, client_secret_hash, redirect_uris, client_secret_enc)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [appId, developerId, name, description, clientId, clientSecretHash, serializeRedirectUris(redirectUris), clientSecretEnc],
     );
   }
 
   async createApiKey(client: PoolClient, keyId: string, appId: string, keyHash: string): Promise<void> {
     await client.query(
       `INSERT INTO api_keys (id, app_id, key_hash) VALUES ($1, $2, $3)`,
-      [keyId, appId, keyHash]
+      [keyId, appId, keyHash],
     );
   }
 
-  async findAppsByDeveloperId(developerId: string): Promise<unknown[]> {
-    const result = await this.pool.query(
-      `SELECT id, name, description, is_active as "isActive", created_at as "createdAt"
+  async findAppsByDeveloperId(developerId: string): Promise<AppRow[]> {
+    const result = await this.pool.query<AppRow>(
+      `SELECT id, name, description, client_id as "clientId",
+              redirect_uris as "redirectUris", is_active as "isActive", created_at as "createdAt"
        FROM registered_apps
        WHERE developer_id = $1 AND is_active = true
        ORDER BY created_at DESC`,
-      [developerId]
+      [developerId],
     );
-    return result.rows;
+    return result.rows.map((r) => ({
+      ...r,
+      redirectUris: parseRedirectUris(r.redirectUris),
+    }));
   }
 
   async deleteApp(appId: string, developerId: string): Promise<boolean> {
     const result = await this.pool.query(
       `UPDATE registered_apps SET is_active = false WHERE id = $1 AND developer_id = $2 RETURNING id`,
-      [appId, developerId]
+      [appId, developerId],
     );
     return result.rowCount !== null && result.rowCount > 0;
   }
@@ -64,7 +102,7 @@ export class AppRepository {
   async findActiveAppById(client: PoolClient, appId: string, developerId: string): Promise<boolean> {
     const result = await client.query(
       `SELECT id FROM registered_apps WHERE id = $1 AND developer_id = $2 AND is_active = true`,
-      [appId, developerId]
+      [appId, developerId],
     );
     return result.rowCount !== null && result.rowCount > 0;
   }
@@ -72,7 +110,15 @@ export class AppRepository {
   async revokeActiveApiKeys(client: PoolClient, appId: string): Promise<void> {
     await client.query(
       `UPDATE api_keys SET revoked_at = NOW() WHERE app_id = $1 AND revoked_at IS NULL`,
-      [appId]
+      [appId],
     );
+  }
+
+  async updateRedirectUris(appId: string, developerId: string, redirectUris: string[]): Promise<boolean> {
+    const result = await this.pool.query(
+      `UPDATE registered_apps SET redirect_uris = $1 WHERE id = $2 AND developer_id = $3 AND is_active = true RETURNING id`,
+      [serializeRedirectUris(redirectUris), appId, developerId],
+    );
+    return result.rowCount !== null && result.rowCount > 0;
   }
 }
