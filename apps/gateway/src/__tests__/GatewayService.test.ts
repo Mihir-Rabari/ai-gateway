@@ -10,6 +10,8 @@ function createFetchMock() {
 
     if (normalizedUrl.includes('/internal/auth/validate')) {
       return {
+        ok: true,
+        status: 200,
         json: async () => ({
           success: true,
           data: { userId: 'user-1', planId: 'pro', email: 'user@example.com' },
@@ -18,19 +20,21 @@ function createFetchMock() {
     }
 
     if (normalizedUrl.includes('/credits/lock')) {
-      return { json: async () => ({ success: true }) } as Response;
+      return { ok: true, status: 200, json: async () => ({ success: true }) } as Response;
     }
 
     if (normalizedUrl.includes('/credits/confirm')) {
-      return { json: async () => ({ success: true }) } as Response;
+      return { ok: true, status: 200, json: async () => ({ success: true }) } as Response;
     }
 
     if (normalizedUrl.includes('/credits/release')) {
-      return { json: async () => ({ success: true }) } as Response;
+      return { ok: true, status: 200, json: async () => ({ success: true }) } as Response;
     }
 
     if (normalizedUrl.includes('/internal/routing/route')) {
       return {
+        ok: true,
+        status: 200,
         json: async () => ({
           success: true,
           data: {
@@ -55,6 +59,7 @@ function createRedisMock(store: Map<string, string> = new Map()) {
     expire: async () => 1,
     get: async (key: string) => store.get(key) ?? null,
     set: async (key: string, value: string) => { store.set(key, value); return 'OK'; },
+    del: async (key: string) => { store.delete(key); return 1; },
   } as unknown as Redis;
 }
 
@@ -231,6 +236,8 @@ describe('GatewayService', () => {
       if (normalizedUrl.includes('/internal/auth/validate')) {
         authCallCount += 1;
         return {
+          ok: true,
+          status: 200,
           json: async () => ({
             success: true,
             data: { userId: 'user-1', planId: 'pro', email: 'user@example.com' },
@@ -352,6 +359,8 @@ describe('GatewayService', () => {
       if (normalizedUrl.includes('/internal/auth/validate')) {
         if (shouldFail) throw new Error('Auth service down');
         return {
+          ok: true,
+          status: 200,
           json: async () => ({
             success: true,
             data: { userId: 'user-1', planId: 'pro', email: 'user@example.com' },
@@ -369,6 +378,7 @@ describe('GatewayService', () => {
       expire: async () => 1,
       get: async (_key: string) => null,
       set: async () => 'OK',
+      del: async () => 1,
     } as unknown as Redis;
 
     const service = new GatewayService({
@@ -402,5 +412,51 @@ describe('GatewayService', () => {
     shouldFail = false;
     const result = await service.processRequest(makeReq());
     assert.equal(result.output, 'hello', 'Circuit should still be closed after intermittent failures');
+  });
+
+  test('falls back to the auth service when the cached token entry is malformed JSON', async () => {
+    let authCallCount = 0;
+    const redisStore = new Map<string, string>();
+    // Seed a malformed (non-JSON) value so the cache-read triggers the fallback.
+    redisStore.set(
+      `auth:token:${(await import('crypto')).createHash('sha256').update('my-token').digest('hex')}`,
+      'not-valid-json{{',
+    );
+
+    const fetchMock = async (url: string | URL | globalThis.Request, init?: RequestInit) => {
+      const normalizedUrl = typeof url === 'string' ? url : String(url);
+      if (normalizedUrl.includes('/internal/auth/validate')) {
+        authCallCount += 1;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            data: { userId: 'user-1', planId: 'pro', email: 'user@example.com' },
+          }),
+        } as Response;
+      }
+      return createFetchMock()(url, init);
+    };
+
+    const pgPool = { query: async () => ({ rows: [], rowCount: 0 }) } as unknown as Pool;
+    const service = new GatewayService({
+      authServiceUrl: 'http://auth-service',
+      creditServiceUrl: 'http://credit-service',
+      routingServiceUrl: 'http://routing-service',
+      kafkaPublish: async () => undefined,
+      pgPool,
+      redis: createRedisMock(redisStore),
+    }, { httpFetch: fetchMock });
+
+    const result = await service.processRequest({
+      token: 'my-token',
+      appId: 'api-direct',
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: 'hi' }],
+    });
+
+    assert.equal(result.output, 'hello');
+    assert.equal(authCallCount, 1, 'Auth service should be called when cached entry is malformed');
   });
 });

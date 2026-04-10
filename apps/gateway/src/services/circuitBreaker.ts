@@ -17,12 +17,15 @@ export interface CircuitBreakerOptions {
  * States:
  *   closed    – requests pass through; failures are counted.
  *   open      – all calls fail fast with GATEWAY_004; opens after failureThreshold failures.
- *   half-open – one probe call is allowed after resetTimeoutMs; success → closed, failure → open.
+ *   half-open – exactly one probe call is allowed after resetTimeoutMs; success → closed,
+ *               failure → open; all other concurrent callers in half-open are rejected.
  */
 export class CircuitBreaker {
   private failures = 0;
   private lastFailureTime = 0;
   private state: CircuitState = 'closed';
+  /** True while a single probe call is executing in the half-open state. */
+  private probeInFlight = false;
 
   private readonly failureThreshold: number;
   private readonly resetTimeoutMs: number;
@@ -39,9 +42,17 @@ export class CircuitBreaker {
   }
 
   async execute<T>(fn: () => Promise<T>): Promise<T> {
+    // Track whether this specific invocation is the single half-open probe call.
+    let isProbe = false;
+
     if (this.state === 'open') {
       if (Date.now() - this.lastFailureTime >= this.resetTimeoutMs) {
+        // Transition to half-open and atomically claim the probe slot.
+        // JavaScript is single-threaded, so no other caller can preempt between
+        // the state assignment and setting probeInFlight.
         this.state = 'half-open';
+        this.probeInFlight = true;
+        isProbe = true;
       } else {
         throw new GatewayError(
           'GATEWAY_004',
@@ -51,19 +62,39 @@ export class CircuitBreaker {
       }
     }
 
+    // Reject concurrent callers that arrive while a probe is already running.
+    if (this.state === 'half-open' && !isProbe) {
+      throw new GatewayError(
+        'GATEWAY_004',
+        `${this.serviceName} is temporarily unavailable`,
+        503,
+      );
+    }
+
     try {
       const result = await fn();
-      // Reset the failure counter on every successful call so that occasional
-      // failures in a mostly-healthy service do not accumulate and open the circuit.
-      if (this.state === 'half-open') {
+      // Success: close the circuit (or reset the failure counter in the closed state).
+      if (isProbe) {
         this.reset();
       } else {
+        // Reset the failure counter on every successful call so that occasional
+        // failures in a mostly-healthy service do not accumulate and open the circuit.
         this.failures = 0;
       }
       return result;
     } catch (err) {
-      this.recordFailure();
+      if (isProbe) {
+        // Probe failed: re-open the circuit and restart the reset timer.
+        this.state = 'open';
+        this.lastFailureTime = Date.now();
+      } else {
+        this.recordFailure();
+      }
       throw err;
+    } finally {
+      if (isProbe) {
+        this.probeInFlight = false;
+      }
     }
   }
 

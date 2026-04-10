@@ -356,29 +356,34 @@ export class GatewayService {
     const cacheKey = `auth:token:${createHash('sha256').update(token).digest('hex')}`;
     const cached = await this.clients.redis.get(cacheKey);
     if (cached) {
-      return JSON.parse(cached) as ValidatedUser;
+      try {
+        return JSON.parse(cached) as ValidatedUser;
+      } catch {
+        // Malformed cache entry: remove it and fall through to the auth service.
+        await this.clients.redis.del(cacheKey);
+      }
     }
 
-    const res = await this.authBreaker.execute(() =>
-      this.httpFetch(`${this.clients.authServiceUrl}/internal/auth/validate`, {
+    const user = await this.authBreaker.execute(async () => {
+      const res = await this.httpFetch(`${this.clients.authServiceUrl}/internal/auth/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
-      }),
-    );
-
-    const json = await res.json() as {
-      success: boolean;
-      data?: ValidatedUser;
-      error?: { code: string; message: string };
-    };
-    if (!json.success || !json.data) throw Errors.INVALID_TOKEN();
+      });
+      const json = await res.json() as {
+        success: boolean;
+        data?: ValidatedUser;
+        error?: { code: string; message: string };
+      };
+      if (!res.ok || !json.success || !json.data) throw Errors.INVALID_TOKEN();
+      return json.data;
+    });
 
     // Cache the validated user data so subsequent requests skip the auth service call.
     const ttl = this.clients.tokenCacheTtlSeconds ?? 60;
-    await this.clients.redis.set(cacheKey, JSON.stringify(json.data), 'EX', ttl);
+    await this.clients.redis.set(cacheKey, JSON.stringify(user), 'EX', ttl);
 
-    return json.data;
+    return user;
   }
 
   private async lockCredits(userId: string, requestId: string, amount: number): Promise<void> {
@@ -397,23 +402,39 @@ export class GatewayService {
   }
 
   private async confirmCredits(userId: string, requestId: string): Promise<void> {
-    await this.creditBreaker.execute(() =>
-      this.httpFetch(`${this.clients.creditServiceUrl}/credits/confirm`, {
+    await this.creditBreaker.execute(async () => {
+      const res = await this.httpFetch(`${this.clients.creditServiceUrl}/credits/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, requestId }),
-      }),
-    );
+      });
+      if (!res.ok) {
+        throw new Error(`Credit confirm failed with status ${res.status}`);
+      }
+      const json = await res.json() as { success: boolean };
+      if (!json.success) {
+        throw new Error('Credit confirm response indicated failure');
+      }
+    });
   }
 
   private async releaseCredits(userId: string, requestId: string): Promise<void> {
-    await this.creditBreaker.execute(() =>
-      this.httpFetch(`${this.clients.creditServiceUrl}/credits/release`, {
+    await this.creditBreaker.execute(async () => {
+      const res = await this.httpFetch(`${this.clients.creditServiceUrl}/credits/release`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, requestId }),
-      }),
-    ).catch(() => undefined);
+      });
+      if (!res.ok) {
+        throw new Error(`Credit release failed with status ${res.status}`);
+      }
+      const json = await res.json() as { success: boolean };
+      if (!json.success) {
+        throw new Error('Credit release response indicated failure');
+      }
+    }).catch((err) => {
+      logger.warn({ err, userId, requestId }, 'Failed to release credits');
+    });
   }
 
   private async routeRequest(data: {
