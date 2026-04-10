@@ -4,7 +4,7 @@ import {
   generateId, Errors, calculateCredits, createLogger, GatewayError, withRetry,
   decryptClientSecret, verifyAppJwt, type AppJwtPayload,
 } from '@ai-gateway/utils';
-import { KAFKA_TOPICS, FIRST_PARTY_APP_IDS } from '@ai-gateway/config';
+import { KAFKA_TOPICS, FIRST_PARTY_APP_IDS, APP_CACHE_KEYS } from '@ai-gateway/config';
 import type { GatewayRequest, GatewayResponse, UsageEvent } from '@ai-gateway/types';
 import type { Pool } from 'pg';
 import type Redis from 'ioredis';
@@ -294,9 +294,17 @@ export class GatewayService {
             // Cache key stores the encrypted secret (or empty string when the
             // app does not exist / is inactive). This avoids a DB round-trip
             // for every JWT-authenticated AI request.
-            const secretCacheKey = `app:clientid:${clientId}:secret_enc`;
+            // Fail open: any Redis error is treated as a cache miss so the
+            // DB remains the authoritative fallback.
+            const secretCacheKey = APP_CACHE_KEYS.clientSecret(clientId);
             let enc: string | null = null;
-            const cachedSecret = await this.clients.redis.get(secretCacheKey);
+            let cachedSecret: string | null = null;
+            try {
+              cachedSecret = await this.clients.redis.get(secretCacheKey);
+            } catch {
+              // Redis unavailable — fall through to DB
+            }
+
             if (cachedSecret !== null) {
               // Empty string signals "app not found / inactive"
               enc = cachedSecret === '' ? null : cachedSecret;
@@ -307,7 +315,11 @@ export class GatewayService {
                 [clientId],
               );
               enc = row.rows[0]?.client_secret_enc ?? null;
-              await this.clients.redis.setex(secretCacheKey, APP_CACHE_TTL_SECS, enc ?? '');
+              try {
+                await this.clients.redis.setex(secretCacheKey, APP_CACHE_TTL_SECS, enc ?? '');
+              } catch {
+                // Ignore write failures; DB remains authoritative
+              }
             }
 
             if (enc) {
@@ -334,15 +346,36 @@ export class GatewayService {
       // ── Redis cache: API key hashes ─────────────────────────────────────
       // Storing hashed keys in Redis is safe because bcrypt hashes cannot be
       // reversed; the plaintext key is never written to the cache.
-      const keysCacheKey = `app:apikeys:${appId}`;
-      let keyHashes: string[];
-      const cachedHashes = await this.clients.redis.get(keysCacheKey);
-      if (cachedHashes !== null) {
-        const parsed: unknown = JSON.parse(cachedHashes);
-        keyHashes = Array.isArray(parsed) && parsed.every((item): item is string => typeof item === 'string')
-          ? parsed
-          : [];
-      } else {
+      // Fail open: Redis errors and malformed cache data both fall through to DB.
+      const keysCacheKey = APP_CACHE_KEYS.apiKeyHashes(appId);
+      let keyHashes: string[] | undefined;
+
+      let cachedHashesRaw: string | null = null;
+      try {
+        cachedHashesRaw = await this.clients.redis.get(keysCacheKey);
+      } catch {
+        // Redis unavailable — treat as cache miss
+      }
+
+      if (cachedHashesRaw !== null) {
+        let evictBadEntry = false;
+        try {
+          const parsed: unknown = JSON.parse(cachedHashesRaw);
+          if (Array.isArray(parsed) && parsed.every((item): item is string => typeof item === 'string')) {
+            keyHashes = parsed;
+          } else {
+            evictBadEntry = true; // Unexpected shape
+          }
+        } catch {
+          evictBadEntry = true; // Malformed JSON
+        }
+        if (evictBadEntry) {
+          // Evict the corrupt entry so the next request gets a fresh DB refresh
+          try { await this.clients.redis.del(keysCacheKey); } catch { /* ignore */ }
+        }
+      }
+
+      if (keyHashes === undefined) {
         const result = await this.clients.pgPool.query(
           `SELECT ak.key_hash
            FROM api_keys ak
@@ -354,7 +387,11 @@ export class GatewayService {
           [appId]
         );
         keyHashes = (result.rows as Array<{ key_hash: string }>).map((r) => r.key_hash);
-        await this.clients.redis.setex(keysCacheKey, APP_CACHE_TTL_SECS, JSON.stringify(keyHashes));
+        try {
+          await this.clients.redis.setex(keysCacheKey, APP_CACHE_TTL_SECS, JSON.stringify(keyHashes));
+        } catch {
+          // Ignore write failures; DB remains authoritative
+        }
       }
 
       for (const keyHash of keyHashes) {
@@ -367,8 +404,15 @@ export class GatewayService {
     }
 
     // ── Redis cache: basic app active status ─────────────────────────────
-    const activeCacheKey = `app:active:${appId}`;
-    const cachedActive = await this.clients.redis.get(activeCacheKey);
+    // Fail open: Redis errors fall through to DB.
+    const activeCacheKey = APP_CACHE_KEYS.activeStatus(appId);
+    let cachedActive: string | null = null;
+    try {
+      cachedActive = await this.clients.redis.get(activeCacheKey);
+    } catch {
+      // Redis unavailable — fall through to DB
+    }
+
     if (cachedActive === '1') return 'allowed';
     if (cachedActive === '0') return 'forbidden';
     // Unexpected / missing cache value: fall through to DB
@@ -378,7 +422,11 @@ export class GatewayService {
       [appId]
     );
     const isActive = (result.rowCount ?? 0) > 0;
-    await this.clients.redis.setex(activeCacheKey, APP_CACHE_TTL_SECS, isActive ? '1' : '0');
+    try {
+      await this.clients.redis.setex(activeCacheKey, APP_CACHE_TTL_SECS, isActive ? '1' : '0');
+    } catch {
+      // Ignore write failures; DB remains authoritative
+    }
     return isActive ? 'allowed' : 'forbidden';
   }
 
