@@ -41,6 +41,9 @@ interface RoutingResult {
 
 type AppAccessResult = 'allowed' | 'invalid_key' | 'forbidden';
 
+/** TTL (seconds) for app-metadata Redis cache entries. */
+const APP_CACHE_TTL_SECS = 300; // 5 minutes
+
 interface GatewayServiceDeps {
   httpFetch?: typeof fetch;
   compareHash?: (plain: string, hash: string) => Promise<boolean>;
@@ -287,13 +290,26 @@ export class GatewayService {
           }
 
           if (clientId) {
-            const row = await this.clients.pgPool.query<{ client_secret_enc: string | null }>(
-              `SELECT client_secret_enc FROM registered_apps
-               WHERE client_id = $1 AND is_active = true`,
-              [clientId],
-            );
+            // ── Redis cache: client secret ──────────────────────────────
+            // Cache key stores the encrypted secret (or empty string when the
+            // app does not exist / is inactive). This avoids a DB round-trip
+            // for every JWT-authenticated AI request.
+            const secretCacheKey = `app:clientid:${clientId}:secret_enc`;
+            let enc: string | null = null;
+            const cachedSecret = await this.clients.redis.get(secretCacheKey);
+            if (cachedSecret !== null) {
+              // Empty string signals "app not found / inactive"
+              enc = cachedSecret === '' ? null : cachedSecret;
+            } else {
+              const row = await this.clients.pgPool.query<{ client_secret_enc: string | null }>(
+                `SELECT client_secret_enc FROM registered_apps
+                 WHERE client_id = $1 AND is_active = true`,
+                [clientId],
+              );
+              enc = row.rows[0]?.client_secret_enc ?? null;
+              await this.clients.redis.setex(secretCacheKey, APP_CACHE_TTL_SECS, enc ?? '');
+            }
 
-            const enc = row.rows[0]?.client_secret_enc ?? null;
             if (enc) {
               const decryptFn = this.deps.decryptSecret ?? decryptClientSecret;
               const verifyFn = this.deps.verifyJwt ?? verifyAppJwt;
@@ -315,19 +331,34 @@ export class GatewayService {
 
     // ── Legacy API-key authentication ─────────────────────────────────────
     if (appApiKey) {
-      const result = await this.clients.pgPool.query(
-        `SELECT ak.key_hash
-         FROM api_keys ak
-         INNER JOIN registered_apps ra ON ra.id = ak.app_id
-         WHERE ra.id = $1
-           AND ra.is_active = true
-           AND ak.revoked_at IS NULL
-         ORDER BY ak.created_at DESC`,
-        [appId]
-      );
+      // ── Redis cache: API key hashes ─────────────────────────────────────
+      // Storing hashed keys in Redis is safe because bcrypt hashes cannot be
+      // reversed; the plaintext key is never written to the cache.
+      const keysCacheKey = `app:apikeys:${appId}`;
+      let keyHashes: string[];
+      const cachedHashes = await this.clients.redis.get(keysCacheKey);
+      if (cachedHashes !== null) {
+        const parsed: unknown = JSON.parse(cachedHashes);
+        keyHashes = Array.isArray(parsed) && parsed.every((item): item is string => typeof item === 'string')
+          ? parsed
+          : [];
+      } else {
+        const result = await this.clients.pgPool.query(
+          `SELECT ak.key_hash
+           FROM api_keys ak
+           INNER JOIN registered_apps ra ON ra.id = ak.app_id
+           WHERE ra.id = $1
+             AND ra.is_active = true
+             AND ak.revoked_at IS NULL
+           ORDER BY ak.created_at DESC`,
+          [appId]
+        );
+        keyHashes = (result.rows as Array<{ key_hash: string }>).map((r) => r.key_hash);
+        await this.clients.redis.setex(keysCacheKey, APP_CACHE_TTL_SECS, JSON.stringify(keyHashes));
+      }
 
-      for (const row of result.rows as Array<{ key_hash: string }>) {
-        if (await this.compareHash(appApiKey, row.key_hash)) {
+      for (const keyHash of keyHashes) {
+        if (await this.compareHash(appApiKey, keyHash)) {
           return 'allowed';
         }
       }
@@ -335,11 +366,20 @@ export class GatewayService {
       return 'invalid_key';
     }
 
+    // ── Redis cache: basic app active status ─────────────────────────────
+    const activeCacheKey = `app:active:${appId}`;
+    const cachedActive = await this.clients.redis.get(activeCacheKey);
+    if (cachedActive === '1') return 'allowed';
+    if (cachedActive === '0') return 'forbidden';
+    // Unexpected / missing cache value: fall through to DB
+
     const result = await this.clients.pgPool.query(
       'SELECT id FROM registered_apps WHERE id = $1 AND is_active = true',
       [appId]
     );
-    return (result.rowCount ?? 0) > 0 ? 'allowed' : 'forbidden';
+    const isActive = (result.rowCount ?? 0) > 0;
+    await this.clients.redis.setex(activeCacheKey, APP_CACHE_TTL_SECS, isActive ? '1' : '0');
+    return isActive ? 'allowed' : 'forbidden';
   }
 
   private async validateToken(token: string): Promise<ValidatedUser> {
