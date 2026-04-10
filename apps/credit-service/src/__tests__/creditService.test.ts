@@ -1,3 +1,8 @@
+// Set required env vars before any imports that call getCreditConfig() during class instantiation
+process.env['DATABASE_URL'] ??= 'postgresql://test:test@localhost:5432/test';
+process.env['REDIS_URL'] ??= 'redis://localhost:6379';
+process.env['KAFKA_BROKERS'] ??= 'localhost:9092';
+
 import { test, describe, mock, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import { CreditService } from '../services/creditService.js';

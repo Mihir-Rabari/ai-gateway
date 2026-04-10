@@ -1,10 +1,15 @@
 import { fetch } from 'undici';
 import bcrypt from 'bcrypt';
-import { generateId, Errors, calculateCredits, createLogger, GatewayError, withRetry } from '@ai-gateway/utils';
-import { KAFKA_TOPICS } from '@ai-gateway/config';
+import { createHash } from 'crypto';
+import {
+  generateId, Errors, calculateCredits, createLogger, GatewayError, withRetry,
+  decryptClientSecret, verifyAppJwt, type AppJwtPayload,
+} from '@ai-gateway/utils';
+import { KAFKA_TOPICS, FIRST_PARTY_APP_IDS } from '@ai-gateway/config';
 import type { GatewayRequest, GatewayResponse, UsageEvent } from '@ai-gateway/types';
 import type { Pool } from 'pg';
 import type Redis from 'ioredis';
+import { CircuitBreaker } from './circuitBreaker.js';
 
 const logger = createLogger('gateway-service');
 
@@ -15,6 +20,10 @@ interface ServiceClients {
   kafkaPublish: (topic: string, msg: object) => Promise<void>;
   pgPool: Pool;
   redis: Redis;
+  /** AES-256 key (64-char hex) for decrypting stored client secrets. Optional. */
+  clientSecretEncryptionKey?: string;
+  /** TTL in seconds for the validated-token Redis cache. Default: 60. */
+  tokenCacheTtlSeconds?: number;
 }
 
 interface ValidatedUser {
@@ -32,16 +41,24 @@ interface RoutingResult {
   provider: string;
 }
 
-const FIRST_PARTY_APP_IDS = new Set(['unknown', 'api-direct', 'web-direct', 'web-dashboard']);
+// FIRST_PARTY_APP_IDS is imported from @ai-gateway/config
 
 type AppAccessResult = 'allowed' | 'invalid_key' | 'forbidden';
 
 interface GatewayServiceDeps {
   httpFetch?: typeof fetch;
   compareHash?: (plain: string, hash: string) => Promise<boolean>;
+  /** Injected for unit-testing; defaults to the utils helper. */
+  decryptSecret?: (enc: string, keyHex: string) => string;
+  /** Injected for unit-testing; defaults to the utils helper. */
+  verifyJwt?: (token: string, secret: string) => AppJwtPayload;
 }
 
 export class GatewayService {
+  private readonly authBreaker = new CircuitBreaker({ serviceName: 'Auth service' });
+  private readonly creditBreaker = new CircuitBreaker({ serviceName: 'Credit service' });
+  private readonly routingBreaker = new CircuitBreaker({ serviceName: 'Routing service' });
+
   constructor(
     private readonly clients: ServiceClients,
     private readonly deps: GatewayServiceDeps = {},
@@ -63,6 +80,7 @@ export class GatewayService {
     token: string;
     appId: string;
     appApiKey?: string;
+    appJwt?: string;
     model: string;
     messages: GatewayRequest['messages'];
     maxTokens?: number;
@@ -87,7 +105,7 @@ export class GatewayService {
     }
 
     // Step 3: Validate app context
-    const appAccess = await this.validateAppAccess(input.appId, input.appApiKey);
+    const appAccess = await this.validateAppAccess(input.appId, input.appApiKey, input.appJwt);
     if (appAccess !== 'allowed') {
       throw appAccess === 'invalid_key' ? Errors.INVALID_APP_KEY() : Errors.FORBIDDEN();
     }
@@ -116,7 +134,7 @@ export class GatewayService {
 
       routingResult = (await Promise.race([routingPromise, timeoutPromise])) as RoutingResult;
     } catch (err) {
-      await this.releaseCredits(user.userId, requestId).catch(() => undefined);
+      await this.releaseCredits(user.userId, requestId);
       const latencyMs = Date.now() - startTime;
       void this.publishUsageEvent(
         requestId, user.userId, input.appId, input.model, 'openai',
@@ -161,6 +179,7 @@ export class GatewayService {
     token: string;
     appId: string;
     appApiKey?: string;
+    appJwt?: string;
     model: string;
     messages: GatewayRequest['messages'];
     maxTokens?: number;
@@ -178,7 +197,7 @@ export class GatewayService {
     if (currentUsage === 1) await this.clients.redis.expire(rateLimitKey, 60);
     if (currentUsage > limit) throw new GatewayError('RATE_LIMIT_EXCEEDED', 'Rate limit exceeded', 429);
 
-    const appAccess = await this.validateAppAccess(input.appId, input.appApiKey);
+    const appAccess = await this.validateAppAccess(input.appId, input.appApiKey, input.appJwt);
     if (appAccess !== 'allowed') {
       throw appAccess === 'invalid_key' ? Errors.INVALID_APP_KEY() : Errors.FORBIDDEN();
     }
@@ -221,7 +240,7 @@ export class GatewayService {
       );
 
     } catch (err) {
-      await this.releaseCredits(user.userId, requestId).catch(() => undefined);
+      await this.releaseCredits(user.userId, requestId);
       const latencyMs = Date.now() - startTime;
       void this.publishUsageEvent(
         requestId, user.userId, input.appId, input.model, 'openai',
@@ -241,11 +260,68 @@ export class GatewayService {
     return 10;
   }
 
-  private async validateAppAccess(appId: string, appApiKey?: string): Promise<AppAccessResult> {
+  private async validateAppAccess(
+    appId: string,
+    appApiKey?: string,
+    appJwt?: string,
+  ): Promise<AppAccessResult> {
     if (!appId || FIRST_PARTY_APP_IDS.has(appId)) {
       return 'allowed';
     }
 
+    // ── JWT-based app authentication ──────────────────────────────────────
+    // When the developer's app sends X-App-Token (a short-lived HS256 JWT
+    // signed with their client secret), verify it using the stored encrypted
+    // secret. This avoids long-lived API keys in transit.
+    if (appJwt) {
+      const encKey = this.clients.clientSecretEncryptionKey;
+      if (encKey) {
+        try {
+          // The payload is decoded before signature verification only to extract
+          // the clientId needed for the DB lookup. The extracted clientId is used
+          // solely as a lookup key (parameterised query); the full token is then
+          // passed to verifyFn which performs the cryptographic check.
+          // Any invalid JSON or missing fields are caught by the outer try/catch.
+          const jwtParts = appJwt.split('.');
+          if (jwtParts.length !== 3) return 'invalid_key';
+
+          let clientId: string | undefined;
+          try {
+            const rawPayload = Buffer.from(jwtParts[1]!, 'base64url').toString('utf8');
+            ({ clientId } = JSON.parse(rawPayload) as { clientId?: string });
+          } catch {
+            // Malformed base64url or JSON — reject immediately
+            return 'invalid_key';
+          }
+
+          if (clientId) {
+            const row = await this.clients.pgPool.query<{ client_secret_enc: string | null }>(
+              `SELECT client_secret_enc FROM registered_apps
+               WHERE client_id = $1 AND is_active = true`,
+              [clientId],
+            );
+
+            const enc = row.rows[0]?.client_secret_enc ?? null;
+            if (enc) {
+              const decryptFn = this.deps.decryptSecret ?? decryptClientSecret;
+              const verifyFn = this.deps.verifyJwt ?? verifyAppJwt;
+              try {
+                const secret = decryptFn(enc, encKey);
+                verifyFn(appJwt, secret); // throws on invalid sig or expiry
+                return 'allowed';
+              } catch {
+                return 'invalid_key';
+              }
+            }
+          }
+        } catch {
+          return 'invalid_key';
+        }
+      }
+      // If encryption key not configured, fall through to API-key path
+    }
+
+    // ── Legacy API-key authentication ─────────────────────────────────────
     if (appApiKey) {
       const result = await this.clients.pgPool.query(
         `SELECT ak.key_hash
@@ -275,47 +351,92 @@ export class GatewayService {
   }
 
   private async validateToken(token: string): Promise<ValidatedUser> {
-    const res = await this.httpFetch(`${this.clients.authServiceUrl}/internal/auth/validate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
+    // Check Redis cache before calling the auth service.
+    // The token is hashed (SHA-256) so the raw bearer token is never stored as a Redis key.
+    const cacheKey = `auth:token:${createHash('sha256').update(token).digest('hex')}`;
+    const cached = await this.clients.redis.get(cacheKey);
+    if (cached) {
+      try {
+        return JSON.parse(cached) as ValidatedUser;
+      } catch {
+        // Malformed cache entry: remove it and fall through to the auth service.
+        await this.clients.redis.del(cacheKey);
+      }
+    }
+
+    const user = await this.authBreaker.execute(async () => {
+      const res = await this.httpFetch(`${this.clients.authServiceUrl}/internal/auth/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+      const json = await res.json() as {
+        success: boolean;
+        data?: ValidatedUser;
+        error?: { code: string; message: string };
+      };
+      if (!res.ok || !json.success || !json.data) throw Errors.INVALID_TOKEN();
+      return json.data;
     });
 
-    const json = await res.json() as {
-      success: boolean;
-      data?: ValidatedUser;
-      error?: { code: string; message: string };
-    };
-    if (!json.success || !json.data) throw Errors.INVALID_TOKEN();
-    return json.data;
+    // Cache the validated user data so subsequent requests skip the auth service call.
+    const ttl = this.clients.tokenCacheTtlSeconds ?? 60;
+    await this.clients.redis.set(cacheKey, JSON.stringify(user), 'EX', ttl);
+
+    return user;
   }
 
   private async lockCredits(userId: string, requestId: string, amount: number): Promise<void> {
-    const res = await this.httpFetch(`${this.clients.creditServiceUrl}/credits/lock`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, requestId, amount }),
+    await this.creditBreaker.execute(async () => {
+      const res = await this.httpFetch(`${this.clients.creditServiceUrl}/credits/lock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, requestId, amount }),
+      });
+      if (!res.ok) {
+        throw new Error(`Credit lock failed with status ${res.status}`);
+      }
+      const json = await res.json() as { success: boolean; error?: { code: string; statusCode: number } };
+      if (!json.success) {
+        const code = json.error?.code ?? 'CREDIT_001';
+        throw code === 'CREDIT_002' ? Errors.CREDIT_LOCK_FAILED() : Errors.INSUFFICIENT_CREDITS(0, amount);
+      }
     });
-    const json = await res.json() as { success: boolean; error?: { code: string; statusCode: number } };
-    if (!json.success) {
-      const code = json.error?.code ?? 'CREDIT_001';
-      throw code === 'CREDIT_002' ? Errors.CREDIT_LOCK_FAILED() : Errors.INSUFFICIENT_CREDITS(0, amount);
-    }
   }
 
   private async confirmCredits(userId: string, requestId: string): Promise<void> {
-    await this.httpFetch(`${this.clients.creditServiceUrl}/credits/confirm`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, requestId }),
+    await this.creditBreaker.execute(async () => {
+      const res = await this.httpFetch(`${this.clients.creditServiceUrl}/credits/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, requestId }),
+      });
+      if (!res.ok) {
+        throw new Error(`Credit confirm failed with status ${res.status}`);
+      }
+      const json = await res.json() as { success: boolean };
+      if (!json.success) {
+        throw new Error('Credit confirm response indicated failure');
+      }
     });
   }
 
   private async releaseCredits(userId: string, requestId: string): Promise<void> {
-    await this.httpFetch(`${this.clients.creditServiceUrl}/credits/release`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, requestId }),
+    await this.creditBreaker.execute(async () => {
+      const res = await this.httpFetch(`${this.clients.creditServiceUrl}/credits/release`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, requestId }),
+      });
+      if (!res.ok) {
+        throw new Error(`Credit release failed with status ${res.status}`);
+      }
+      const json = await res.json() as { success: boolean };
+      if (!json.success) {
+        throw new Error('Credit release response indicated failure');
+      }
+    }).catch((err) => {
+      logger.warn({ err, userId, requestId }, 'Failed to release credits');
     });
   }
 
@@ -327,31 +448,34 @@ export class GatewayService {
     temperature?: number;
     stream?: boolean;
   }): Promise<RoutingResult | AsyncGenerator<string>> {
-    return withRetry<RoutingResult | AsyncGenerator<string>>(async () => {
-      const res = await this.httpFetch(`${this.clients.routingServiceUrl}/internal/routing/route`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+    return this.routingBreaker.execute(() =>
+      withRetry<RoutingResult | AsyncGenerator<string>>(async () => {
+        const res = await this.httpFetch(`${this.clients.routingServiceUrl}/internal/routing/route`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
 
-      if (data.stream) {
-        if (!res.body) throw Errors.ROUTING_FAILED();
-        async function* streamGenerator() {
-          for await (const chunk of res.body! as any) {
-             yield Buffer.isBuffer(chunk) ? chunk.toString() : String(chunk);
+        if (data.stream) {
+          if (!res.body) throw Errors.ROUTING_FAILED();
+          async function* streamGenerator() {
+            const decoder = new TextDecoder();
+            for await (const chunk of res.body! as any) {
+              yield decoder.decode(chunk, { stream: true });
+            }
           }
+          return streamGenerator();
         }
-        return streamGenerator();
-      }
 
-      const json = await res.json() as {
-        success: boolean;
-        data?: RoutingResult;
-        error?: { code: string; message: string };
-      };
-      if (!json.success || !json.data) throw Errors.ROUTING_FAILED();
-      return json.data;
-    });
+        const json = await res.json() as {
+          success: boolean;
+          data?: RoutingResult;
+          error?: { code: string; message: string };
+        };
+        if (!json.success || !json.data) throw Errors.ROUTING_FAILED();
+        return json.data;
+      }),
+    );
   }
 
   private publishUsageEvent(

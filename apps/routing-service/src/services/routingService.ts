@@ -49,7 +49,7 @@ const FALLBACK_MAP: Record<string, string> = {
   'gpt-4o': 'gpt-3.5-turbo',
   'gpt-4-turbo': 'gpt-3.5-turbo',
   'claude-3-5-sonnet-20241022': 'claude-3-haiku-20240307',
-  'gemini-1.5-pro': 'gemini-1.5-flash',
+  'gemini-2.5-pro': 'gemini-2.5-flash',
 };
 
 const MODEL_PROVIDER: Record<string, ProviderName> = {
@@ -58,8 +58,8 @@ const MODEL_PROVIDER: Record<string, ProviderName> = {
   'gpt-3.5-turbo': 'openai',
   'claude-3-5-sonnet-20241022': 'anthropic',
   'claude-3-haiku-20240307': 'anthropic',
-  'gemini-1.5-pro': 'google',
-  'gemini-1.5-flash': 'google',
+  'gemini-2.5-pro': 'google',
+  'gemini-2.5-flash': 'google',
 };
 
 export class RoutingService {

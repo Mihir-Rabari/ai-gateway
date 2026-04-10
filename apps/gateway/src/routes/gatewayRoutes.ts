@@ -4,15 +4,20 @@ import { GatewayService } from '../services/gatewayService.js';
 import type { Message } from '@ai-gateway/types';
 
 export async function gatewayRoutes(fastify: FastifyInstance) {
-  const getService = () =>
-    new GatewayService({
-      authServiceUrl: process.env['AUTH_SERVICE_URL'] ?? 'http://localhost:3003',
-      creditServiceUrl: process.env['CREDIT_SERVICE_URL'] ?? 'http://localhost:3005',
-      routingServiceUrl: process.env['ROUTING_SERVICE_URL'] ?? 'http://localhost:3006',
-      kafkaPublish: fastify.kafka.publish.bind(fastify.kafka),
-      pgPool: fastify.pg,
-      redis: fastify.redis,
-    });
+  // Create one shared GatewayService instance per server lifetime so that
+  // circuit-breaker state (and the token cache) persists across requests.
+  const service = new GatewayService({
+    authServiceUrl: process.env['AUTH_SERVICE_URL'] ?? 'http://localhost:3003',
+    creditServiceUrl: process.env['CREDIT_SERVICE_URL'] ?? 'http://localhost:3005',
+    routingServiceUrl: process.env['ROUTING_SERVICE_URL'] ?? 'http://localhost:3006',
+    kafkaPublish: fastify.kafka.publish.bind(fastify.kafka),
+    pgPool: fastify.pg,
+    redis: fastify.redis,
+    clientSecretEncryptionKey: process.env['CLIENT_SECRET_ENCRYPTION_KEY'],
+    tokenCacheTtlSeconds: process.env['TOKEN_CACHE_TTL_SECONDS']
+      ? Number(process.env['TOKEN_CACHE_TTL_SECONDS'])
+      : 60,
+  });
 
   // POST /gateway/request
   fastify.post(
@@ -45,7 +50,7 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
     async (
       req: FastifyRequest<{
         Body: { model: string; messages: Message[]; maxTokens?: number; temperature?: number; stream?: boolean; };
-        Headers: { authorization?: string; 'x-app-id'?: string; 'x-api-key'?: string; 'x-app-key'?: string };
+        Headers: { authorization?: string; 'x-app-id'?: string; 'x-api-key'?: string; 'x-app-key'?: string; 'x-app-token'?: string };
       }>,
       reply: FastifyReply,
     ) => {
@@ -61,12 +66,14 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
         const token = authHeader.slice(7);
         const appId = req.headers['x-app-id'] ?? 'unknown';
         const appApiKey = req.headers['x-api-key'] ?? req.headers['x-app-key'];
+        const appJwt = req.headers['x-app-token'] as string | undefined;
 
         if (req.body.stream) {
-          const stream = await getService().processStreamRequest({
+          const stream = await service.processStreamRequest({
             token,
             appId,
             appApiKey,
+            appJwt,
             model: req.body.model,
             messages: req.body.messages,
             maxTokens: req.body.maxTokens,
@@ -94,10 +101,11 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        const result = await getService().processRequest({
+        const result = await service.processRequest({
           token,
           appId,
           appApiKey,
+          appJwt,
           model: req.body.model,
           messages: req.body.messages,
           maxTokens: req.body.maxTokens,
@@ -119,7 +127,7 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
       models: [
         'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo',
         'claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307',
-        'gemini-1.5-pro', 'gemini-1.5-flash',
+        'gemini-2.5-pro', 'gemini-2.5-flash',
       ],
     }));
   });

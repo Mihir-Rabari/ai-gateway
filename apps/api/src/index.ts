@@ -14,8 +14,16 @@ async function bootstrap() {
 
   // CORS
   await app.register(cors, {
-    origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000'],
-    credentials: true,
+    origin: '*',
+    credentials: false,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type', 'Authorization',
+      'X-App-Id', 'x-app-id',
+      'X-App-Token', 'x-app-token',
+      'X-Api-Key', 'x-api-key',
+      'X-App-Key', 'x-app-key',
+    ],
   });
 
   // Rate limiting
@@ -57,6 +65,20 @@ async function bootstrap() {
 
   const billingM = await import('./routes/v1/billing.js');
   await app.register(billingM.billingRoutes, { prefix: '/api/v1' });
+
+
+  const developersM = await import('./routes/v1/developers.js');
+  await app.register(developersM.developerRoutes, { prefix: '/api/v1' });
+
+  // Security Headers
+  app.addHook('onSend', async (req, reply) => {
+    reply.header('X-Frame-Options', 'DENY');
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    reply.header('Content-Security-Policy', "default-src 'none'");
+    reply.header('X-XSS-Protection', '1; mode=block');
+  });
+
 
   await app.listen({ port: Number(process.env['API_PORT'] ?? 3001), host: '0.0.0.0' });
   logger.info(`🚀 API service running on port ${process.env['API_PORT'] ?? 3001}`);
