@@ -114,6 +114,12 @@ const STATE_ENTROPY_BYTES = 24;
 const APP_TOKEN_EXPIRY_SECONDS = 60; // 1 minute
 
 /**
+ * Number of seconds before an access token's expiry at which the SDK will
+ * proactively refresh it. Avoids clock-skew and latency issues.
+ */
+const TOKEN_EXPIRY_BUFFER_SECONDS = 30;
+
+/**
  * AI Gateway SDK Client
  *
  * Implements a Google OAuth-style authentication and AI request pipeline.
@@ -536,21 +542,22 @@ export class AIGateway {
   private async getAuthHeader(): Promise<string> {
     let stored = await this.storage.get(STORAGE_KEYS.ACCESS_TOKEN);
 
-    // Auto-refresh OAuth access tokens that are expired or about to expire (30s buffer).
+    // Auto-refresh OAuth access tokens that are expired or about to expire.
     // Only applies to the OAuth flow (stored token); legacy apiKey / setToken() paths are skipped.
     if (stored) {
       const exp = this.decodeTokenExpiry(stored);
       const now = Math.floor(Date.now() / 1000);
-      if (exp !== null && exp - now < 30) {
+      if (exp !== null && exp - now < TOKEN_EXPIRY_BUFFER_SECONDS) {
         const refreshToken = await this.storage.get(STORAGE_KEYS.REFRESH_TOKEN);
         if (refreshToken) {
           try {
             const refreshed = await this.refreshSession();
             stored = refreshed.accessToken;
-          } catch {
+          } catch (err) {
             // Refresh token is also expired — automatically sign the user out.
             await this.signOut();
-            throw new Error('AIGateway: Session expired. Please sign in again.');
+            const reason = err instanceof Error ? err.message : String(err);
+            throw new Error(`AIGateway: Session expired. Please sign in again. (${reason})`);
           }
         } else {
           // No refresh token available — clear stale tokens and sign out.
