@@ -120,6 +120,19 @@ const APP_TOKEN_EXPIRY_SECONDS = 60; // 1 minute
 const TOKEN_EXPIRY_BUFFER_SECONDS = 30;
 
 /**
+ * OAuth error codes and message keywords that indicate the refresh token is
+ * permanently invalid. A match causes the SDK to sign the user out rather than
+ * silently retrying.  Transient errors (network, 5xx) do not appear here and
+ * will be rethrown without clearing the local session.
+ */
+const TERMINAL_REFRESH_ERROR_PATTERNS = [
+  'invalid_grant',
+  'invalid_token',
+  'revoked',
+  'expired',
+] as const;
+
+/**
  * Internal error thrown by refreshSession() when the server explicitly rejects
  * the refresh token. Carries the HTTP response status for terminal-error detection.
  */
@@ -587,7 +600,7 @@ export class AIGateway {
             // must not clear the local session — the caller can retry.
             const isTerminalAuthError =
               (err instanceof RefreshError && (err.status === 401 || err.status === 403)) ||
-              (err instanceof Error && /invalid_grant|invalid_token|revoked|expired/i.test(err.message));
+              (err instanceof Error && TERMINAL_REFRESH_ERROR_PATTERNS.some((p) => err.message.toLowerCase().includes(p)));
             if (isTerminalAuthError) {
               await this.signOut();
               const reason = err instanceof Error ? err.message : String(err);

@@ -483,8 +483,11 @@ describe('AIGateway SDK', () => {
     assert.equal(storage.get('ai_gw_access_token'), VALID_TOKEN);
 
     // The credits request must have used the refreshed token in the Authorization header
-    const [creditsUrl, creditsInit] = fetchMock.mock.calls[1].arguments as unknown as [string, RequestInit];
-    assert.equal(creditsUrl, 'https://api.ai-gateway.io/api/v1/credits');
+    const creditsCall = fetchMock.mock.calls.find(
+      (c) => (c.arguments[0] as string).includes('/api/v1/credits'),
+    );
+    assert.ok(creditsCall, 'credits endpoint should have been called');
+    const [, creditsInit] = creditsCall!.arguments as unknown as [string, RequestInit];
     assert.equal((creditsInit.headers as Record<string, string>)['Authorization'], `Bearer ${VALID_TOKEN}`);
   });
 
