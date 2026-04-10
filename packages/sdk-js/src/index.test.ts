@@ -2,6 +2,20 @@ import { describe, it, beforeEach, mock } from 'node:test';
 import assert from 'node:assert';
 import { AIGateway } from './index.js';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Build a minimal fake JWT with the given payload (signature is not verified). */
+function makeFakeJWT(payload: Record<string, unknown>): string {
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  return `${header}.${body}.fakesig`;
+}
+
+const EXPIRED_TOKEN = makeFakeJWT({ userId: 'user-1', type: 'access', exp: 1 }); // expired 1970
+const VALID_TOKEN = makeFakeJWT({ userId: 'user-1', type: 'access', exp: Math.floor(Date.now() / 1000) + 3600 });
+
 describe('AIGateway SDK', () => {
   let ai: AIGateway;
 
@@ -420,5 +434,121 @@ describe('AIGateway SDK', () => {
       },
       /AIGateway stream error: Insufficient credits/
     );
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Auto-refresh and auto-logout behaviour
+  // ─────────────────────────────────────────────────────────────────────────
+
+  it('getAuthHeader auto-refreshes when access token is expired', async () => {
+    const oauthAi = new AIGateway({
+      clientId: 'client_abc',
+      redirectUri: 'http://localhost:3000/callback',
+      authUrl: 'https://auth.ai-gateway.io',
+    });
+
+    const storage = (oauthAi as unknown as { storage: { set: (k: string, v: string) => void; get: (k: string) => string | null } }).storage;
+    storage.set('ai_gw_access_token', EXPIRED_TOKEN);
+    storage.set('ai_gw_refresh_token', 'refresh_abc');
+
+    // First call: refresh endpoint returns new tokens.
+    // Second call: credits endpoint returns data.
+    const fetchMock = mock.fn(async (url: string) => {
+      if ((url as string).includes('/refresh')) {
+        return {
+          json: async () => ({
+            success: true,
+            data: { accessToken: VALID_TOKEN, refreshToken: 'new_refresh_abc' },
+          }),
+        } as unknown as Response;
+      }
+      return {
+        json: async () => ({ success: true, data: { balance: 50, planId: 'free' } }),
+      } as unknown as Response;
+    });
+
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const result = await oauthAi.credits();
+
+    // Should have called refresh endpoint then credits endpoint
+    assert.equal(fetchMock.mock.calls.length, 2);
+    const [refreshUrl] = fetchMock.mock.calls[0].arguments as unknown as [string];
+    assert.ok(refreshUrl.includes('/refresh'), 'first call should be the refresh endpoint');
+
+    // Credits response should be returned correctly
+    assert.equal(result.balance, 50);
+
+    // New access token should be stored
+    assert.equal(storage.get('ai_gw_access_token'), VALID_TOKEN);
+  });
+
+  it('getAuthHeader signs out and throws when both tokens are expired', async () => {
+    const oauthAi = new AIGateway({
+      clientId: 'client_abc',
+      redirectUri: 'http://localhost:3000/callback',
+      authUrl: 'https://auth.ai-gateway.io',
+    });
+
+    const storage = (oauthAi as unknown as { storage: { set: (k: string, v: string) => void; get: (k: string) => string | null } }).storage;
+    storage.set('ai_gw_access_token', EXPIRED_TOKEN);
+    storage.set('ai_gw_refresh_token', 'expired_refresh_tok');
+
+    // Refresh endpoint returns an error
+    const fetchMock = mock.fn(async () => {
+      return {
+        json: async () => ({ success: false, error: { message: 'Refresh token expired' } }),
+      } as unknown as Response;
+    });
+
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await assert.rejects(
+      async () => oauthAi.credits(),
+      /AIGateway: Session expired/
+    );
+
+    // Tokens should have been cleared (user signed out)
+    assert.equal(storage.get('ai_gw_access_token'), null);
+    assert.equal(storage.get('ai_gw_refresh_token'), null);
+  });
+
+  it('getAuthHeader signs out and throws when access token expired and no refresh token stored', async () => {
+    const oauthAi = new AIGateway({
+      clientId: 'client_abc',
+      redirectUri: 'http://localhost:3000/callback',
+      authUrl: 'https://auth.ai-gateway.io',
+    });
+
+    const storage = (oauthAi as unknown as { storage: { set: (k: string, v: string) => void; get: (k: string) => string | null } }).storage;
+    storage.set('ai_gw_access_token', EXPIRED_TOKEN);
+    // No refresh token stored
+
+    const fetchMock = mock.fn(async () => ({ ok: true }) as Response);
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await assert.rejects(
+      async () => oauthAi.credits(),
+      /AIGateway: Session expired/
+    );
+
+    // Access token should have been cleared
+    assert.equal(storage.get('ai_gw_access_token'), null);
+  });
+
+  it('getAuthHeader does not refresh non-JWT legacy tokens (apiKey)', async () => {
+    // ai fixture uses apiKey — it should bypass refresh logic entirely
+    const fetchMock = mock.fn(async () => {
+      return {
+        json: async () => ({ success: true, data: { balance: 10, planId: 'free' } }),
+      } as unknown as Response;
+    });
+
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const result = await ai.credits();
+    assert.equal(result.balance, 10);
+    // Only one fetch call — no refresh was attempted
+    assert.equal(fetchMock.mock.calls.length, 1);
   });
 });

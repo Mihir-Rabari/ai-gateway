@@ -111,7 +111,7 @@ const STATE_ENTROPY_BYTES = 24;
  * Lifetime of a signed X-App-Token JWT in seconds.
  * Short-lived to limit the blast radius of a leaked token in transit.
  */
-const APP_TOKEN_EXPIRY_SECONDS = 31536000; // 1 year
+const APP_TOKEN_EXPIRY_SECONDS = 60; // 1 minute
 
 /**
  * AI Gateway SDK Client
@@ -534,10 +534,57 @@ export class AIGateway {
   // ─────────────────────────────────────────────────────────────────────────
 
   private async getAuthHeader(): Promise<string> {
-    const stored = await this.storage.get(STORAGE_KEYS.ACCESS_TOKEN);
+    let stored = await this.storage.get(STORAGE_KEYS.ACCESS_TOKEN);
+
+    // Auto-refresh OAuth access tokens that are expired or about to expire (30s buffer).
+    // Only applies to the OAuth flow (stored token); legacy apiKey / setToken() paths are skipped.
+    if (stored) {
+      const exp = this.decodeTokenExpiry(stored);
+      const now = Math.floor(Date.now() / 1000);
+      if (exp !== null && exp - now < 30) {
+        const refreshToken = await this.storage.get(STORAGE_KEYS.REFRESH_TOKEN);
+        if (refreshToken) {
+          try {
+            const refreshed = await this.refreshSession();
+            stored = refreshed.accessToken;
+          } catch {
+            // Refresh token is also expired — automatically sign the user out.
+            await this.signOut();
+            throw new Error('AIGateway: Session expired. Please sign in again.');
+          }
+        } else {
+          // No refresh token available — clear stale tokens and sign out.
+          await this.signOut();
+          throw new Error('AIGateway: Session expired. Please sign in again.');
+        }
+      }
+    }
+
     const token = stored ?? this.legacyAccessToken ?? this.apiKey;
     if (!token) throw new Error('AIGateway: No access token. Call signIn() and handleCallback() first.');
     return `Bearer ${token}`;
+  }
+
+  /**
+   * Decode the `exp` (expiry) claim from a JWT payload without verifying the signature.
+   * Returns the expiry as a Unix timestamp (seconds), or `null` if the token cannot be decoded
+   * or does not contain an `exp` claim.
+   */
+  private decodeTokenExpiry(token: string): number | null {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      // Support both browser (atob) and Node.js (Buffer) environments.
+      const json =
+        typeof atob === 'function'
+          ? atob(payloadB64)
+          : Buffer.from(payloadB64, 'base64').toString('utf8');
+      const payload = JSON.parse(json) as { exp?: unknown };
+      return typeof payload.exp === 'number' ? payload.exp : null;
+    } catch {
+      return null;
+    }
   }
 
   private getOAuthBaseUrl(): string {
