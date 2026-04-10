@@ -120,6 +120,20 @@ const APP_TOKEN_EXPIRY_SECONDS = 60; // 1 minute
 const TOKEN_EXPIRY_BUFFER_SECONDS = 30;
 
 /**
+ * Internal error thrown by refreshSession() when the server explicitly rejects
+ * the refresh token. Carries the HTTP response status for terminal-error detection.
+ */
+class RefreshError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'RefreshError';
+  }
+}
+
+/**
  * AI Gateway SDK Client
  *
  * Implements a Google OAuth-style authentication and AI request pipeline.
@@ -152,6 +166,9 @@ export class AIGateway {
   private apiKey: string | undefined;
   /** @deprecated – use storage instead */
   private legacyAccessToken: string | undefined;
+
+  /** In-flight refresh promise; serializes concurrent token-refresh calls. */
+  private refreshPromise: Promise<RefreshResult> | null = null;
 
   /**
    * Create a new AIGateway instance.
@@ -327,7 +344,10 @@ export class AIGateway {
     };
 
     if (!json.success || !json.data) {
-      throw new Error(`AIGateway: Session refresh failed - ${json.error?.message ?? 'Unknown error'}`);
+      throw new RefreshError(
+        `AIGateway: Session refresh failed - ${json.error?.message ?? 'Unknown error'}`,
+        res.status,
+      );
     }
 
     await this.storage.set(STORAGE_KEYS.ACCESS_TOKEN, json.data.accessToken);
@@ -550,14 +570,30 @@ export class AIGateway {
       if (exp !== null && exp - now < TOKEN_EXPIRY_BUFFER_SECONDS) {
         const refreshToken = await this.storage.get(STORAGE_KEYS.REFRESH_TOKEN);
         if (refreshToken) {
+          // Serialize concurrent refresh calls: if a refresh is already in-flight,
+          // await the same promise rather than issuing a duplicate request.
+          if (!this.refreshPromise) {
+            this.refreshPromise = this.refreshSession().finally(() => {
+              this.refreshPromise = null;
+            });
+          }
           try {
-            const refreshed = await this.refreshSession();
+            const refreshed = await this.refreshPromise;
             stored = refreshed.accessToken;
           } catch (err) {
-            // Refresh token is also expired — automatically sign the user out.
-            await this.signOut();
-            const reason = err instanceof Error ? err.message : String(err);
-            throw new Error(`AIGateway: Session expired. Please sign in again. (${reason})`);
+            // Only sign out on terminal auth errors (HTTP 401/403, OAuth
+            // invalid_grant/invalid_token, or explicit revocation/expiry).
+            // Transient failures (network errors, 5xx, timeouts, bad JSON)
+            // must not clear the local session — the caller can retry.
+            const isTerminalAuthError =
+              (err instanceof RefreshError && (err.status === 401 || err.status === 403)) ||
+              (err instanceof Error && /invalid_grant|invalid_token|revoked|expired/i.test(err.message));
+            if (isTerminalAuthError) {
+              await this.signOut();
+              const reason = err instanceof Error ? err.message : String(err);
+              throw new Error(`AIGateway: Session expired. Please sign in again. (${reason})`);
+            }
+            throw err;
           }
         } else {
           // No refresh token available — clear stale tokens and sign out.

@@ -481,6 +481,11 @@ describe('AIGateway SDK', () => {
 
     // New access token should be stored
     assert.equal(storage.get('ai_gw_access_token'), VALID_TOKEN);
+
+    // The credits request must have used the refreshed token in the Authorization header
+    const [creditsUrl, creditsInit] = fetchMock.mock.calls[1].arguments as unknown as [string, RequestInit];
+    assert.equal(creditsUrl, 'https://api.ai-gateway.io/api/v1/credits');
+    assert.equal((creditsInit.headers as Record<string, string>)['Authorization'], `Bearer ${VALID_TOKEN}`);
   });
 
   it('getAuthHeader signs out and throws when both tokens are expired', async () => {
@@ -497,6 +502,7 @@ describe('AIGateway SDK', () => {
     // Refresh endpoint returns an error
     const fetchMock = mock.fn(async () => {
       return {
+        status: 401,
         json: async () => ({ success: false, error: { message: 'Refresh token expired' } }),
       } as unknown as Response;
     });
@@ -550,5 +556,36 @@ describe('AIGateway SDK', () => {
     assert.equal(result.balance, 10);
     // Only one fetch call — no refresh was attempted
     assert.equal(fetchMock.mock.calls.length, 1);
+  });
+
+  it('getAuthHeader does not sign out on transient 5xx refresh failures', async () => {
+    const oauthAi = new AIGateway({
+      clientId: 'client_abc',
+      redirectUri: 'http://localhost:3000/callback',
+      authUrl: 'https://auth.ai-gateway.io',
+    });
+
+    const storage = (oauthAi as unknown as { storage: { set: (k: string, v: string) => void; get: (k: string) => string | null } }).storage;
+    storage.set('ai_gw_access_token', EXPIRED_TOKEN);
+    storage.set('ai_gw_refresh_token', 'refresh_abc');
+
+    // Refresh endpoint returns a 500 server error
+    const fetchMock = mock.fn(async () => {
+      return {
+        status: 500,
+        json: async () => ({ success: false, error: { message: 'Internal Server Error' } }),
+      } as unknown as Response;
+    });
+
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await assert.rejects(
+      async () => oauthAi.credits(),
+      /Session refresh failed/,
+    );
+
+    // Tokens must NOT have been cleared — transient errors should not sign the user out
+    assert.equal(storage.get('ai_gw_access_token'), EXPIRED_TOKEN);
+    assert.equal(storage.get('ai_gw_refresh_token'), 'refresh_abc');
   });
 });
