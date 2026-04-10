@@ -14,6 +14,9 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
     pgPool: fastify.pg,
     redis: fastify.redis,
     clientSecretEncryptionKey: process.env['CLIENT_SECRET_ENCRYPTION_KEY'],
+    tokenCacheTtlSeconds: process.env['TOKEN_CACHE_TTL_SECONDS']
+      ? Number(process.env['TOKEN_CACHE_TTL_SECONDS'])
+      : 60,
   });
 
   // POST /gateway/request

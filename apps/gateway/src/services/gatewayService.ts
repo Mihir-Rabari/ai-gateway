@@ -387,18 +387,21 @@ export class GatewayService {
   }
 
   private async lockCredits(userId: string, requestId: string, amount: number): Promise<void> {
-    const res = await this.creditBreaker.execute(() =>
-      this.httpFetch(`${this.clients.creditServiceUrl}/credits/lock`, {
+    await this.creditBreaker.execute(async () => {
+      const res = await this.httpFetch(`${this.clients.creditServiceUrl}/credits/lock`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, requestId, amount }),
-      }),
-    );
-    const json = await res.json() as { success: boolean; error?: { code: string; statusCode: number } };
-    if (!json.success) {
-      const code = json.error?.code ?? 'CREDIT_001';
-      throw code === 'CREDIT_002' ? Errors.CREDIT_LOCK_FAILED() : Errors.INSUFFICIENT_CREDITS(0, amount);
-    }
+      });
+      if (!res.ok) {
+        throw new Error(`Credit lock failed with status ${res.status}`);
+      }
+      const json = await res.json() as { success: boolean; error?: { code: string; statusCode: number } };
+      if (!json.success) {
+        const code = json.error?.code ?? 'CREDIT_001';
+        throw code === 'CREDIT_002' ? Errors.CREDIT_LOCK_FAILED() : Errors.INSUFFICIENT_CREDITS(0, amount);
+      }
+    });
   }
 
   private async confirmCredits(userId: string, requestId: string): Promise<void> {
