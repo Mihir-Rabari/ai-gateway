@@ -132,6 +132,13 @@ function createGoogleClient(options: {
         stream: (async function* () {
           yield { text: () => 'google-stream' };
         })(),
+        response: Promise.resolve({
+          usageMetadata: {
+            promptTokenCount: 9,
+            candidatesTokenCount: 5,
+            totalTokenCount: 14,
+          },
+        }),
       }),
     }),
   };
@@ -254,5 +261,169 @@ describe('RoutingService', () => {
     assert.ok(anthropic);
     assert.equal(anthropic.healthy, false);
     assert.equal(anthropic.failureCount, 3);
+  });
+
+  test('OpenAI streaming emits output chunks followed by a native usage SSE event', async () => {
+    const openaiStreamClient = {
+      chat: {
+        completions: {
+          create: async () =>
+            (async function* () {
+              yield { choices: [{ delta: { content: 'Hello' } }], usage: null };
+              yield { choices: [{ delta: { content: ' world' } }], usage: null };
+              // Final chunk with usage (stream_options: { include_usage: true })
+              yield { choices: [], usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 } };
+            })(),
+        },
+      },
+    };
+
+    const service = new RoutingService(
+      async () => undefined,
+      createRedisMock(),
+      {
+        openaiClient: openaiStreamClient,
+        anthropicClient: createAnthropicClient(),
+        googleClient: createGoogleClient(),
+      },
+    );
+
+    const result = await service.route({
+      requestId: 'req-openai-stream',
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: 'hello' }],
+      stream: true,
+    });
+
+    assert.ok(Symbol.asyncIterator in Object(result), 'result should be async iterable');
+
+    const chunks: string[] = [];
+    for await (const chunk of result as AsyncIterable<string>) {
+      chunks.push(chunk);
+    }
+
+    // Should yield output chunks followed by a usage event and [DONE]
+    assert.ok(chunks.some((c) => c.includes('"output":"Hello"')), 'should include first output chunk');
+    assert.ok(chunks.some((c) => c.includes('"output":" world"')), 'should include second output chunk');
+    const usageChunk = chunks.find((c) => c.includes('"usage"'));
+    assert.ok(usageChunk, 'should emit a usage SSE event');
+    const usagePayload = JSON.parse(usageChunk!.replace(/^data: /, '').trim()) as {
+      usage: { tokensInput: number; tokensOutput: number; tokensTotal: number };
+      provider: string;
+    };
+    assert.equal(usagePayload.usage.tokensInput, 10);
+    assert.equal(usagePayload.usage.tokensOutput, 5);
+    assert.equal(usagePayload.usage.tokensTotal, 15);
+    assert.equal(usagePayload.provider, 'openai');
+    assert.ok(chunks[chunks.length - 1]?.includes('[DONE]'), 'last chunk should be [DONE]');
+  });
+
+  test('Anthropic streaming emits output chunks followed by a native usage SSE event', async () => {
+    const anthropicStreamClient = {
+      messages: {
+        create: async () =>
+          (async function* () {
+            yield { type: 'message_start', message: { usage: { input_tokens: 8, output_tokens: 0 } } };
+            yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Hi there' } };
+            yield { type: 'message_delta', usage: { output_tokens: 4 } };
+            yield { type: 'message_stop' };
+          })(),
+      },
+    };
+
+    const service = new RoutingService(
+      async () => undefined,
+      createRedisMock(),
+      {
+        openaiClient: createOpenAiClient(),
+        anthropicClient: anthropicStreamClient,
+        googleClient: createGoogleClient(),
+      },
+    );
+
+    const result = await service.route({
+      requestId: 'req-anthropic-stream',
+      model: 'claude-3-5-sonnet-20241022',
+      messages: [{ role: 'user', content: 'hello' }],
+      stream: true,
+    });
+
+    assert.ok(Symbol.asyncIterator in Object(result), 'result should be async iterable');
+
+    const chunks: string[] = [];
+    for await (const chunk of result as AsyncIterable<string>) {
+      chunks.push(chunk);
+    }
+
+    assert.ok(chunks.some((c) => c.includes('"output":"Hi there"')), 'should include output chunk');
+    const usageChunk = chunks.find((c) => c.includes('"usage"'));
+    assert.ok(usageChunk, 'should emit a usage SSE event');
+    const usagePayload = JSON.parse(usageChunk!.replace(/^data: /, '').trim()) as {
+      usage: { tokensInput: number; tokensOutput: number; tokensTotal: number };
+      provider: string;
+    };
+    assert.equal(usagePayload.usage.tokensInput, 8);
+    assert.equal(usagePayload.usage.tokensOutput, 4);
+    assert.equal(usagePayload.usage.tokensTotal, 12);
+    assert.equal(usagePayload.provider, 'anthropic');
+    assert.ok(chunks[chunks.length - 1]?.includes('[DONE]'), 'last chunk should be [DONE]');
+  });
+
+  test('Google streaming emits output chunks followed by a native usage SSE event', async () => {
+    const googleStreamClient = {
+      getGenerativeModel: () => ({
+        generateContent: async () => ({
+          response: {
+            text: () => 'google-response',
+            usageMetadata: { promptTokenCount: 9, candidatesTokenCount: 5, totalTokenCount: 14 },
+          },
+        }),
+        generateContentStream: async () => ({
+          stream: (async function* () {
+            yield { text: () => 'google-stream-chunk' };
+          })(),
+          response: Promise.resolve({
+            usageMetadata: { promptTokenCount: 9, candidatesTokenCount: 5, totalTokenCount: 14 },
+          }),
+        }),
+      }),
+    };
+
+    const service = new RoutingService(
+      async () => undefined,
+      createRedisMock(),
+      {
+        openaiClient: createOpenAiClient(),
+        anthropicClient: createAnthropicClient(),
+        googleClient: googleStreamClient,
+      },
+    );
+
+    const result = await service.route({
+      requestId: 'req-google-stream',
+      model: 'gemini-2.5-pro',
+      messages: [{ role: 'user', content: 'hello' }],
+      stream: true,
+    });
+
+    assert.ok(Symbol.asyncIterator in Object(result), 'result should be async iterable');
+
+    const chunks: string[] = [];
+    for await (const chunk of result as AsyncIterable<string>) {
+      chunks.push(chunk);
+    }
+
+    assert.ok(chunks.some((c) => c.includes('"output":"google-stream-chunk"')), 'should include output chunk');
+    const usageChunk = chunks.find((c) => c.includes('"usage"'));
+    assert.ok(usageChunk, 'should emit a usage SSE event');
+    const usagePayload = JSON.parse(usageChunk!.replace(/^data: /, '').trim()) as {
+      usage: { tokensInput: number; tokensOutput: number; tokensTotal: number };
+      provider: string;
+    };
+    assert.equal(usagePayload.usage.tokensInput, 9);
+    assert.equal(usagePayload.usage.tokensOutput, 5);
+    assert.equal(usagePayload.usage.tokensTotal, 14);
+    assert.equal(usagePayload.provider, 'google');
+    assert.ok(chunks[chunks.length - 1]?.includes('[DONE]'), 'last chunk should be [DONE]');
   });
 });
