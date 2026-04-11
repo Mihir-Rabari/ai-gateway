@@ -151,3 +151,18 @@ export const FIRST_PARTY_APP_IDS = new Set([
   'web-direct',
   'web-dashboard',
 ]);
+
+// ─────────────────────────────────────────
+// App Cache Key Helpers
+// Used by the gateway service (reads) and the API service (invalidation).
+// Both services MUST use these helpers so key patterns stay in sync.
+// ─────────────────────────────────────────
+
+export const APP_CACHE_KEYS = {
+  /** '1' = active/allowed, '0' = inactive/forbidden */
+  activeStatus: (appId: string) => `app:active:${appId}`,
+  /** JSON array of bcrypt key hashes for legacy API-key auth */
+  apiKeyHashes: (appId: string) => `app:apikeys:${appId}`,
+  /** Encrypted client secret used for JWT-based app auth */
+  clientSecret: (clientId: string) => `app:clientid:${clientId}:secret_enc`,
+} as const;

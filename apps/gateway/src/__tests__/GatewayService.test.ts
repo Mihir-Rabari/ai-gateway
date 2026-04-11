@@ -53,14 +53,33 @@ function createFetchMock() {
   };
 }
 
-function createRedisMock(store: Map<string, string> = new Map()) {
-  return {
-    incr: async () => 1,
+function createRedisMockWithStore(store: Map<string, string> = new Map()) {
+  const redis = {
+    incr: async (key: string) => {
+      const next = Number(store.get(key) ?? '0') + 1;
+      store.set(key, String(next));
+      return next;
+    },
     expire: async () => 1,
     get: async (key: string) => store.get(key) ?? null,
+    // redis.set(key, value, 'EX', ttl) — used by validateToken token cache
     set: async (key: string, value: string) => { store.set(key, value); return 'OK'; },
-    del: async (key: string) => { store.delete(key); return 1; },
+    // redis.setex(key, ttl, value) — used by validateAppAccess app-metadata cache
+    setex: async (key: string, _ttl: number, value: string) => {
+      store.set(key, value);
+      return 'OK' as const;
+    },
+    del: async (...keys: string[]) => {
+      let count = 0;
+      for (const key of keys) { if (store.delete(key)) count++; }
+      return count;
+    },
   } as unknown as Redis;
+  return { redis, store };
+}
+
+function createRedisMock(store: Map<string, string> = new Map()) {
+  return createRedisMockWithStore(store).redis;
 }
 
 describe('GatewayService', () => {
@@ -459,4 +478,269 @@ describe('GatewayService', () => {
     assert.equal(result.output, 'hello');
     assert.equal(authCallCount, 1, 'Auth service should be called when cached entry is malformed');
   });
+
+  // ─── App-metadata cache hit tests ────────────────────────────────────────
+
+  test('serves API-key validation from Redis cache on second request, skipping DB', async () => {
+    let queryCount = 0;
+    const pgPool = {
+      query: async () => {
+        queryCount += 1;
+        return { rows: [{ key_hash: 'hashed-key' }], rowCount: 1 };
+      },
+    } as unknown as Pool;
+
+    const redis = createRedisMock();
+
+    const makeService = () => new GatewayService({
+      authServiceUrl: 'http://auth-service',
+      creditServiceUrl: 'http://credit-service',
+      routingServiceUrl: 'http://routing-service',
+      kafkaPublish: async () => undefined,
+      pgPool,
+      redis,
+    }, {
+      httpFetch: createFetchMock(),
+      compareHash: async (plain, hash) => plain === 'agk_live_key' && hash === 'hashed-key',
+    });
+
+    await makeService().processRequest({
+      token: 'access-token',
+      appId: 'app-cache-test',
+      appApiKey: 'agk_live_key',
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: 'hello' }],
+    });
+    assert.equal(queryCount, 1, 'first request should hit the DB');
+
+    await makeService().processRequest({
+      token: 'access-token',
+      appId: 'app-cache-test',
+      appApiKey: 'agk_live_key',
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: 'hello' }],
+    });
+    assert.equal(queryCount, 1, 'second request should be served from cache without hitting DB');
+  });
+
+  test('serves JWT client-secret validation from Redis cache on second request, skipping DB', async () => {
+    let queryCount = 0;
+    const pgPool = {
+      query: async () => {
+        queryCount += 1;
+        return { rows: [{ client_secret_enc: 'enc-secret' }], rowCount: 1 };
+      },
+    } as unknown as Pool;
+
+    const redis = createRedisMock();
+
+    const makeService = () => new GatewayService({
+      authServiceUrl: 'http://auth-service',
+      creditServiceUrl: 'http://credit-service',
+      routingServiceUrl: 'http://routing-service',
+      kafkaPublish: async () => undefined,
+      pgPool,
+      redis,
+      clientSecretEncryptionKey: 'a'.repeat(64),
+    }, {
+      httpFetch: createFetchMock(),
+      decryptSecret: (_enc, _key) => 'my-client-secret',
+      verifyJwt: (_token, _secret) => ({ clientId: 'client_cache', iat: 0, exp: 9999999999 }),
+    });
+
+    const payloadB64 = Buffer.from(JSON.stringify({ clientId: 'client_cache', iat: 0, exp: 9999999999 })).toString('base64url');
+    const fakeAppJwt = `aGVhZGVy.${payloadB64}.c2lnbmF0dXJl`;
+
+    await makeService().processRequest({
+      token: 'access-token',
+      appId: 'app-jwt-cache',
+      appJwt: fakeAppJwt,
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: 'hello' }],
+    });
+    assert.equal(queryCount, 1, 'first JWT request should hit the DB');
+
+    await makeService().processRequest({
+      token: 'access-token',
+      appId: 'app-jwt-cache',
+      appJwt: fakeAppJwt,
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: 'hello' }],
+    });
+    assert.equal(queryCount, 1, 'second JWT request should be served from cache without hitting DB');
+  });
+
+  test('serves app-active validation from Redis cache on second request, skipping DB', async () => {
+    let queryCount = 0;
+    const pgPool = {
+      query: async () => {
+        queryCount += 1;
+        return { rows: [{ id: 'app-active-cache' }], rowCount: 1 };
+      },
+    } as unknown as Pool;
+
+    const redis = createRedisMock();
+
+    const makeService = () => new GatewayService({
+      authServiceUrl: 'http://auth-service',
+      creditServiceUrl: 'http://credit-service',
+      routingServiceUrl: 'http://routing-service',
+      kafkaPublish: async () => undefined,
+      pgPool,
+      redis,
+    }, {
+      httpFetch: createFetchMock(),
+    });
+
+    await makeService().processRequest({
+      token: 'access-token',
+      appId: 'app-active-cache',
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: 'hello' }],
+    });
+    assert.equal(queryCount, 1, 'first active-check request should hit the DB');
+
+    await makeService().processRequest({
+      token: 'access-token',
+      appId: 'app-active-cache',
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: 'hello' }],
+    });
+    assert.equal(queryCount, 1, 'second active-check request should be served from cache without hitting DB');
+  });
+
+  test('falls back to DB for API-key auth when Redis.get throws, and does not surface the error', async () => {
+    let queryCount = 0;
+    const pgPool = {
+      query: async () => {
+        queryCount += 1;
+        return { rows: [{ key_hash: 'hashed-key' }], rowCount: 1 };
+      },
+    } as unknown as Pool;
+
+    // This mock fails only for app-metadata keys so validateToken (which uses
+    // redis.get / redis.set for auth token cache) still works, while
+    // validateAppAccess exercises the fail-open Redis path.
+    const failingRedis = {
+      incr: async () => 1,
+      expire: async () => 1,
+      get: async (key: string) => {
+        if (key.startsWith('app:')) throw new Error('Redis connection failed');
+        return null; // auth token: cache miss → calls auth service
+      },
+      set: async () => 'OK',  // auth token write — must not throw
+      setex: async (key: string) => {
+        if (key.startsWith('app:')) throw new Error('Redis connection failed');
+        return 'OK' as const;
+      },
+      del: async () => 0,
+    } as unknown as Redis;
+
+    const service = new GatewayService({
+      authServiceUrl: 'http://auth-service',
+      creditServiceUrl: 'http://credit-service',
+      routingServiceUrl: 'http://routing-service',
+      kafkaPublish: async () => undefined,
+      pgPool,
+      redis: failingRedis,
+    }, {
+      httpFetch: createFetchMock(),
+      compareHash: async (plain, hash) => plain === 'agk_live_key' && hash === 'hashed-key',
+    });
+
+    const result = await service.processRequest({
+      token: 'access-token',
+      appId: 'app-redis-fail',
+      appApiKey: 'agk_live_key',
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: 'hello' }],
+    });
+
+    assert.equal(result.output, 'hello', 'request should succeed despite Redis being unavailable for app keys');
+    assert.equal(queryCount, 1, 'should fall through to DB when Redis is unavailable');
+  });
+
+  test('falls back to DB and evicts malformed cached API-key hashes', async () => {
+    let queryCount = 0;
+    const pgPool = {
+      query: async () => {
+        queryCount += 1;
+        return { rows: [{ key_hash: 'hashed-key' }], rowCount: 1 };
+      },
+    } as unknown as Pool;
+
+    const { redis, store } = createRedisMockWithStore();
+    // Pre-populate the API-key hashes cache with malformed JSON
+    store.set('app:apikeys:app-bad-cache', '{not valid json}');
+
+    const service = new GatewayService({
+      authServiceUrl: 'http://auth-service',
+      creditServiceUrl: 'http://credit-service',
+      routingServiceUrl: 'http://routing-service',
+      kafkaPublish: async () => undefined,
+      pgPool,
+      redis,
+    }, {
+      httpFetch: createFetchMock(),
+      compareHash: async (plain, hash) => plain === 'agk_live_key' && hash === 'hashed-key',
+    });
+
+    const result = await service.processRequest({
+      token: 'access-token',
+      appId: 'app-bad-cache',
+      appApiKey: 'agk_live_key',
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: 'hello' }],
+    });
+
+    assert.equal(result.output, 'hello', 'request should succeed after evicting malformed cache entry');
+    assert.equal(queryCount, 1, 'should fall through to DB when cached JSON is malformed');
+    assert.notEqual(store.get('app:apikeys:app-bad-cache'), '{not valid json}', 'malformed cache entry should have been replaced');
+  });
+
+  test('re-queries DB after cache is externally invalidated (simulating API service cache del on key rotation)', async () => {
+    let queryCount = 0;
+    const pgPool = {
+      query: async () => {
+        queryCount += 1;
+        return { rows: [{ key_hash: 'hashed-key' }], rowCount: 1 };
+      },
+    } as unknown as Pool;
+
+    const { redis, store } = createRedisMockWithStore();
+
+    const makeService = () => new GatewayService({
+      authServiceUrl: 'http://auth-service',
+      creditServiceUrl: 'http://credit-service',
+      routingServiceUrl: 'http://routing-service',
+      kafkaPublish: async () => undefined,
+      pgPool,
+      redis,
+    }, {
+      httpFetch: createFetchMock(),
+      compareHash: async (plain, hash) => plain === 'agk_live_key' && hash === 'hashed-key',
+    });
+
+    await makeService().processRequest({
+      token: 'access-token',
+      appId: 'app-invalidate-test',
+      appApiKey: 'agk_live_key',
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: 'hello' }],
+    });
+    assert.equal(queryCount, 1, 'first request should hit DB');
+
+    // Simulate the API service invalidating the cache on API key rotation
+    store.delete('app:apikeys:app-invalidate-test');
+
+    await makeService().processRequest({
+      token: 'access-token',
+      appId: 'app-invalidate-test',
+      appApiKey: 'agk_live_key',
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: 'hello' }],
+    });
+    assert.equal(queryCount, 2, 'should re-query DB after cache is externally invalidated');
+  });
+
 });
