@@ -10,6 +10,8 @@ function createFetchMock() {
 
     if (normalizedUrl.includes('/internal/auth/validate')) {
       return {
+        ok: true,
+        status: 200,
         json: async () => ({
           success: true,
           data: { userId: 'user-1', planId: 'pro', email: 'user@example.com' },
@@ -18,19 +20,21 @@ function createFetchMock() {
     }
 
     if (normalizedUrl.includes('/credits/lock')) {
-      return { json: async () => ({ success: true }) } as Response;
+      return { ok: true, status: 200, json: async () => ({ success: true }) } as Response;
     }
 
     if (normalizedUrl.includes('/credits/confirm')) {
-      return { json: async () => ({ success: true }) } as Response;
+      return { ok: true, status: 200, json: async () => ({ success: true }) } as Response;
     }
 
     if (normalizedUrl.includes('/credits/release')) {
-      return { json: async () => ({ success: true }) } as Response;
+      return { ok: true, status: 200, json: async () => ({ success: true }) } as Response;
     }
 
     if (normalizedUrl.includes('/internal/routing/route')) {
       return {
+        ok: true,
+        status: 200,
         json: async () => ({
           success: true,
           data: {
@@ -49,8 +53,7 @@ function createFetchMock() {
   };
 }
 
-function createRedisMockWithStore() {
-  const store = new Map<string, string>();
+function createRedisMockWithStore(store: Map<string, string> = new Map()) {
   const redis = {
     incr: async (key: string) => {
       const next = Number(store.get(key) ?? '0') + 1;
@@ -59,6 +62,9 @@ function createRedisMockWithStore() {
     },
     expire: async () => 1,
     get: async (key: string) => store.get(key) ?? null,
+    // redis.set(key, value, 'EX', ttl) — used by validateToken token cache
+    set: async (key: string, value: string) => { store.set(key, value); return 'OK'; },
+    // redis.setex(key, ttl, value) — used by validateAppAccess app-metadata cache
     setex: async (key: string, _ttl: number, value: string) => {
       store.set(key, value);
       return 'OK' as const;
@@ -72,8 +78,8 @@ function createRedisMockWithStore() {
   return { redis, store };
 }
 
-function createRedisMock() {
-  return createRedisMockWithStore().redis;
+function createRedisMock(store: Map<string, string> = new Map()) {
+  return createRedisMockWithStore(store).redis;
 }
 
 describe('GatewayService', () => {
@@ -241,6 +247,240 @@ describe('GatewayService', () => {
     );
   });
 
+  test('caches validated token so the auth service is only called once for repeated requests', async () => {
+    let authCallCount = 0;
+
+    const fetchMock = async (url: string | URL | globalThis.Request, init?: RequestInit) => {
+      const normalizedUrl = typeof url === 'string' ? url : String(url);
+      if (normalizedUrl.includes('/internal/auth/validate')) {
+        authCallCount += 1;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            data: { userId: 'user-1', planId: 'pro', email: 'user@example.com' },
+          }),
+        } as Response;
+      }
+      return createFetchMock()(url, init);
+    };
+
+    const redisStore = new Map<string, string>();
+    const pgPool = { query: async () => ({ rows: [], rowCount: 0 }) } as unknown as Pool;
+
+    const service = new GatewayService({
+      authServiceUrl: 'http://auth-service',
+      creditServiceUrl: 'http://credit-service',
+      routingServiceUrl: 'http://routing-service',
+      kafkaPublish: async () => undefined,
+      pgPool,
+      redis: createRedisMock(redisStore),
+      tokenCacheTtlSeconds: 60,
+    }, { httpFetch: fetchMock });
+
+    const req = { token: 'my-token', appId: 'api-direct', model: 'gpt-4o', messages: [{ role: 'user' as const, content: 'hi' }] };
+
+    await service.processRequest(req);
+    await service.processRequest(req);
+
+    assert.equal(authCallCount, 1, 'Auth service should only be called once; second request uses cache');
+  });
+
+  test('auth circuit breaker opens after threshold failures and fast-fails subsequent requests', async () => {
+    const THRESHOLD = 5;
+    let authCallCount = 0;
+
+    const failingFetch = async (url: string | URL | globalThis.Request, init?: RequestInit) => {
+      const normalizedUrl = typeof url === 'string' ? url : String(url);
+      if (normalizedUrl.includes('/internal/auth/validate')) {
+        authCallCount += 1;
+        throw new Error('Auth service down');
+      }
+      return createFetchMock()(url, init);
+    };
+
+    const pgPool = { query: async () => ({ rows: [], rowCount: 0 }) } as unknown as Pool;
+
+    const service = new GatewayService({
+      authServiceUrl: 'http://auth-service',
+      creditServiceUrl: 'http://credit-service',
+      routingServiceUrl: 'http://routing-service',
+      kafkaPublish: async () => undefined,
+      pgPool,
+      redis: createRedisMock(),
+    }, { httpFetch: failingFetch });
+
+    const req = { token: 'bad-token', appId: 'api-direct', model: 'gpt-4o', messages: [{ role: 'user' as const, content: 'hi' }] };
+
+    // Drive failures up to (and including) the threshold to open the circuit.
+    for (let i = 0; i < THRESHOLD; i++) {
+      await assert.rejects(() => service.processRequest(req));
+    }
+
+    // The next call should be rejected by the open circuit (not by the auth service).
+    const authCallsBeforeOpen = authCallCount;
+    await assert.rejects(
+      () => service.processRequest(req),
+      (err: unknown) => (err as { code?: string }).code === 'GATEWAY_004',
+    );
+    assert.equal(authCallCount, authCallsBeforeOpen, 'No additional auth calls should be made when circuit is open');
+  });
+
+  test('credit circuit breaker opens after threshold failures and fast-fails lock requests', async () => {
+    const THRESHOLD = 5;
+    let creditCallCount = 0;
+
+    const fetchMock = async (url: string | URL | globalThis.Request, init?: RequestInit) => {
+      const normalizedUrl = typeof url === 'string' ? url : String(url);
+      if (normalizedUrl.includes('/credits/lock')) {
+        creditCallCount += 1;
+        throw new Error('Credit service down');
+      }
+      return createFetchMock()(url, init);
+    };
+
+    const pgPool = { query: async () => ({ rows: [], rowCount: 0 }) } as unknown as Pool;
+    const redisStore = new Map<string, string>();
+
+    const service = new GatewayService({
+      authServiceUrl: 'http://auth-service',
+      creditServiceUrl: 'http://credit-service',
+      routingServiceUrl: 'http://routing-service',
+      kafkaPublish: async () => undefined,
+      pgPool,
+      redis: createRedisMock(redisStore),
+      tokenCacheTtlSeconds: 60,
+    }, { httpFetch: fetchMock });
+
+    const req = { token: 'my-token', appId: 'api-direct', model: 'gpt-4o', messages: [{ role: 'user' as const, content: 'hi' }] };
+
+    // Drive failures up to (and including) the threshold to open the circuit.
+    for (let i = 0; i < THRESHOLD; i++) {
+      await assert.rejects(() => service.processRequest(req));
+    }
+
+    // The next call should be rejected by the open circuit (not by the credit service).
+    const creditCallsBeforeOpen = creditCallCount;
+    await assert.rejects(
+      () => service.processRequest(req),
+      (err: unknown) => (err as { code?: string }).code === 'GATEWAY_004',
+    );
+    assert.equal(creditCallCount, creditCallsBeforeOpen, 'No additional credit calls should be made when circuit is open');
+  });
+
+  test('circuit breaker resets failure counter on successful calls so intermittent errors do not open the circuit', async () => {
+    const THRESHOLD = 5;
+    let shouldFail = false;
+
+    const fetchMock = async (url: string | URL | globalThis.Request, init?: RequestInit) => {
+      const normalizedUrl = typeof url === 'string' ? url : String(url);
+      if (normalizedUrl.includes('/internal/auth/validate')) {
+        if (shouldFail) throw new Error('Auth service down');
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            data: { userId: 'user-1', planId: 'pro', email: 'user@example.com' },
+          }),
+        } as Response;
+      }
+      return createFetchMock()(url, init);
+    };
+
+    const pgPool = { query: async () => ({ rows: [], rowCount: 0 }) } as unknown as Pool;
+
+    // Use a Redis mock that never returns cached tokens so every request reaches the auth service.
+    const noopRedis = {
+      incr: async () => 1,
+      expire: async () => 1,
+      get: async (_key: string) => null,
+      set: async () => 'OK',
+      del: async () => 1,
+    } as unknown as Redis;
+
+    const service = new GatewayService({
+      authServiceUrl: 'http://auth-service',
+      creditServiceUrl: 'http://credit-service',
+      routingServiceUrl: 'http://routing-service',
+      kafkaPublish: async () => undefined,
+      pgPool,
+      redis: noopRedis,
+    }, { httpFetch: fetchMock });
+
+    // Use a unique token per call so each iteration starts with a fresh cache miss.
+    let counter = 0;
+    const makeReq = () => ({
+      token: `token-${counter++}`,
+      appId: 'api-direct',
+      model: 'gpt-4o',
+      messages: [{ role: 'user' as const, content: 'hi' }],
+    });
+
+    // Alternate failures and successes — the counter should reset on each success.
+    for (let i = 0; i < THRESHOLD - 1; i++) {
+      shouldFail = true;
+      await assert.rejects(() => service.processRequest(makeReq()));
+      // A success clears the failure count.
+      shouldFail = false;
+      await service.processRequest(makeReq());
+    }
+
+    // After all those failures+successes the circuit must still be closed.
+    shouldFail = false;
+    const result = await service.processRequest(makeReq());
+    assert.equal(result.output, 'hello', 'Circuit should still be closed after intermittent failures');
+  });
+
+  test('falls back to the auth service when the cached token entry is malformed JSON', async () => {
+    let authCallCount = 0;
+    const redisStore = new Map<string, string>();
+    // Seed a malformed (non-JSON) value so the cache-read triggers the fallback.
+    redisStore.set(
+      `auth:token:${(await import('crypto')).createHash('sha256').update('my-token').digest('hex')}`,
+      'not-valid-json{{',
+    );
+
+    const fetchMock = async (url: string | URL | globalThis.Request, init?: RequestInit) => {
+      const normalizedUrl = typeof url === 'string' ? url : String(url);
+      if (normalizedUrl.includes('/internal/auth/validate')) {
+        authCallCount += 1;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            data: { userId: 'user-1', planId: 'pro', email: 'user@example.com' },
+          }),
+        } as Response;
+      }
+      return createFetchMock()(url, init);
+    };
+
+    const pgPool = { query: async () => ({ rows: [], rowCount: 0 }) } as unknown as Pool;
+    const service = new GatewayService({
+      authServiceUrl: 'http://auth-service',
+      creditServiceUrl: 'http://credit-service',
+      routingServiceUrl: 'http://routing-service',
+      kafkaPublish: async () => undefined,
+      pgPool,
+      redis: createRedisMock(redisStore),
+    }, { httpFetch: fetchMock });
+
+    const result = await service.processRequest({
+      token: 'my-token',
+      appId: 'api-direct',
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: 'hi' }],
+    });
+
+    assert.equal(result.output, 'hello');
+    assert.equal(authCallCount, 1, 'Auth service should be called when cached entry is malformed');
+  });
+
+  // ─── App-metadata cache hit tests ────────────────────────────────────────
+
   test('serves API-key validation from Redis cache on second request, skipping DB', async () => {
     let queryCount = 0;
     const pgPool = {
@@ -264,7 +504,6 @@ describe('GatewayService', () => {
       compareHash: async (plain, hash) => plain === 'agk_live_key' && hash === 'hashed-key',
     });
 
-    // First request: cache miss → DB queried once
     await makeService().processRequest({
       token: 'access-token',
       appId: 'app-cache-test',
@@ -274,7 +513,6 @@ describe('GatewayService', () => {
     });
     assert.equal(queryCount, 1, 'first request should hit the DB');
 
-    // Second request with same appId: cache hit → no additional DB query
     await makeService().processRequest({
       token: 'access-token',
       appId: 'app-cache-test',
@@ -313,7 +551,6 @@ describe('GatewayService', () => {
     const payloadB64 = Buffer.from(JSON.stringify({ clientId: 'client_cache', iat: 0, exp: 9999999999 })).toString('base64url');
     const fakeAppJwt = `aGVhZGVy.${payloadB64}.c2lnbmF0dXJl`;
 
-    // First request: cache miss → DB queried once
     await makeService().processRequest({
       token: 'access-token',
       appId: 'app-jwt-cache',
@@ -323,7 +560,6 @@ describe('GatewayService', () => {
     });
     assert.equal(queryCount, 1, 'first JWT request should hit the DB');
 
-    // Second request: cache hit → no additional DB query
     await makeService().processRequest({
       token: 'access-token',
       appId: 'app-jwt-cache',
@@ -356,7 +592,6 @@ describe('GatewayService', () => {
       httpFetch: createFetchMock(),
     });
 
-    // First request (no API key, no JWT): cache miss → DB queried once
     await makeService().processRequest({
       token: 'access-token',
       appId: 'app-active-cache',
@@ -365,7 +600,6 @@ describe('GatewayService', () => {
     });
     assert.equal(queryCount, 1, 'first active-check request should hit the DB');
 
-    // Second request: cache hit → no additional DB query
     await makeService().processRequest({
       token: 'access-token',
       appId: 'app-active-cache',
@@ -384,12 +618,22 @@ describe('GatewayService', () => {
       },
     } as unknown as Pool;
 
+    // This mock fails only for app-metadata keys so validateToken (which uses
+    // redis.get / redis.set for auth token cache) still works, while
+    // validateAppAccess exercises the fail-open Redis path.
     const failingRedis = {
       incr: async () => 1,
       expire: async () => 1,
-      get: async () => { throw new Error('Redis connection failed'); },
-      setex: async () => { throw new Error('Redis connection failed'); },
-      del: async () => { throw new Error('Redis connection failed'); },
+      get: async (key: string) => {
+        if (key.startsWith('app:')) throw new Error('Redis connection failed');
+        return null; // auth token: cache miss → calls auth service
+      },
+      set: async () => 'OK',  // auth token write — must not throw
+      setex: async (key: string) => {
+        if (key.startsWith('app:')) throw new Error('Redis connection failed');
+        return 'OK' as const;
+      },
+      del: async () => 0,
     } as unknown as Redis;
 
     const service = new GatewayService({
@@ -412,7 +656,7 @@ describe('GatewayService', () => {
       messages: [{ role: 'user', content: 'hello' }],
     });
 
-    assert.equal(result.output, 'hello', 'request should succeed despite Redis being unavailable');
+    assert.equal(result.output, 'hello', 'request should succeed despite Redis being unavailable for app keys');
     assert.equal(queryCount, 1, 'should fall through to DB when Redis is unavailable');
   });
 
@@ -451,8 +695,7 @@ describe('GatewayService', () => {
 
     assert.equal(result.output, 'hello', 'request should succeed after evicting malformed cache entry');
     assert.equal(queryCount, 1, 'should fall through to DB when cached JSON is malformed');
-    // The malformed entry should be replaced with fresh data from DB; the old string must no longer be present
-    assert.notEqual(store.get('app:apikeys:app-bad-cache'), '{not valid json}', 'malformed cache entry should have been replaced with fresh DB data');
+    assert.notEqual(store.get('app:apikeys:app-bad-cache'), '{not valid json}', 'malformed cache entry should have been replaced');
   });
 
   test('re-queries DB after cache is externally invalidated (simulating API service cache del on key rotation)', async () => {
@@ -478,7 +721,6 @@ describe('GatewayService', () => {
       compareHash: async (plain, hash) => plain === 'agk_live_key' && hash === 'hashed-key',
     });
 
-    // First request: cache miss → DB queried
     await makeService().processRequest({
       token: 'access-token',
       appId: 'app-invalidate-test',
@@ -491,7 +733,6 @@ describe('GatewayService', () => {
     // Simulate the API service invalidating the cache on API key rotation
     store.delete('app:apikeys:app-invalidate-test');
 
-    // Second request: cache miss again → DB queried again
     await makeService().processRequest({
       token: 'access-token',
       appId: 'app-invalidate-test',
@@ -501,4 +742,5 @@ describe('GatewayService', () => {
     });
     assert.equal(queryCount, 2, 'should re-query DB after cache is externally invalidated');
   });
+
 });
