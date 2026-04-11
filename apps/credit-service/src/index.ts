@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { getCreditConfig } from '@ai-gateway/config';
-import { createLogger } from '@ai-gateway/utils';
+import { createLogger, getFastifyLoggerOptions } from '@ai-gateway/utils';
 import { postgresPlugin } from './plugins/postgres.js';
 import { redisPlugin } from './plugins/redis.js';
 import { kafkaPlugin } from './plugins/kafka.js';
@@ -9,7 +9,7 @@ import { creditRoutes } from './routes/creditRoutes.js';
 
 const logger = createLogger('credit-service');
 const config = getCreditConfig();
-const app = Fastify({ logger: false });
+const app = Fastify({ logger: getFastifyLoggerOptions() });
 
 async function bootstrap() {
   await app.register(cors, {

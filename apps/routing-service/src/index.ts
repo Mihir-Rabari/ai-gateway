@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { getRoutingConfig } from '@ai-gateway/config';
-import { createLogger, ok, fail, type GatewayError } from '@ai-gateway/utils';
+import { createLogger, getFastifyLoggerOptions, ok, fail, type GatewayError } from '@ai-gateway/utils';
 import { kafkaPlugin } from './plugins/kafka.js';
 import { redisPlugin } from './plugins/redis.js';
 import { RoutingService } from './services/routingService.js';
@@ -10,7 +10,7 @@ import type { Message } from '@ai-gateway/types';
 
 const logger = createLogger('routing-service');
 const config = getRoutingConfig();
-const app = Fastify({ logger: false });
+const app = Fastify({ logger: getFastifyLoggerOptions() });
 
 async function bootstrap() {
   await app.register(cors, {

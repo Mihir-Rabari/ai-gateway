@@ -3,7 +3,7 @@ import cors from '@fastify/cors';
 import formbody from '@fastify/formbody';
 import rateLimit from '@fastify/rate-limit';
 import { getAuthConfig } from '@ai-gateway/config';
-import { createLogger } from '@ai-gateway/utils';
+import { createLogger, getFastifyLoggerOptions } from '@ai-gateway/utils';
 import { postgresPlugin } from './plugins/postgres.js';
 import { redisPlugin } from './plugins/redis.js';
 import { kafkaPlugin } from './plugins/kafka.js';
@@ -15,15 +15,7 @@ import { startAuthAuditConsumer } from './events/authAuditConsumer.js';
 const logger = createLogger('auth-service');
 const config = getAuthConfig();
 
-const app = Fastify({
-  logger: {
-    level: process.env['LOG_LEVEL'] ?? 'info',
-    transport:
-      config.NODE_ENV === 'development'
-        ? { target: 'pino-pretty', options: { colorize: true } }
-        : undefined,
-  },
-});
+const app = Fastify({ logger: getFastifyLoggerOptions() });
 
 async function bootstrap() {
   let auditConsumer: { disconnect: () => Promise<void> } | null = null;

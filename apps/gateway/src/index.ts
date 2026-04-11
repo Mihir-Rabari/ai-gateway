@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { getGatewayConfig } from '@ai-gateway/config';
-import { createLogger } from '@ai-gateway/utils';
+import { createLogger, getFastifyLoggerOptions } from '@ai-gateway/utils';
 import { postgresPlugin } from './plugins/postgres.js';
 import { redisPlugin } from './plugins/redis.js';
 import { kafkaPlugin } from './plugins/kafka.js';
@@ -11,7 +11,7 @@ import { gatewayRoutes } from './routes/gatewayRoutes.js';
 const logger = createLogger('gateway');
 const config = getGatewayConfig();
 
-const app = Fastify({ logger: false });
+const app = Fastify({ logger: getFastifyLoggerOptions() });
 
 async function bootstrap() {
   await app.register(cors, {
