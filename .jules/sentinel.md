@@ -1,4 +1,4 @@
-## 2026-04-05 - Added security headers to API service
-**Vulnerability:** The API service lacked standard security HTTP headers (e.g., Content-Security-Policy, X-Frame-Options), leaving it vulnerable to basic attacks like XSS or clickjacking.
-**Learning:** Fastify allows easy addition of security headers without introducing new dependencies by using the `onSend` lifecycle hook on the app instance. This pattern was already present in the gateway service but missing in the core API service.
-**Prevention:** Ensure new Fastify services implement the standard security headers in an `onSend` hook during bootstrapping to provide defense-in-depth from the start.
+## 2024-06-25 - [Fix JWT Expiration Check]
+**Vulnerability:** The JWT expiration check in `packages/utils/src/index.ts` within the `verifyAppJwt` function was commented out. This meant that any App JWT, even if expired, would be accepted as valid.
+**Learning:** This is a critical security vulnerability as it allows for the replay or reuse of potentially compromised tokens indefinitely. The check was likely commented out during debugging and accidentally left out of the final code.
+**Prevention:** Always ensure that JWTs are validated for expiration (`exp` claim) and that such crucial security checks are not commented out or bypassed in production code. Tests should be implemented to verify that expired tokens are explicitly rejected.
