@@ -11,9 +11,7 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
     creditServiceUrl: process.env['CREDIT_SERVICE_URL'] ?? 'http://localhost:3005',
     routingServiceUrl: process.env['ROUTING_SERVICE_URL'] ?? 'http://localhost:3006',
     kafkaPublish: fastify.kafka.publish.bind(fastify.kafka),
-    pgPool: fastify.pg,
     redis: fastify.redis,
-    clientSecretEncryptionKey: process.env['CLIENT_SECRET_ENCRYPTION_KEY'],
     tokenCacheTtlSeconds: process.env['TOKEN_CACHE_TTL_SECONDS']
       ? Number(process.env['TOKEN_CACHE_TTL_SECONDS'])
       : 60,

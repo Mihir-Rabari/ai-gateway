@@ -1,13 +1,10 @@
 import { fetch } from 'undici';
-import bcrypt from 'bcrypt';
 import { createHash } from 'crypto';
 import {
   generateId, Errors, calculateCredits, createLogger, GatewayError, withRetry,
-  decryptClientSecret, verifyAppJwt, type AppJwtPayload,
 } from '@ai-gateway/utils';
-import { KAFKA_TOPICS, FIRST_PARTY_APP_IDS, APP_CACHE_KEYS } from '@ai-gateway/config';
+import { KAFKA_TOPICS, FIRST_PARTY_APP_IDS } from '@ai-gateway/config';
 import type { GatewayRequest, GatewayResponse, UsageEvent } from '@ai-gateway/types';
-import type { Pool } from 'pg';
 import type Redis from 'ioredis';
 import { CircuitBreaker } from './circuitBreaker.js';
 
@@ -18,10 +15,7 @@ interface ServiceClients {
   creditServiceUrl: string;
   routingServiceUrl: string;
   kafkaPublish: (topic: string, msg: object) => Promise<void>;
-  pgPool: Pool;
   redis: Redis;
-  /** AES-256 key (64-char hex) for decrypting stored client secrets. Optional. */
-  clientSecretEncryptionKey?: string;
   /** TTL in seconds for the validated-token Redis cache. Default: 60. */
   tokenCacheTtlSeconds?: number;
 }
@@ -45,16 +39,8 @@ interface RoutingResult {
 
 type AppAccessResult = 'allowed' | 'invalid_key' | 'forbidden';
 
-/** TTL (seconds) for app-metadata Redis cache entries. */
-const APP_CACHE_TTL_SECS = 300; // 5 minutes
-
 interface GatewayServiceDeps {
   httpFetch?: typeof fetch;
-  compareHash?: (plain: string, hash: string) => Promise<boolean>;
-  /** Injected for unit-testing; defaults to the utils helper. */
-  decryptSecret?: (enc: string, keyHex: string) => string;
-  /** Injected for unit-testing; defaults to the utils helper. */
-  verifyJwt?: (token: string, secret: string) => AppJwtPayload;
 }
 
 export class GatewayService {
@@ -69,10 +55,6 @@ export class GatewayService {
 
   private get httpFetch(): typeof fetch {
     return this.deps.httpFetch ?? fetch;
-  }
-
-  private get compareHash(): (plain: string, hash: string) => Promise<boolean> {
-    return this.deps.compareHash ?? bcrypt.compare;
   }
 
   // ─────────────────────────────────────────
@@ -272,170 +254,26 @@ export class GatewayService {
       return 'allowed';
     }
 
-    // ── JWT-based app authentication ──────────────────────────────────────
-    // When the developer's app sends X-App-Token (a short-lived HS256 JWT
-    // signed with their client secret), verify it using the stored encrypted
-    // secret. This avoids long-lived API keys in transit.
-    if (appJwt) {
-      const encKey = this.clients.clientSecretEncryptionKey;
-      if (encKey) {
-        try {
-          // The payload is decoded before signature verification only to extract
-          // the clientId needed for the DB lookup. The extracted clientId is used
-          // solely as a lookup key (parameterised query); the full token is then
-          // passed to verifyFn which performs the cryptographic check.
-          // Any invalid JSON or missing fields are caught by the outer try/catch.
-          const jwtParts = appJwt.split('.');
-          if (jwtParts.length !== 3) return 'invalid_key';
+    // Delegate all registered_apps logic to the auth-service.
+    // This preserves service isolation: the gateway never queries
+    // the registered_apps table directly.
+    const json = await this.authBreaker.execute(async () => {
+      const res = await this.httpFetch(
+        `${this.clients.authServiceUrl}/internal/auth/apps/validate`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ appId, appApiKey, appJwt }),
+        },
+      );
+      return res.json() as Promise<{
+        success: boolean;
+        data?: { result: AppAccessResult };
+        error?: { code: string; message: string };
+      }>;
+    });
 
-          let clientId: string | undefined;
-          try {
-            const rawPayload = Buffer.from(jwtParts[1]!, 'base64url').toString('utf8');
-            ({ clientId } = JSON.parse(rawPayload) as { clientId?: string });
-          } catch {
-            // Malformed base64url or JSON — reject immediately
-            return 'invalid_key';
-          }
-
-          if (clientId) {
-            // ── Redis cache: client secret ──────────────────────────────
-            // Cache key stores the encrypted secret (or empty string when the
-            // app does not exist / is inactive). This avoids a DB round-trip
-            // for every JWT-authenticated AI request.
-            // Fail open: any Redis error is treated as a cache miss so the
-            // DB remains the authoritative fallback.
-            const secretCacheKey = APP_CACHE_KEYS.clientSecret(clientId);
-            let enc: string | null = null;
-            let cachedSecret: string | null = null;
-            try {
-              cachedSecret = await this.clients.redis.get(secretCacheKey);
-            } catch {
-              // Redis unavailable — fall through to DB
-            }
-
-            if (cachedSecret !== null) {
-              // Empty string signals "app not found / inactive"
-              enc = cachedSecret === '' ? null : cachedSecret;
-            } else {
-              const row = await this.clients.pgPool.query<{ client_secret_enc: string | null }>(
-                `SELECT client_secret_enc FROM registered_apps
-                 WHERE client_id = $1 AND is_active = true`,
-                [clientId],
-              );
-              enc = row.rows[0]?.client_secret_enc ?? null;
-              try {
-                await this.clients.redis.setex(secretCacheKey, APP_CACHE_TTL_SECS, enc ?? '');
-              } catch {
-                // Ignore write failures; DB remains authoritative
-              }
-            }
-
-            if (enc) {
-              const decryptFn = this.deps.decryptSecret ?? decryptClientSecret;
-              const verifyFn = this.deps.verifyJwt ?? verifyAppJwt;
-              try {
-                const secret = decryptFn(enc, encKey);
-                verifyFn(appJwt, secret); // throws on invalid sig or expiry
-                return 'allowed';
-              } catch {
-                return 'invalid_key';
-              }
-            }
-          }
-        } catch {
-          return 'invalid_key';
-        }
-      }
-      // If encryption key not configured, fall through to API-key path
-    }
-
-    // ── Legacy API-key authentication ─────────────────────────────────────
-    if (appApiKey) {
-      // ── Redis cache: API key hashes ─────────────────────────────────────
-      // Storing hashed keys in Redis is safe because bcrypt hashes cannot be
-      // reversed; the plaintext key is never written to the cache.
-      // Fail open: Redis errors and malformed cache data both fall through to DB.
-      const keysCacheKey = APP_CACHE_KEYS.apiKeyHashes(appId);
-      let keyHashes: string[] | undefined;
-
-      let cachedHashesRaw: string | null = null;
-      try {
-        cachedHashesRaw = await this.clients.redis.get(keysCacheKey);
-      } catch {
-        // Redis unavailable — treat as cache miss
-      }
-
-      if (cachedHashesRaw !== null) {
-        let evictBadEntry = false;
-        try {
-          const parsed: unknown = JSON.parse(cachedHashesRaw);
-          if (Array.isArray(parsed) && parsed.every((item): item is string => typeof item === 'string')) {
-            keyHashes = parsed;
-          } else {
-            evictBadEntry = true; // Unexpected shape
-          }
-        } catch {
-          evictBadEntry = true; // Malformed JSON
-        }
-        if (evictBadEntry) {
-          // Evict the corrupt entry so the next request gets a fresh DB refresh
-          try { await this.clients.redis.del(keysCacheKey); } catch { /* ignore */ }
-        }
-      }
-
-      if (keyHashes === undefined) {
-        const result = await this.clients.pgPool.query(
-          `SELECT ak.key_hash
-           FROM api_keys ak
-           INNER JOIN registered_apps ra ON ra.id = ak.app_id
-           WHERE ra.id = $1
-             AND ra.is_active = true
-             AND ak.revoked_at IS NULL
-           ORDER BY ak.created_at DESC`,
-          [appId]
-        );
-        keyHashes = (result.rows as Array<{ key_hash: string }>).map((r) => r.key_hash);
-        try {
-          await this.clients.redis.setex(keysCacheKey, APP_CACHE_TTL_SECS, JSON.stringify(keyHashes));
-        } catch {
-          // Ignore write failures; DB remains authoritative
-        }
-      }
-
-      for (const keyHash of keyHashes) {
-        if (await this.compareHash(appApiKey, keyHash)) {
-          return 'allowed';
-        }
-      }
-
-      return 'invalid_key';
-    }
-
-    // ── Redis cache: basic app active status ─────────────────────────────
-    // Fail open: Redis errors fall through to DB.
-    const activeCacheKey = APP_CACHE_KEYS.activeStatus(appId);
-    let cachedActive: string | null = null;
-    try {
-      cachedActive = await this.clients.redis.get(activeCacheKey);
-    } catch {
-      // Redis unavailable — fall through to DB
-    }
-
-    if (cachedActive === '1') return 'allowed';
-    if (cachedActive === '0') return 'forbidden';
-    // Unexpected / missing cache value: fall through to DB
-
-    const result = await this.clients.pgPool.query(
-      'SELECT id FROM registered_apps WHERE id = $1 AND is_active = true',
-      [appId]
-    );
-    const isActive = (result.rowCount ?? 0) > 0;
-    try {
-      await this.clients.redis.setex(activeCacheKey, APP_CACHE_TTL_SECS, isActive ? '1' : '0');
-    } catch {
-      // Ignore write failures; DB remains authoritative
-    }
-    return isActive ? 'allowed' : 'forbidden';
+    return json.data?.result ?? 'forbidden';
   }
 
   private async validateToken(token: string): Promise<ValidatedUser> {

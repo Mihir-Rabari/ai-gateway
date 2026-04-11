@@ -3,7 +3,6 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { getGatewayConfig } from '@ai-gateway/config';
 import { createLogger } from '@ai-gateway/utils';
-import { postgresPlugin } from './plugins/postgres.js';
 import { redisPlugin } from './plugins/redis.js';
 import { kafkaPlugin } from './plugins/kafka.js';
 import { gatewayRoutes } from './routes/gatewayRoutes.js';
@@ -26,7 +25,6 @@ async function bootstrap() {
     timeWindow: config.RATE_LIMIT_WINDOW_MS,
   });
 
-  await app.register(postgresPlugin);
   await app.register(redisPlugin);
   await app.register(kafkaPlugin);
 
