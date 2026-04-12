@@ -1,12 +1,12 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { getBillingConfig } from '@ai-gateway/config';
-import { createLogger, postgresPlugin, redisPlugin, kafkaPlugin, errorHandlerPlugin } from '@ai-gateway/utils';
+import { createLogger, getFastifyLoggerOptions, postgresPlugin, redisPlugin, kafkaPlugin, errorHandlerPlugin } from '@ai-gateway/utils';
 import { billingRoutes } from './routes/billingRoutes.js';
 
 const logger = createLogger('billing-service');
 const config = getBillingConfig();
-const app = Fastify({ logger: false });
+const app = Fastify({ logger: getFastifyLoggerOptions() });
 
 // Custom content type parser to capture raw request body for signature verification
 app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body, done) => {

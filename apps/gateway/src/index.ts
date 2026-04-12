@@ -2,13 +2,13 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { getGatewayConfig } from '@ai-gateway/config';
-import { createLogger, redisPlugin, kafkaPlugin, errorHandlerPlugin } from '@ai-gateway/utils';
+import { createLogger, getFastifyLoggerOptions, redisPlugin, kafkaPlugin, errorHandlerPlugin } from '@ai-gateway/utils';
 import { gatewayRoutes } from './routes/gatewayRoutes.js';
 
 const logger = createLogger('gateway');
 const config = getGatewayConfig();
 
-const app = Fastify({ logger: false });
+const app = Fastify({ logger: getFastifyLoggerOptions() });
 
 async function bootstrap() {
   await app.register(cors, {

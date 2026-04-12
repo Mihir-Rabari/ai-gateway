@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { getRoutingConfig } from '@ai-gateway/config';
-import { createLogger, ok, fail, redisPlugin, kafkaPlugin, type GatewayError } from '@ai-gateway/utils';
+import { createLogger, getFastifyLoggerOptions, ok, fail, redisPlugin, kafkaPlugin, type GatewayError } from '@ai-gateway/utils';
 import { RoutingService, buildModelConfigFromEnv, validateModelConfig } from './services/routingService.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { Message } from '@ai-gateway/types';
@@ -9,7 +9,7 @@ import type { ModelConfig } from './services/routingService.js';
 
 const logger = createLogger('routing-service');
 const config = getRoutingConfig();
-const app = Fastify({ logger: false });
+const app = Fastify({ logger: getFastifyLoggerOptions() });
 
 // Module-level model config cache. Loaded from Redis on startup and updated
 // in-place when the PUT /internal/routing/models/config endpoint is called.
