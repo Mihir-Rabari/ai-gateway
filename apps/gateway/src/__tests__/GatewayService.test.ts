@@ -509,5 +509,115 @@ describe('GatewayService', () => {
     );
   });
 
+  test('app-validation 5xx causes the app-validation circuit breaker to open, not the auth-token breaker', async () => {
+    const THRESHOLD = 5;
+    let appValidateCallCount = 0;
+    let tokenValidateCallCount = 0;
+
+    const fetchMock = async (url: string | URL | globalThis.Request, init?: RequestInit) => {
+      const normalizedUrl = typeof url === 'string' ? url : String(url);
+
+      if (normalizedUrl.includes('/internal/auth/apps/validate')) {
+        appValidateCallCount += 1;
+        // Return a 503 so the gateway throws and the app-validation breaker records a failure.
+        return {
+          ok: false,
+          status: 503,
+          json: async () => ({ success: false, error: { code: 'UPSTREAM', message: 'Service unavailable' } }),
+        } as Response;
+      }
+
+      if (normalizedUrl.includes('/internal/auth/validate')) {
+        tokenValidateCallCount += 1;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            data: { userId: 'user-1', planId: 'pro', email: 'user@example.com' },
+          }),
+        } as Response;
+      }
+
+      return createFetchMock()(url, init);
+    };
+
+    const service = new GatewayService({
+      authServiceUrl: 'http://auth-service',
+      creditServiceUrl: 'http://credit-service',
+      routingServiceUrl: 'http://routing-service',
+      kafkaPublish: async () => undefined,
+      redis: createRedisMock(),
+    }, { httpFetch: fetchMock });
+
+    const req = {
+      token: 'access-token',
+      appId: 'developer-app',
+      appApiKey: 'some-key',
+      model: 'gpt-4o',
+      messages: [{ role: 'user' as const, content: 'hi' }],
+    };
+
+    // Drive app-validation failures up to the threshold to open its circuit.
+    for (let i = 0; i < THRESHOLD; i++) {
+      await assert.rejects(() => service.processRequest(req));
+    }
+
+    // Now the app-validation breaker should be open: the next call for a dev app should
+    // fast-fail with GATEWAY_004 without calling the app-validate endpoint again.
+    const appCallsBeforeOpen = appValidateCallCount;
+    await assert.rejects(
+      () => service.processRequest(req),
+      (err: unknown) => (err as { code?: string }).code === 'GATEWAY_004',
+    );
+    assert.equal(appValidateCallCount, appCallsBeforeOpen, 'App-validate endpoint should not be called when its circuit is open');
+
+    // Critically: the auth-token breaker must still be healthy — a first-party request
+    // (which skips app-validate entirely) should succeed with no issue.
+    const tokenCallsBefore = tokenValidateCallCount;
+    const result = await service.processRequest({
+      token: 'fresh-token',
+      appId: 'api-direct', // first-party: bypasses app-validation entirely
+      model: 'gpt-4o',
+      messages: [{ role: 'user' as const, content: 'hi' }],
+    });
+    assert.equal(result.output, 'hello', 'First-party requests must succeed even when the app-validation circuit is open');
+    assert.equal(tokenValidateCallCount, tokenCallsBefore + 1, 'Token validate endpoint must still be reachable');
+  });
+
+  test('app-validation 5xx is not silently downgraded to forbidden — a GATEWAY_005 error is thrown', async () => {
+    const fetchMock = async (url: string | URL | globalThis.Request, init?: RequestInit) => {
+      const normalizedUrl = typeof url === 'string' ? url : String(url);
+      if (normalizedUrl.includes('/internal/auth/apps/validate')) {
+        return {
+          ok: false,
+          status: 500,
+          json: async () => ({ success: false, error: { code: 'INTERNAL', message: 'Internal server error' } }),
+        } as Response;
+      }
+      return createFetchMock()(url, init);
+    };
+
+    const service = new GatewayService({
+      authServiceUrl: 'http://auth-service',
+      creditServiceUrl: 'http://credit-service',
+      routingServiceUrl: 'http://routing-service',
+      kafkaPublish: async () => undefined,
+      redis: createRedisMock(),
+    }, { httpFetch: fetchMock });
+
+    await assert.rejects(
+      () => service.processRequest({
+        token: 'access-token',
+        appId: 'some-developer-app',
+        appApiKey: 'some-key',
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: 'hello' }],
+      }),
+      (err: unknown) => (err as { code?: string }).code === 'GATEWAY_005',
+      'A 5xx from the app-validation service must surface as GATEWAY_005, not AUTH_003 (forbidden)',
+    );
+  });
+
 });
 

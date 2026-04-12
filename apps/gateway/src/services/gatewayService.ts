@@ -45,6 +45,7 @@ interface GatewayServiceDeps {
 
 export class GatewayService {
   private readonly authBreaker = new CircuitBreaker({ serviceName: 'Auth service' });
+  private readonly appValidationBreaker = new CircuitBreaker({ serviceName: 'App validation service' });
   private readonly creditBreaker = new CircuitBreaker({ serviceName: 'Credit service' });
   private readonly routingBreaker = new CircuitBreaker({ serviceName: 'Routing service' });
 
@@ -257,7 +258,7 @@ export class GatewayService {
     // Delegate all registered_apps logic to the auth-service.
     // This preserves service isolation: the gateway never queries
     // the registered_apps table directly.
-    const json = await this.authBreaker.execute(async () => {
+    const json = await this.appValidationBreaker.execute(async () => {
       const res = await this.httpFetch(
         `${this.clients.authServiceUrl}/internal/auth/apps/validate`,
         {
@@ -266,11 +267,19 @@ export class GatewayService {
           body: JSON.stringify({ appId, appApiKey, appJwt }),
         },
       );
-      return res.json() as Promise<{
+      const payload = await res.json() as {
         success: boolean;
         data?: { result: AppAccessResult };
         error?: { code: string; message: string };
-      }>;
+      };
+      if (!res.ok || !payload.success) {
+        throw new GatewayError(
+          'GATEWAY_005',
+          `App validation service responded with an error`,
+          502,
+        );
+      }
+      return payload;
     });
 
     return json.data?.result ?? 'forbidden';
