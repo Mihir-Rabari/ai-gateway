@@ -703,6 +703,18 @@ importers:
       '@fastify/rate-limit':
         specifier: '8'
         version: 8.1.1
+      fastify-plugin:
+        specifier: ^5.0.0
+        version: 5.1.0
+      ioredis:
+        specifier: ^5.4.1
+        version: 5.10.1
+      kafkajs:
+        specifier: ^2.2.4
+        version: 2.2.4
+      pg:
+        specifier: ^8.12.0
+        version: 8.20.0
       pino:
         specifier: ^9.2.0
         version: 9.14.0
@@ -710,6 +722,12 @@ importers:
       '@types/node':
         specifier: ^20.14.0
         version: 20.19.37
+      '@types/pg':
+        specifier: ^8.11.6
+        version: 8.20.0
+      fastify:
+        specifier: ^5.8.4
+        version: 5.8.4
       typescript:
         specifier: ^5.4.5
         version: 5.9.3

@@ -3,10 +3,7 @@ import cors from '@fastify/cors';
 import formbody from '@fastify/formbody';
 import rateLimit from '@fastify/rate-limit';
 import { getAuthConfig } from '@ai-gateway/config';
-import { createLogger } from '@ai-gateway/utils';
-import { postgresPlugin } from './plugins/postgres.js';
-import { redisPlugin } from './plugins/redis.js';
-import { kafkaPlugin } from './plugins/kafka.js';
+import { createLogger, postgresPlugin, redisPlugin, kafkaPlugin, errorHandlerPlugin } from '@ai-gateway/utils';
 import { authRoutes } from './routes/authRoutes.js';
 import { internalRoutes } from './routes/internalRoutes.js';
 import { oauthRoutes } from './routes/oauthRoutes.js';
@@ -70,19 +67,7 @@ async function bootstrap() {
   app.get('/health', async () => ({ status: 'ok', service: 'auth-service' }));
 
   // ─── Error Handler ─────────────────────────────
-  app.setErrorHandler((error, _req, reply) => {
-    logger.error({ error }, 'Unhandled error');
-    const appError = error as { statusCode?: number; code?: string; message?: string };
-    const statusCode = appError.statusCode ?? 500;
-    reply.status(statusCode).send({
-      success: false,
-      error: {
-        code: appError.code ?? 'INTERNAL',
-        message: appError.message ?? 'Internal server error',
-        statusCode,
-      },
-    });
-  });
+  await app.register(errorHandlerPlugin);
 
   // ─── Start ─────────────────────────────────────
   await app.listen({ port: config.AUTH_SERVICE_PORT, host: '0.0.0.0' });

@@ -1,9 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { getRoutingConfig } from '@ai-gateway/config';
-import { createLogger, ok, fail, type GatewayError } from '@ai-gateway/utils';
-import { kafkaPlugin } from './plugins/kafka.js';
-import { redisPlugin } from './plugins/redis.js';
+import { createLogger, ok, fail, redisPlugin, kafkaPlugin, type GatewayError } from '@ai-gateway/utils';
 import { RoutingService } from './services/routingService.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { Message } from '@ai-gateway/types';
