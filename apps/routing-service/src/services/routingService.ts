@@ -343,6 +343,9 @@ export class RoutingService {
             yield `data: ${JSON.stringify({ output: chunkText })}\n\n`;
           }
         }
+        const finalResponse = await resultStream.response;
+        const usage = finalResponse.usageMetadata;
+        yield `data: ${JSON.stringify({ usage: { tokensInput: usage?.promptTokenCount ?? 0, tokensOutput: usage?.candidatesTokenCount ?? 0, tokensTotal: usage?.totalTokenCount ?? 0 }, provider: 'google' })}\n\n`;
         yield `data: [DONE]\n\n`;
       })();
     }
@@ -380,16 +383,25 @@ export class RoutingService {
         max_tokens: maxTokens,
         temperature,
         stream: true,
+        stream_options: { include_usage: true },
       });
 
       return (async function* () {
+        let tokensInput = 0;
+        let tokensOutput = 0;
+        let tokensTotal = 0;
         for await (const chunk of responseStream) {
           const content = chunk.choices[0]?.delta?.content || '';
           if (content) {
             yield `data: ${JSON.stringify({ output: content })}\n\n`;
           }
+          if (chunk.usage) {
+            tokensInput = chunk.usage.prompt_tokens ?? 0;
+            tokensOutput = chunk.usage.completion_tokens ?? 0;
+            tokensTotal = chunk.usage.total_tokens ?? 0;
+          }
         }
-        // Ideally we'd send final usage tokens here, but OpenAI stream usage requires extra config
+        yield `data: ${JSON.stringify({ usage: { tokensInput, tokensOutput, tokensTotal }, provider: 'openai' })}\n\n`;
         yield `data: [DONE]\n\n`;
       })();
     }
@@ -441,11 +453,22 @@ export class RoutingService {
       });
 
       return (async function* () {
+        let tokensInput = 0;
+        let tokensOutput = 0;
         for await (const chunk of responseStream) {
           if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
             yield `data: ${JSON.stringify({ output: chunk.delta.text })}\n\n`;
           }
+          if (chunk.type === 'message_start' && chunk.message?.usage) {
+            tokensInput = chunk.message.usage.input_tokens ?? 0;
+            tokensOutput = chunk.message.usage.output_tokens ?? 0;
+          }
+          if (chunk.type === 'message_delta' && chunk.usage) {
+            tokensOutput = chunk.usage.output_tokens ?? tokensOutput;
+          }
         }
+        const tokensTotal = tokensInput + tokensOutput;
+        yield `data: ${JSON.stringify({ usage: { tokensInput, tokensOutput, tokensTotal }, provider: 'anthropic' })}\n\n`;
         yield `data: [DONE]\n\n`;
       })();
     }
