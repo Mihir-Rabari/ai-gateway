@@ -286,3 +286,12 @@ export function verifyAppJwt(token: string, secret: string): AppJwtPayload {
 
   return payload;
 }
+
+// ─────────────────────────────────────────
+// Shared Fastify Plugins
+// ─────────────────────────────────────────
+
+export { postgresPlugin } from './plugins/postgres.js';
+export { redisPlugin } from './plugins/redis.js';
+export { kafkaPlugin } from './plugins/kafka.js';
+export { errorHandlerPlugin } from './plugins/errorHandler.js';

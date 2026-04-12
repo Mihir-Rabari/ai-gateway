@@ -8,6 +8,16 @@ declare module 'fastify' {
   }
 }
 
+/**
+ * Shared Fastify PostgreSQL plugin.
+ *
+ * Connects to the database specified by the `DATABASE_URL` environment variable
+ * and decorates the Fastify instance with a `pg` property (a `pg.Pool`).
+ *
+ * Pool settings: `max: 10`, `idleTimeoutMillis: 30 000`, `connectionTimeoutMillis: 2 000`.
+ *
+ * The pool is gracefully ended in the `onClose` hook.
+ */
 export const postgresPlugin = fp(async (fastify: FastifyInstance) => {
   const pool = new Pool({
     connectionString: process.env['DATABASE_URL'],
@@ -16,15 +26,10 @@ export const postgresPlugin = fp(async (fastify: FastifyInstance) => {
     connectionTimeoutMillis: 2000,
   });
 
-  // Test connection on startup
   const client = await pool.connect();
   client.release();
 
   fastify.decorate('pg', pool);
-
-  fastify.addHook('onClose', async () => {
-    await pool.end();
-  });
-
+  fastify.addHook('onClose', async () => { await pool.end(); });
   fastify.log.info('✅ PostgreSQL connected');
 });
