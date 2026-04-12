@@ -6,7 +6,7 @@ import swaggerUi from '@fastify/swagger-ui';
 import { createLogger, getFastifyLoggerOptions } from '@ai-gateway/utils';
 
 const logger = createLogger('api');
-const app = Fastify({ logger: getFastifyLoggerOptions(), genReqId: () => `req_${Date.now()}` });
+const app = Fastify({ logger: getFastifyLoggerOptions(), disableRequestLogging: true, genReqId: () => `req_${Date.now()}` });
 
 async function bootstrap() {
   const loggerM = await import('./middleware/requestLogger.js');
