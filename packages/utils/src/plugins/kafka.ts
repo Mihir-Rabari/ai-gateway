@@ -1,5 +1,5 @@
 import fp from 'fastify-plugin';
-import { Kafka, Producer } from 'kafkajs';
+import { Kafka, type Producer } from 'kafkajs';
 import type { FastifyInstance } from 'fastify';
 
 declare module 'fastify' {
@@ -11,9 +11,23 @@ declare module 'fastify' {
   }
 }
 
+/**
+ * Shared Fastify Kafka producer plugin.
+ *
+ * Creates a KafkaJS producer and decorates the Fastify instance with a `kafka`
+ * property exposing:
+ *   - `producer` — the raw KafkaJS `Producer` instance
+ *   - `publish(topic, message)` — helper that JSON-serialises `message` and sends it
+ *
+ * Environment variables:
+ *   - `KAFKA_CLIENT_ID`  — client identifier sent to the broker (default: `'service'`)
+ *   - `KAFKA_BROKERS`    — comma-separated broker list (default: `'localhost:9092'`)
+ *
+ * The producer is gracefully disconnected in the `onClose` hook.
+ */
 export const kafkaPlugin = fp(async (fastify: FastifyInstance) => {
   const kafka = new Kafka({
-    clientId: process.env['KAFKA_CLIENT_ID'] ?? 'gateway',
+    clientId: process.env['KAFKA_CLIENT_ID'] ?? 'service',
     brokers: (process.env['KAFKA_BROKERS'] ?? 'localhost:9092').split(','),
   });
 

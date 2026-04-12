@@ -1,10 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { getCreditConfig } from '@ai-gateway/config';
-import { createLogger } from '@ai-gateway/utils';
-import { postgresPlugin } from './plugins/postgres.js';
-import { redisPlugin } from './plugins/redis.js';
-import { kafkaPlugin } from './plugins/kafka.js';
+import { createLogger, postgresPlugin, redisPlugin, kafkaPlugin, errorHandlerPlugin } from '@ai-gateway/utils';
 import { creditRoutes } from './routes/creditRoutes.js';
 
 const logger = createLogger('credit-service');
@@ -25,18 +22,7 @@ async function bootstrap() {
 
   app.get('/health', async () => ({ status: 'ok', service: 'credit-service' }));
 
-  app.setErrorHandler((error, _req, reply) => {
-    const appError = error as { statusCode?: number; code?: string; message?: string };
-    const statusCode = appError.statusCode ?? 500;
-    reply.status(statusCode).send({
-      success: false,
-      error: {
-        code: appError.code ?? 'INTERNAL',
-        message: appError.message ?? 'Internal server error',
-        statusCode,
-      },
-    });
-  });
+  await app.register(errorHandlerPlugin);
 
   await app.listen({ port: config.CREDIT_SERVICE_PORT, host: '0.0.0.0' });
   logger.info(`💰 Credit service running on port ${config.CREDIT_SERVICE_PORT}`);

@@ -619,5 +619,93 @@ describe('GatewayService', () => {
     );
   });
 
+  // ─── Streaming: native usage metrics ─────────────────────────────────────
+
+  test('processStreamRequest uses native usage metrics from routing service instead of char-count estimation', async () => {
+    const usageEvent = JSON.stringify({
+      usage: { tokensInput: 15, tokensOutput: 32, tokensTotal: 47 },
+      provider: 'openai',
+    });
+
+    // Build a mock fetch that returns a streaming response with output + usage SSE events
+    const streamFetch = async (url: string | URL | globalThis.Request, init?: RequestInit) => {
+      const normalizedUrl = typeof url === 'string' ? url : String(url);
+
+      if (normalizedUrl.includes('/internal/auth/validate')) {
+        return {
+          ok: true, status: 200,
+          json: async () => ({ success: true, data: { userId: 'user-stream', planId: 'pro', email: 'u@example.com' } }),
+        } as Response;
+      }
+      if (normalizedUrl.includes('/credits/lock')) {
+        return { ok: true, status: 200, json: async () => ({ success: true }) } as Response;
+      }
+      if (normalizedUrl.includes('/credits/confirm')) {
+        return { ok: true, status: 200, json: async () => ({ success: true }) } as Response;
+      }
+      if (normalizedUrl.includes('/credits/release')) {
+        return { ok: true, status: 200, json: async () => ({ success: true }) } as Response;
+      }
+      if (normalizedUrl.includes('/internal/routing/route')) {
+        // Return a streaming body with output chunks + usage event + [DONE]
+        const sseData = [
+          `data: ${JSON.stringify({ output: 'Hello' })}\n\n`,
+          `data: ${JSON.stringify({ output: ' world' })}\n\n`,
+          `data: ${usageEvent}\n\n`,
+          `data: [DONE]\n\n`,
+        ].join('');
+
+        const encoder = new TextEncoder();
+        const body = new ReadableStream({
+          start(controller) {
+            controller.enqueue(encoder.encode(sseData));
+            controller.close();
+          },
+        });
+        return { ok: true, status: 200, body } as unknown as Response;
+      }
+      throw new Error(`Unexpected fetch URL: ${normalizedUrl}`);
+    };
+
+    const publishedEvents: Array<{ topic: string; msg: object }> = [];
+    const service = new GatewayService({
+      authServiceUrl: 'http://auth-service',
+      creditServiceUrl: 'http://credit-service',
+      routingServiceUrl: 'http://routing-service',
+      kafkaPublish: async (topic, msg) => { publishedEvents.push({ topic, msg }); },
+      redis: createRedisMock(),
+    }, { httpFetch: streamFetch as typeof fetch });
+
+    const chunks: string[] = [];
+    for await (const chunk of service.processStreamRequest({
+      token: 'access-token',
+      appId: 'web-direct',
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: 'hello' }],
+    })) {
+      chunks.push(chunk);
+    }
+
+    // Usage event must NOT be forwarded to the client
+    assert.ok(!chunks.some((c) => c.includes('"usage"')), 'usage event should not be forwarded to client');
+
+    // Output chunks should be forwarded
+    assert.ok(chunks.some((c) => c.includes('"output":"Hello"')), 'output chunks should be forwarded');
+
+    // Usage event should contain actual provider metrics in the published Kafka event
+    const usageKafkaEvent = publishedEvents.find((e) => {
+      const msg = e.msg as { type?: string };
+      return msg.type === 'usage.request.completed';
+    });
+    assert.ok(usageKafkaEvent, 'should publish a usage.request.completed event');
+    const kafkaMsg = usageKafkaEvent!.msg as {
+      tokensInput: number; tokensOutput: number; tokensTotal: number; provider: string;
+    };
+    assert.equal(kafkaMsg.tokensInput, 15, 'should use native tokensInput from provider');
+    assert.equal(kafkaMsg.tokensOutput, 32, 'should use native tokensOutput from provider');
+    assert.equal(kafkaMsg.tokensTotal, 47, 'should use native tokensTotal from provider');
+    assert.equal(kafkaMsg.provider, 'openai', 'should use provider from usage event');
+  });
+
 });
 

@@ -2,9 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { getGatewayConfig } from '@ai-gateway/config';
-import { createLogger } from '@ai-gateway/utils';
-import { redisPlugin } from './plugins/redis.js';
-import { kafkaPlugin } from './plugins/kafka.js';
+import { createLogger, redisPlugin, kafkaPlugin, errorHandlerPlugin } from '@ai-gateway/utils';
 import { gatewayRoutes } from './routes/gatewayRoutes.js';
 
 const logger = createLogger('gateway');
@@ -41,13 +39,7 @@ async function bootstrap() {
 
   app.get('/health', async () => ({ status: 'ok', service: 'gateway' }));
 
-  app.setErrorHandler((error, _req, reply) => {
-    const statusCode = (error as { statusCode?: number }).statusCode ?? 500;
-    reply.status(statusCode).send({
-      success: false,
-      error: { code: (error as { code?: string }).code ?? 'INTERNAL', message: (error as { message?: string }).message ?? 'Unknown error', statusCode },
-    });
-  });
+  await app.register(errorHandlerPlugin);
 
   await app.listen({ port: config.GATEWAY_PORT, host: '0.0.0.0' });
   logger.info(`🚪 Gateway running on port ${config.GATEWAY_PORT}`);

@@ -192,7 +192,9 @@ export class GatewayService {
     const estimatedCredits = calculateCredits(input.model, estimatedTokens);
     await this.lockCredits(user.userId, requestId, estimatedCredits);
 
-    let tokenCounter = 0;
+    let tokensInput = 0;
+    let tokensOutput = 0;
+    let tokensTotal = 0;
     let finalProvider = 'unknown';
 
     try {
@@ -206,31 +208,59 @@ export class GatewayService {
       }) as AsyncGenerator<string>;
 
       for await (const chunk of stream) {
-        // Very basic proxy Token counter: assumes 1 token per roughly 4 chars of data payload. 
-        // We only estimate this because SSE chunks won't perfectly equate to tokens.
-        // A true implementation parses the delta text blocks natively.
-        const match = chunk.match(/"output":"(.*?)"/);
-        if (match && match[1]) {
-           tokenCounter += Math.max(1, Math.floor(match[1].length / 4));
+        // SSE events are separated by '\n\n'. Split so that a usage event can be
+        // filtered out without discarding co-located output events in the same chunk.
+        const parts = chunk.split('\n\n');
+        const forwardParts: string[] = [];
+
+        for (const part of parts) {
+          let isUsageEvent = false;
+          for (const line of part.split('\n')) {
+            const trimmedLine = line.trim();
+            if (trimmedLine.startsWith('data: ') && trimmedLine !== 'data: [DONE]') {
+              const payload = trimmedLine.slice(6).trim();
+              try {
+                const parsed = JSON.parse(payload) as {
+                  usage?: { tokensInput: number; tokensOutput: number; tokensTotal: number };
+                  provider?: string;
+                };
+                if (parsed.usage) {
+                  tokensInput = parsed.usage.tokensInput;
+                  tokensOutput = parsed.usage.tokensOutput;
+                  tokensTotal = parsed.usage.tokensTotal;
+                  finalProvider = parsed.provider ?? 'unknown';
+                  isUsageEvent = true;
+                  break;
+                }
+              } catch { /* not a usage event, pass through */ }
+            }
+          }
+          if (!isUsageEvent) {
+            forwardParts.push(part);
+          }
         }
-        yield chunk;
+
+        const filteredChunk = forwardParts.join('\n\n');
+        if (filteredChunk.trim()) {
+          yield filteredChunk;
+        }
       }
 
-      const actualCredits = calculateCredits(input.model, tokenCounter);
+      const actualCredits = calculateCredits(input.model, tokensTotal);
       await this.confirmCredits(user.userId, requestId);
 
       const latencyMs = Date.now() - startTime;
       void this.publishUsageEvent(
-        requestId, user.userId, input.appId, input.model, 'openai', // fallback tag
-        0, tokenCounter, tokenCounter, actualCredits, latencyMs,
+        requestId, user.userId, input.appId, input.model, finalProvider as UsageEvent['provider'],
+        tokensInput, tokensOutput, tokensTotal, actualCredits, latencyMs,
       );
 
     } catch (err) {
       await this.releaseCredits(user.userId, requestId);
       const latencyMs = Date.now() - startTime;
       void this.publishUsageEvent(
-        requestId, user.userId, input.appId, input.model, 'openai',
-        0, tokenCounter, tokenCounter, 0, latencyMs, (err as GatewayError).code,
+        requestId, user.userId, input.appId, input.model, finalProvider as UsageEvent['provider'],
+        tokensInput, tokensOutput, tokensTotal, 0, latencyMs, (err as GatewayError).code,
       );
       throw err;
     }

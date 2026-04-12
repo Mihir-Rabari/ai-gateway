@@ -119,8 +119,23 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
     },
   );
 
-  // GET /gateway/models
+  // GET /gateway/models — delegates to routing-service so the list is always
+  // in sync with the active model config stored there.
   fastify.get('/models', async (_req, reply) => {
+    try {
+      const routingServiceUrl = process.env['ROUTING_SERVICE_URL'] ?? 'http://localhost:3006';
+      const res = await fetch(`${routingServiceUrl}/internal/routing/models`);
+      if (res.ok) {
+        const body = await res.json() as { success: boolean; data: { models: string[] } };
+        return reply.send(ok({ models: body.data.models }));
+      }
+    } catch {
+      // Routing service unavailable — fall through to hardcoded defaults.
+    }
+    // Fallback: return a static list so the gateway stays operational when the
+    // routing service is temporarily unreachable. This list mirrors the
+    // DEFAULT_MODEL_CONFIG in the routing service and is intentionally kept in
+    // sync via the shared source of truth (routing-service Redis config).
     return reply.send(ok({
       models: [
         'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo',

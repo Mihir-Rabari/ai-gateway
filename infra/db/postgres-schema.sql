@@ -147,6 +147,42 @@ CREATE TABLE IF NOT EXISTS dev_wallet_transactions (
 
 CREATE INDEX IF NOT EXISTS idx_dev_wallet_txn_app_id ON dev_wallet_transactions (app_id);
 
+-- ──────────────────────────────────────────────
+-- Providers
+-- ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS providers (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug        TEXT UNIQUE NOT NULL,
+  name        TEXT NOT NULL,
+  is_active   BOOLEAN NOT NULL DEFAULT true,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_providers_slug ON providers (slug);
+
+-- ──────────────────────────────────────────────
+-- Models
+-- ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS models (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug         TEXT UNIQUE NOT NULL,
+  name         TEXT NOT NULL,
+  provider_id  UUID NOT NULL REFERENCES providers(id) ON DELETE RESTRICT,
+  is_active    BOOLEAN NOT NULL DEFAULT true,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_models_slug ON models (slug);
+CREATE INDEX IF NOT EXISTS idx_models_provider_id ON models (provider_id);
+
+CREATE TRIGGER update_providers_updated_at BEFORE UPDATE ON providers
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_models_updated_at BEFORE UPDATE ON models
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- User Events (analytics/audit support)
 CREATE TABLE IF NOT EXISTS user_events (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
