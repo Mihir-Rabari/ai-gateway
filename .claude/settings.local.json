@@ -1,19 +1,17 @@
 {
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://localhost:4141",
+    "ANTHROPIC_AUTH_TOKEN": "dummy",
+    "ANTHROPIC_MODEL": "gpt-4.1",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "gpt-4.1",
+    "ANTHROPIC_SMALL_FAST_MODEL": "gpt-4.1",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "gpt-4.1",
+    "DISABLE_NON_ESSENTIAL_MODEL_CALLS": "1",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"
+  },
   "permissions": {
-    "allow": [
-      "Bash(pm2 logs:*)",
-      "Bash(pm2 restart:*)",
-      "Bash(pm2 status:*)",
-      "Bash(pm2 delete:*)",
-      "Bash(pm2 start:*)",
-      "Bash(pnpm -v)",
-      "Bash(pm2 -v)",
-      "Bash(pnpm pm2:dev)",
-      "Bash(pm2 kill:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(pm2 show:*)",
-      "Bash(*)"
+    "deny": [
+      "WebSearch"
     ]
   }
 }
