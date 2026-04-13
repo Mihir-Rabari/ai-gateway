@@ -280,12 +280,29 @@ export class RoutingService {
     // modelProvider values are guaranteed to be valid ProviderName entries
     // because validateModelConfig filters out any unknown providers.
     const providers = [...new Set(Object.values(modelProvider))];
-    return Promise.all(providers.map(async (p) => ({
-      name: p,
-      models: Object.keys(modelProvider).filter((model) => modelProvider[model] === p),
-      healthy: await this.isHealthy(p),
-      failureCount: Number(await this.redis.get(`provider:failures:${p}`) ?? '0'),
-    })));
+
+    if (providers.length === 0) return [];
+
+    // ⚡ Bolt: Batch Redis queries to avoid N+1 queries.
+    // Instead of querying `isHealthy` and `failures` individually per provider in a Promise.all,
+    // we use `mget` to fetch all statuses in a single round trip, significantly reducing latency.
+    const keysToFetch = providers.flatMap((p) => [
+      `provider:unhealthy:${p}`,
+      `provider:failures:${p}`,
+    ]);
+
+    const results = await this.redis.mget(keysToFetch);
+
+    return providers.map((p, index) => {
+      const unhealthyResult = results[index * 2];
+      const failureResult = results[index * 2 + 1];
+      return {
+        name: p,
+        models: Object.keys(modelProvider).filter((model) => modelProvider[model] === p),
+        healthy: unhealthyResult === null,
+        failureCount: Number(failureResult ?? '0'),
+      };
+    });
   }
 
   private callProvider(
