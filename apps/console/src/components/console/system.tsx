@@ -93,7 +93,7 @@ export const Button = forwardRef<
       ref={ref}
       disabled={disabled || busy}
       className={cn(
-        "inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium transition duration-200 disabled:cursor-not-allowed disabled:opacity-55",
+        "inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium transition duration-200 disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
         palette,
         className,
       )}
