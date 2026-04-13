@@ -1,3 +1,3 @@
-## 2025-04-12 - Missing ARIA Labels on Ad-Hoc Icon Buttons
+## 2026-04-12 - Missing ARIA Labels on Ad-Hoc Icon Buttons
 **Learning:** In the developer console UI (`apps/console`), there is a pattern of using inline, ad-hoc `<button>` elements rather than standard design system components for small actions like the password visibility toggle (`Eye`/`EyeOff`). These ad-hoc buttons often lack critical accessibility attributes such as `aria-label` or `title`, and sometimes miss focus-visible states for keyboard users.
 **Action:** Always verify small interactive elements (especially icon-only buttons) for proper aria-labels and keyboard focus indicators, and consider standardizing them into a reusable `<IconButton />` component in the future to prevent regressions.
