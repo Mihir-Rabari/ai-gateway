@@ -1,0 +1,3 @@
+## 2024-05-18 - App-specific Keyboard Focus Indicator Pattern
+**Learning:** For custom interactive elements (e.g., ad-hoc icon-only buttons, TextInputs, TextAreas in `apps/console`) the dark aesthetic is best preserved while meeting accessibility standards by using `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50` for keyboard focus indicators instead of default focus styles or other ring colors.
+**Action:** Consistently apply `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50` class combinations to interactive components across the console to maintain both accessibility and the dark aesthetic.
