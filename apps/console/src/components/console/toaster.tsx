@@ -21,7 +21,7 @@ export function Toaster() {
           <button
             type="button"
             onClick={() => dismiss(toast.id)}
-            className="mt-3 text-xs uppercase tracking-[0.22em] text-white/38 transition hover:text-white/72"
+            className="mt-3 text-xs uppercase tracking-[0.22em] text-white/38 transition hover:text-white/72 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-sm"
           >
             Dismiss
           </button>

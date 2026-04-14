@@ -1,0 +1,4 @@
+
+## 2024-04-14 - Keyboard Navigation Consistency in Console
+**Learning:** The console application previously lacked explicit keyboard focus indicators on custom interactive elements (Buttons, TextInputs, TextAreas, Links, and Toaster dismiss buttons). While Tailwind's default focus styles might apply in some browsers, relying on them creates an inconsistent and often inaccessible experience for keyboard users, especially against custom dark-themed backgrounds.
+**Action:** When creating new custom interactive components or wrappers (especially those replacing native elements like `<button>` or `<input>`), always apply explicit `focus-visible` styles. A standard, reusable pattern for this application's dark aesthetic is `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50`.
