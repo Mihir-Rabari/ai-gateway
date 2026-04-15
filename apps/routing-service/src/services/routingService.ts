@@ -157,12 +157,21 @@ export class RoutingService {
   }
 
   async getProvidersHealth() {
-    return Promise.all(['openai', 'anthropic', 'google'].map(async (p) => ({
-      name: p,
-      models: Object.keys(MODEL_PROVIDER).filter((model) => MODEL_PROVIDER[model] === p),
-      healthy: await this.isHealthy(p as ProviderName),
-      failureCount: Number(await this.redis.get(`provider:failures:${p}`) ?? '0'),
-    })));
+    const providers: ProviderName[] = ['openai', 'anthropic', 'google'];
+    const keys = providers.flatMap((p) => [`provider:unhealthy:${p}`, `provider:failures:${p}`]);
+    const results = await this.redis.mget(...keys);
+
+    return providers.map((p, i) => {
+      const unhealthyVal = results[i * 2];
+      const failureCountVal = results[i * 2 + 1];
+
+      return {
+        name: p,
+        models: Object.keys(MODEL_PROVIDER).filter((model) => MODEL_PROVIDER[model] === p),
+        healthy: unhealthyVal === null,
+        failureCount: Number(failureCountVal ?? '0'),
+      };
+    });
   }
 
   private callProvider(
