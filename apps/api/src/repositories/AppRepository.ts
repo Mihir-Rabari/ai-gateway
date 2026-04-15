@@ -111,6 +111,14 @@ export class AppRepository {
     return result.rowCount !== null && result.rowCount > 0;
   }
 
+  async checkActiveAppExists(appId: string, developerId: string): Promise<boolean> {
+    const result = await this.pool.query(
+      `SELECT id FROM registered_apps WHERE id = $1 AND developer_id = $2 AND is_active = true`,
+      [appId, developerId],
+    );
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
   async revokeActiveApiKeys(client: PoolClient, appId: string): Promise<void> {
     await client.query(
       `UPDATE api_keys SET revoked_at = NOW() WHERE app_id = $1 AND revoked_at IS NULL`,

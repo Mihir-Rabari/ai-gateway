@@ -45,6 +45,10 @@ export class AppService {
     return this.repo.findAppsByDeveloperId(developerId);
   }
 
+  async checkAppExists(appId: string, developerId: string): Promise<boolean> {
+    return this.repo.checkActiveAppExists(appId, developerId);
+  }
+
   async deleteApp(appId: string, developerId: string): Promise<{ success: boolean; clientId: string | null }> {
     return this.repo.deleteApp(appId, developerId);
   }
