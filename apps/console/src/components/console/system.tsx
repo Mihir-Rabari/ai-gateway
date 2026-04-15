@@ -39,17 +39,30 @@ export function ShellSection({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between", className)}>
+    <div
+      className={cn(
+        "flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between",
+        className,
+      )}
+    >
       <div className="max-w-3xl">
         {eyebrow ? (
-          <p className="mb-3 text-[11px] uppercase tracking-[0.32em] text-white/38">{eyebrow}</p>
+          <p className="mb-3 text-[11px] uppercase tracking-[0.32em] text-white/38">
+            {eyebrow}
+          </p>
         ) : null}
-        <h1 className="font-display text-4xl tracking-[-0.05em] text-white md:text-5xl">{title}</h1>
+        <h1 className="font-display text-4xl tracking-[-0.05em] text-white md:text-5xl">
+          {title}
+        </h1>
         {description ? (
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/58 md:text-base">{description}</p>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/58 md:text-base">
+            {description}
+          </p>
         ) : null}
       </div>
-      {action ? <div className="flex shrink-0 items-center gap-3">{action}</div> : null}
+      {action ? (
+        <div className="flex shrink-0 items-center gap-3">{action}</div>
+      ) : null}
     </div>
   );
 }
@@ -67,8 +80,12 @@ export function MetricCard({
 }) {
   return (
     <Surface className={cn("p-5", className)}>
-      <p className="text-[11px] uppercase tracking-[0.24em] text-white/40">{label}</p>
-      <p className="mt-6 font-display text-3xl tracking-[-0.06em] text-white md:text-4xl">{value}</p>
+      <p className="text-[11px] uppercase tracking-[0.24em] text-white/40">
+        {label}
+      </p>
+      <p className="mt-6 font-display text-3xl tracking-[-0.06em] text-white md:text-4xl">
+        {value}
+      </p>
       {hint ? <p className="mt-3 text-sm text-white/54">{hint}</p> : null}
     </Surface>
   );
@@ -80,12 +97,16 @@ export const Button = forwardRef<
     variant?: "primary" | "secondary" | "ghost" | "danger";
     busy?: boolean;
   }
->(function Button({ className, variant = "primary", busy, children, disabled, ...props }, ref) {
+>(function Button(
+  { className, variant = "primary", busy, children, disabled, ...props },
+  ref,
+) {
   const palette = {
     primary: "bg-white text-black hover:bg-white/86",
     secondary: "border border-white/10 bg-white/8 text-white hover:bg-white/14",
     ghost: "bg-transparent text-white/72 hover:bg-white/6 hover:text-white",
-    danger: "border border-red-300/20 bg-red-400/12 text-red-200 hover:bg-red-400/18",
+    danger:
+      "border border-red-300/20 bg-red-400/12 text-red-200 hover:bg-red-400/18",
   }[variant];
 
   return (
@@ -93,7 +114,7 @@ export const Button = forwardRef<
       ref={ref}
       disabled={disabled || busy}
       className={cn(
-        "inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium transition duration-200 disabled:cursor-not-allowed disabled:opacity-55",
+        "inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium transition duration-200 disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
         palette,
         className,
       )}
@@ -105,35 +126,37 @@ export const Button = forwardRef<
   );
 });
 
-export const TextInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
-  function TextInput({ className, ...props }, ref) {
-    return (
-      <input
-        ref={ref}
-        className={cn(
-          "h-12 w-full rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-sm text-white placeholder:text-white/28 outline-none transition focus:border-white/20 focus:bg-white/[0.05]",
-          className,
-        )}
-        {...props}
-      />
-    );
-  },
-);
+export const TextInput = forwardRef<
+  HTMLInputElement,
+  InputHTMLAttributes<HTMLInputElement>
+>(function TextInput({ className, ...props }, ref) {
+  return (
+    <input
+      ref={ref}
+      className={cn(
+        "h-12 w-full rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-sm text-white placeholder:text-white/28 outline-none transition focus:border-white/20 focus:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+        className,
+      )}
+      {...props}
+    />
+  );
+});
 
-export const TextArea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(
-  function TextArea({ className, ...props }, ref) {
-    return (
-      <textarea
-        ref={ref}
-        className={cn(
-          "min-h-[132px] w-full rounded-[22px] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder:text-white/28 outline-none transition focus:border-white/20 focus:bg-white/[0.05]",
-          className,
-        )}
-        {...props}
-      />
-    );
-  },
-);
+export const TextArea = forwardRef<
+  HTMLTextAreaElement,
+  TextareaHTMLAttributes<HTMLTextAreaElement>
+>(function TextArea({ className, ...props }, ref) {
+  return (
+    <textarea
+      ref={ref}
+      className={cn(
+        "min-h-[132px] w-full rounded-[22px] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder:text-white/28 outline-none transition focus:border-white/20 focus:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+        className,
+      )}
+      {...props}
+    />
+  );
+});
 
 export function Field({
   label,
@@ -209,8 +232,13 @@ export function DetailList({
   return (
     <div className={cn("grid gap-3 sm:grid-cols-2", className)}>
       {items.map((item) => (
-        <div key={item.label} className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-white/36">{item.label}</p>
+        <div
+          key={item.label}
+          className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4"
+        >
+          <p className="text-[11px] uppercase tracking-[0.2em] text-white/36">
+            {item.label}
+          </p>
           <div className="mt-3 text-sm text-white/82">{item.value}</div>
         </div>
       ))}
@@ -229,9 +257,15 @@ export function EmptyState({
 }) {
   return (
     <Surface className="p-8 text-center">
-      <p className="text-[11px] uppercase tracking-[0.28em] text-white/34">Nothing Yet</p>
-      <h3 className="mt-4 font-display text-2xl tracking-[-0.05em] text-white">{title}</h3>
-      <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-white/56">{description}</p>
+      <p className="text-[11px] uppercase tracking-[0.28em] text-white/34">
+        Nothing Yet
+      </p>
+      <h3 className="mt-4 font-display text-2xl tracking-[-0.05em] text-white">
+        {title}
+      </h3>
+      <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-white/56">
+        {description}
+      </p>
       {action ? <div className="mt-6 flex justify-center">{action}</div> : null}
     </Surface>
   );
@@ -251,11 +285,19 @@ export function InlineMessage({
     success: "border-emerald-300/20 bg-emerald-300/10 text-emerald-100",
   }[tone];
 
-  return <div className={cn("rounded-2xl border px-4 py-3 text-sm", tones)}>{children}</div>;
+  return (
+    <div className={cn("rounded-2xl border px-4 py-3 text-sm", tones)}>
+      {children}
+    </div>
+  );
 }
 
 export function SkeletonBlock({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse rounded-2xl bg-white/[0.06]", className)} />;
+  return (
+    <div
+      className={cn("animate-pulse rounded-2xl bg-white/[0.06]", className)}
+    />
+  );
 }
 
 export function Badge({
@@ -273,7 +315,12 @@ export function Badge({
   }[tone];
 
   return (
-    <span className={cn("inline-flex items-center rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.18em]", tones)}>
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.18em]",
+        tones,
+      )}
+    >
       {children}
     </span>
   );
