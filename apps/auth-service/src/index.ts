@@ -3,7 +3,7 @@ import cors from '@fastify/cors';
 import formbody from '@fastify/formbody';
 import rateLimit from '@fastify/rate-limit';
 import { getAuthConfig } from '@ai-gateway/config';
-import { createLogger, getFastifyLoggerOptions, postgresPlugin, redisPlugin, kafkaPlugin, errorHandlerPlugin } from '@ai-gateway/utils';
+import { createLogger, getFastifyLoggerOptions, postgresPlugin, redisPlugin, kafkaPlugin, errorHandlerPlugin, securityHeadersPlugin } from '@ai-gateway/utils';
 import { authRoutes } from './routes/authRoutes.js';
 import { internalRoutes } from './routes/internalRoutes.js';
 import { oauthRoutes } from './routes/oauthRoutes.js';
@@ -58,7 +58,8 @@ async function bootstrap() {
   // ─── Health Check ──────────────────────────────
   app.get('/health', async () => ({ status: 'ok', service: 'auth-service' }));
 
-  // ─── Error Handler ─────────────────────────────
+  // ─── Error Handler & Security Headers ──────────
+  await app.register(securityHeadersPlugin);
   await app.register(errorHandlerPlugin);
 
   // ─── Start ─────────────────────────────────────
