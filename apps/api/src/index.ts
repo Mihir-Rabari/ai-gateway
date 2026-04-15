@@ -3,7 +3,7 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
-import { createLogger, getFastifyLoggerOptions } from '@ai-gateway/utils';
+import { createLogger, getFastifyLoggerOptions, securityHeadersPlugin } from '@ai-gateway/utils';
 
 const logger = createLogger('api');
 const app = Fastify({ logger: getFastifyLoggerOptions(), disableRequestLogging: true, genReqId: () => `req_${Date.now()}` });
@@ -70,13 +70,7 @@ async function bootstrap() {
   await app.register(developersM.developerRoutes, { prefix: '/api/v1' });
 
   // Security Headers
-  app.addHook('onSend', async (req, reply) => {
-    reply.header('X-Frame-Options', 'DENY');
-    reply.header('X-Content-Type-Options', 'nosniff');
-    reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    reply.header('Content-Security-Policy', "default-src 'none'");
-    reply.header('X-XSS-Protection', '1; mode=block');
-  });
+  await app.register(securityHeadersPlugin);
 
   await app.listen({ port: Number(process.env['API_PORT'] ?? 3001), host: '0.0.0.0' });
   logger.info(`🚀 API service running on port ${process.env['API_PORT'] ?? 3001}`);
