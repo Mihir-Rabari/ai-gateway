@@ -45,6 +45,10 @@ export class AppService {
     return this.repo.findAppsByDeveloperId(developerId);
   }
 
+  async isAppOwner(appId: string, developerId: string) {
+    return this.repo.isAppOwner(appId, developerId);
+  }
+
   async deleteApp(appId: string, developerId: string): Promise<{ success: boolean; clientId: string | null }> {
     return this.repo.deleteApp(appId, developerId);
   }
