@@ -1,0 +1,3 @@
+## 2026-04-16 - [Keyboard Focus and External Links]
+**Learning:** Added keyboard focus indicators (`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50`) to custom interactive elements (Buttons, TextInputs, TextAreas, and standard links) is crucial for accessibility without breaking the dark aesthetic. For external links, `target="_blank"` and `rel="noopener noreferrer"` are essential standard UX and security best practices.
+**Action:** Ensure all new custom interactive elements implement consistent focus-visible styling and proper external link attributes across the design system components.

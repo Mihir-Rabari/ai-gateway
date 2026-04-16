@@ -82,10 +82,10 @@ export const Button = forwardRef<
   }
 >(function Button({ className, variant = "primary", busy, children, disabled, ...props }, ref) {
   const palette = {
-    primary: "bg-white text-black hover:bg-white/86",
-    secondary: "border border-white/10 bg-white/8 text-white hover:bg-white/14",
-    ghost: "bg-transparent text-white/72 hover:bg-white/6 hover:text-white",
-    danger: "border border-red-300/20 bg-red-400/12 text-red-200 hover:bg-red-400/18",
+    primary: "bg-white text-black hover:bg-white/86 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+    secondary: "border border-white/10 bg-white/8 text-white hover:bg-white/14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+    ghost: "bg-transparent text-white/72 hover:bg-white/6 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+    danger: "border border-red-300/20 bg-red-400/12 text-red-200 hover:bg-red-400/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50",
   }[variant];
 
   return (
@@ -111,7 +111,7 @@ export const TextInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLIn
       <input
         ref={ref}
         className={cn(
-          "h-12 w-full rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-sm text-white placeholder:text-white/28 outline-none transition focus:border-white/20 focus:bg-white/[0.05]",
+          "h-12 w-full rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-sm text-white placeholder:text-white/28 outline-none transition focus:border-white/20 focus:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-white/50",
           className,
         )}
         {...props}
@@ -126,7 +126,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
       <textarea
         ref={ref}
         className={cn(
-          "min-h-[132px] w-full rounded-[22px] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder:text-white/28 outline-none transition focus:border-white/20 focus:bg-white/[0.05]",
+          "min-h-[132px] w-full rounded-[22px] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder:text-white/28 outline-none transition focus:border-white/20 focus:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-white/50",
           className,
         )}
         {...props}
