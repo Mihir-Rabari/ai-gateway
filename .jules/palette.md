@@ -1,0 +1,3 @@
+## 2024-04-16 - Add Focus Styles to Dismiss Button and External Shell Link
+**Learning:** Keyboard navigation states (`focus-visible`) are critical for accessibility and were previously missing on the Toaster dismiss button and the Console Shell's external link. Links navigating away from the app should also include standard security/UX attributes like `target="_blank"`. The project relies heavily on Tailwind's `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50` for its dark-mode aesthetic.
+**Action:** When adding or auditing buttons and links (especially icon-only or text-only buttons in floating elements like Toasters, or navigation items), ensure these specific Tailwind classes are applied for visible keyboard focus indicators.
