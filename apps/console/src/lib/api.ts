@@ -310,6 +310,7 @@ export const api = {
   },
   apps: {
     list: async () => fetchApi<DeveloperApp[]>("/api/v1/apps"),
+    get: async (id: string) => fetchApi<DeveloperApp>(`/api/v1/apps/${id}`),
     create: async (name: string, description?: string, redirectUris?: string[]) => {
       return fetchApi<{
         id: string;
