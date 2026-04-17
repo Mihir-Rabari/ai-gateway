@@ -93,7 +93,7 @@ export const Button = forwardRef<
       ref={ref}
       disabled={disabled || busy}
       className={cn(
-        "inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium transition duration-200 disabled:cursor-not-allowed disabled:opacity-55",
+        "inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium transition duration-200 disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
         palette,
         className,
       )}
@@ -111,7 +111,7 @@ export const TextInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLIn
       <input
         ref={ref}
         className={cn(
-          "h-12 w-full rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-sm text-white placeholder:text-white/28 outline-none transition focus:border-white/20 focus:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-white/50",
+          "h-12 w-full rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-sm text-white placeholder:text-white/28 outline-none transition focus:border-white/20 focus:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
           className,
         )}
         {...props}
@@ -126,8 +126,8 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
       <textarea
         ref={ref}
         className={cn(
-          "min-h-[132px] w-full rounded-[22px] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder:text-white/28 outline-none transition focus:border-white/20 focus:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-white/50",
-          className,
+<<<<<<< HEAD
+          "min-h-[132px] w-full rounded-[22px] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder:text-white/28 outline-none transition focus:border-white/20 focus:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
         )}
         {...props}
       />
