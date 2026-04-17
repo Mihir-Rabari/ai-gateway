@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { getRoutingConfig } from '@ai-gateway/config';
-import { createLogger, getFastifyLoggerOptions, ok, fail, redisPlugin, kafkaPlugin, type GatewayError } from '@ai-gateway/utils';
+import { createLogger, getFastifyLoggerOptions, ok, fail, redisPlugin, kafkaPlugin, securityHeadersPlugin, type GatewayError } from '@ai-gateway/utils';
 import { RoutingService, buildModelConfigFromEnv, validateModelConfig } from './services/routingService.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { Message } from '@ai-gateway/types';
@@ -19,6 +19,7 @@ const app = Fastify({ logger: getFastifyLoggerOptions() });
 let activeModelConfig: ModelConfig = buildModelConfigFromEnv();
 
 async function bootstrap() {
+  await app.register(securityHeadersPlugin);
   await app.register(cors, {
     origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000', 'http://localhost:3009'],
     credentials: true,

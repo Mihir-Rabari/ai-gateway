@@ -3,19 +3,20 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
-import { createLogger, getFastifyLoggerOptions } from '@ai-gateway/utils';
+import { createLogger, getFastifyLoggerOptions, securityHeadersPlugin } from '@ai-gateway/utils';
 
 const logger = createLogger('api');
 const app = Fastify({ logger: getFastifyLoggerOptions(), disableRequestLogging: true, genReqId: () => `req_${Date.now()}` });
 
 async function bootstrap() {
+  await app.register(securityHeadersPlugin);
   const loggerM = await import('./middleware/requestLogger.js');
   await app.register(loggerM.requestLogger);
 
   // CORS
   await app.register(cors, {
-    origin: '*',
-    credentials: false,
+    origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000', 'http://localhost:3009'],
+    credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
       'Content-Type', 'Authorization',
