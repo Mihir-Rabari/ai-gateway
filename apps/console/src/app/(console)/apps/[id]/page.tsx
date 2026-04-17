@@ -25,8 +25,7 @@ export default function AppDetailsPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const [apps, usageRes] = await Promise.all([api.apps.list(), api.apps.usage(id)]);
-        const app = apps.find((entry) => entry.id === id) ?? null;
+        const [app, usageRes] = await Promise.all([api.apps.get(id), api.apps.usage(id)]);
         setAppData(app);
         setUsage(usageRes);
         setRedirectUrisRaw(app?.redirectUris?.join("\n") ?? "");
