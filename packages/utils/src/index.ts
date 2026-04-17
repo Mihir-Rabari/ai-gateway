@@ -12,11 +12,13 @@ import {
 // Logger
 // ─────────────────────────────────────────
 
+const getLogTransport = () =>
+  process.env['NODE_ENV'] === 'development'
+    ? ({ target: 'pino-pretty', options: { colorize: true } } as const)
+    : undefined;
+
 export const createLogger = (service: string) => {
-  const transport =
-    process.env['NODE_ENV'] === 'development'
-      ? ({ target: 'pino-pretty', options: { colorize: true } } as const)
-      : undefined;
+  const transport = getLogTransport();
 
   return pino({
     name: service,
@@ -26,6 +28,22 @@ export const createLogger = (service: string) => {
 };
 
 export type Logger = ReturnType<typeof createLogger>;
+
+/**
+ * Returns standardized pino logger options for use with Fastify's `logger` option.
+ * Use this instead of inline logger configs to ensure consistent logging across all services.
+ *
+ * @example
+ * const app = Fastify({ logger: getFastifyLoggerOptions() });
+ */
+export const getFastifyLoggerOptions = () => {
+  const transport = getLogTransport();
+
+  return {
+    level: process.env['LOG_LEVEL'] ?? 'info',
+    ...(transport ? { transport } : {}),
+  };
+};
 
 // ─────────────────────────────────────────
 // ID Generation
@@ -262,9 +280,19 @@ export function verifyAppJwt(token: string, secret: string): AppJwtPayload {
     Buffer.from(payloadB64, 'base64url').toString('utf8'),
   ) as AppJwtPayload;
 
-  // if (payload.exp < Math.floor(Date.now() / 1000)) {
-  //   throw new Error('JWT expired');
-  // }
+  if (payload.exp < Math.floor(Date.now() / 1000)) {
+    throw new Error('JWT expired');
+  }
 
   return payload;
 }
+
+// ─────────────────────────────────────────
+// Shared Fastify Plugins
+// ─────────────────────────────────────────
+
+export { postgresPlugin } from './plugins/postgres.js';
+export { redisPlugin } from './plugins/redis.js';
+export { kafkaPlugin } from './plugins/kafka.js';
+export { errorHandlerPlugin } from './plugins/errorHandler.js';
+export { securityHeadersPlugin } from './plugins/securityHeaders.js';

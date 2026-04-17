@@ -15,7 +15,6 @@
 
 ## Agent 1 — Infrastructure & DevOps
 
-**Doc:** `docs/agents/tasks/01-infra.md`
 **Owns:** `docker-compose.yml`, `infra/`, `.env.example`, `turbo.json`
 
 - [x] Docker Compose with Postgres, Redis, Kafka, ClickHouse
@@ -36,7 +35,6 @@
 
 ## Agent 2 — Auth Service
 
-**Doc:** `docs/agents/tasks/02-auth-service.md`
 **Owns:** `apps/auth-service/`
 
 - [x] Signup endpoint (POST /auth/signup)
@@ -61,7 +59,6 @@
 
 ## Agent 3 — Credit Service
 
-**Doc:** `docs/agents/tasks/03-credit-service.md`
 **Owns:** `apps/credit-service/`
 
 - [x] GET /credits/balance?userId=
@@ -83,7 +80,6 @@
 
 ## Agent 4 — Gateway Service (AI Request Engine)
 
-**Doc:** `docs/agents/tasks/04-gateway-service.md`
 **Owns:** `apps/gateway/`
 
 - [x] POST /gateway/request (main AI request endpoint)
@@ -106,7 +102,6 @@
 
 ## Agent 5 — Routing Service
 
-**Doc:** `docs/agents/tasks/05-routing-service.md`
 **Owns:** `apps/routing-service/`
 
 - [x] POST /internal/routing/route (main routing endpoint)
@@ -127,7 +122,6 @@
 
 ## Agent 6 — Billing Service
 
-**Doc:** `docs/agents/tasks/06-billing-service.md`
 **Owns:** `apps/billing-service/`
 
 - [x] GET /billing/plans
@@ -149,7 +143,6 @@
 
 ## Agent 7 — Analytics Service + Worker
 
-**Doc:** `docs/agents/tasks/07-analytics-worker.md`
 **Owns:** `apps/analytics-service/`, `apps/worker/`
 
 - [x] Kafka consumer for `usage.events`
@@ -170,7 +163,6 @@
 
 ## Agent 8 — API Aggregation Layer
 
-**Doc:** `docs/agents/tasks/08-api-service.md`
 **Owns:** `apps/api/`
 
 - [x] Placeholder src/index.ts
@@ -193,7 +185,6 @@
 
 ## Agent 9 — Frontend (Web App)
 
-**Doc:** `docs/agents/tasks/09-frontend.md`
 **Owns:** `apps/web/`
 
 - [x] Next.js bootstrapped with Tailwind v4
@@ -223,7 +214,6 @@
 
 ## Agent 10 — SDK + Auth Widget
 
-**Doc:** `docs/agents/tasks/10-sdk-auth-widget.md`
 **Owns:** `packages/sdk-js/`, auth widget frontend JS
 
 - [x] Finish SDK implementation (`packages/sdk-js/src/index.ts`)
@@ -335,3 +325,43 @@ Focus: backend-first completion and contract cleanup before the next frontend pa
 - [x] Add safe localhost defaults for API internal dependency URLs (`AUTH_SERVICE_URL`, `GATEWAY_URL`, `CREDIT_SERVICE_URL`, `BILLING_SERVICE_URL`, `ANALYTICS_SERVICE_URL`)
 - [x] Add safe localhost fallback for API app-route `DATABASE_URL` pool
 - [x] Fix analytics `DateTime64` query param formatting for app usage endpoint
+
+## Developer Console & UX Redesign Sprint (2026-04-06 to 2026-04-09)
+
+- [x] Split developer portal into a standalone `apps/console` application
+- [x] Redesign developer console UI and restore the developer onboarding flow
+- [x] Enable and harden cross-app handshakes, robust auth with silent token refresh, and CORS configurations
+- [x] Resolve dev port conflicts (e.g., port 3002 overlap between gateway and console)
+- [x] Migrate console dependencies to `@base-ui/react`
+
+## PM2 Infrastructure & Alignment Sprint (2026-04-07 to 2026-04-08)
+
+- [x] Add PM2 ecosystem configuration (`ecosystem.config.js`) and start scripts
+- [x] Fix PM2 spawn bugs on Windows (using `pnpm.cmd` wrapper)
+- [x] Perform full end-to-end system alignment and bug squash pass
+
+## Enterprise Auth & SDK Overhaul Sprint (2026-04-08 to 2026-04-09)
+
+- [x] Complete rewrite of SDK incorporating an OAuth-style authentication system
+- [x] Introduce Client Secret encryption and secure JWT app-auth
+- [x] Expose OAuth credentials (clientId, clientSecret, redirectUris) cleanly in the developer console
+- [x] Add native streamlined SDK chat example application
+- [x] Implement flat 1-credit flat developer commission payouts
+- [x] Clean up code review findings (magic numbers extraction, CSRF hardening, input validation)
+
+## Security & Resilience Hardening Sprint (2026-04-10 to 2026-04-11)
+
+- [x] Roll out upstream circuit breakers to handle provider outages gracefully
+- [x] Introduce Redis read-through cache for app validation (with fail-open resilience)
+- [x] Dramatically reduce JWT access token lifetime (from 100 years down to 15 minutes) with SDK auto-refresh backing
+- [x] Enforce robust JWT expiration validation in the gateway verification path
+- [x] Inject advanced security headers (CSP, X-Frame-Options, HSTS) into the API service
+
+## Architecture & Code Quality Polish Sprint (2026-04-12)
+
+- [x] Encapsulate `registered_apps` logic completely into `auth-service` and remove gateway DB access (#37)
+- [x] Fix and use native LLM provider usage metrics for accurate SSE streaming token billing (#36)
+- [x] Extract shared Fastify plugins (Postgres, Redis, Kafka, ErrorHandler) into `@ai-gateway/utils` (#38)
+- [x] Make Kafka topics and AI model routing configuration dynamic via environment overrides (#39)
+- [x] Standardize Fastify logger setup across all services via the common utils package (#40)
+- [x] Bump `npm_and_yarn` group dependencies across the repository (#41)

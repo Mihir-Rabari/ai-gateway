@@ -1,18 +1,25 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { getRoutingConfig } from '@ai-gateway/config';
-import { createLogger, ok, fail, type GatewayError } from '@ai-gateway/utils';
-import { kafkaPlugin } from './plugins/kafka.js';
-import { redisPlugin } from './plugins/redis.js';
-import { RoutingService } from './services/routingService.js';
+import { createLogger, getFastifyLoggerOptions, ok, fail, redisPlugin, kafkaPlugin, securityHeadersPlugin, type GatewayError } from '@ai-gateway/utils';
+import { RoutingService, buildModelConfigFromEnv, validateModelConfig } from './services/routingService.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { Message } from '@ai-gateway/types';
+import type { ModelConfig } from './services/routingService.js';
 
 const logger = createLogger('routing-service');
 const config = getRoutingConfig();
-const app = Fastify({ logger: false });
+const app = Fastify({ logger: getFastifyLoggerOptions() });
+
+// Module-level model config cache. Loaded from Redis on startup and updated
+// in-place when the PUT /internal/routing/models/config endpoint is called.
+// Using an in-memory reference avoids a Redis round-trip on every request
+// while still propagating updates to all replicas (replicas must restart or
+// receive a config update via the PUT endpoint).
+let activeModelConfig: ModelConfig = buildModelConfigFromEnv();
 
 async function bootstrap() {
+  await app.register(securityHeadersPlugin);
   await app.register(cors, {
     origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000', 'http://localhost:3009'],
     credentials: true,
@@ -21,6 +28,19 @@ async function bootstrap() {
   });
   await app.register(redisPlugin);
   await app.register(kafkaPlugin);
+
+  // ── Model config bootstrap ────────────────────────────────────────────
+  // Prefer a config stored in Redis (updated via the admin endpoint) so
+  // that it survives service restarts. Fall back to env-var / defaults.
+  const storedConfig = await RoutingService.loadModelConfig(app.redis);
+  if (storedConfig) {
+    activeModelConfig = storedConfig;
+    logger.info('Model config loaded from Redis');
+  } else {
+    // Seed Redis so future replicas or restarts pick up the same starting config.
+    await RoutingService.saveModelConfigToRedis(app.redis, activeModelConfig);
+    logger.info('Model config seeded into Redis from env/defaults');
+  }
 
   app.post(
     '/internal/routing/route',
@@ -54,7 +74,7 @@ async function bootstrap() {
       reply: FastifyReply,
     ) => {
       try {
-        const service = new RoutingService(app.kafka.publish.bind(app.kafka), app.redis);
+        const service = new RoutingService(app.kafka.publish.bind(app.kafka), app.redis, {}, activeModelConfig);
         const result = await service.route(req.body);
 
         if (req.body.stream) {
@@ -89,10 +109,50 @@ async function bootstrap() {
   );
 
   app.get('/internal/routing/providers', async (_req, reply) => {
-    const service = new RoutingService(app.kafka.publish.bind(app.kafka), app.redis);
+    const service = new RoutingService(app.kafka.publish.bind(app.kafka), app.redis, {}, activeModelConfig);
     const providers = await service.getProvidersHealth();
     return reply.send(ok({ providers }));
   });
+
+  // GET /internal/routing/models — return the current model list derived from
+  // the active model config so other services (e.g. the gateway) don't need
+  // their own hardcoded model lists.
+  app.get('/internal/routing/models', async (_req, reply) => {
+    const models = Object.keys(activeModelConfig.modelProvider);
+    return reply.send(ok({ models }));
+  });
+
+  // PUT /internal/routing/models/config — update the model config.
+  // The new config is validated, saved to Redis for persistence, and the
+  // in-memory cache is updated so changes take effect immediately.
+  app.put(
+    '/internal/routing/models/config',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['modelProvider'],
+          properties: {
+            modelProvider: { type: 'object' },
+            fallbackMap: { type: 'object' },
+          },
+        },
+      },
+    },
+    async (
+      req: FastifyRequest<{ Body: { modelProvider: Record<string, string>; fallbackMap?: Record<string, string> } }>,
+      reply: FastifyReply,
+    ) => {
+      const incoming: ModelConfig = {
+        modelProvider: req.body.modelProvider as Record<string, import('@ai-gateway/types').ProviderName>,
+        fallbackMap: req.body.fallbackMap ?? {},
+      };
+      const validated = validateModelConfig(incoming);
+      await RoutingService.saveModelConfigToRedis(app.redis, validated);
+      activeModelConfig = validated;
+      return reply.send(ok({ message: 'Model config updated', config: validated }));
+    },
+  );
 
   app.get('/health', async () => ({ status: 'ok', service: 'routing-service' }));
 

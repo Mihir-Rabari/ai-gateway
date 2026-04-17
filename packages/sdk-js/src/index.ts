@@ -111,7 +111,40 @@ const STATE_ENTROPY_BYTES = 24;
  * Lifetime of a signed X-App-Token JWT in seconds.
  * Short-lived to limit the blast radius of a leaked token in transit.
  */
-const APP_TOKEN_EXPIRY_SECONDS = 31536000; // 1 year
+const APP_TOKEN_EXPIRY_SECONDS = 60; // 1 minute
+
+/**
+ * Number of seconds before an access token's expiry at which the SDK will
+ * proactively refresh it. Avoids clock-skew and latency issues.
+ */
+const TOKEN_EXPIRY_BUFFER_SECONDS = 30;
+
+/**
+ * OAuth error codes and message keywords that indicate the refresh token is
+ * permanently invalid. A match causes the SDK to sign the user out rather than
+ * silently retrying.  Transient errors (network, 5xx) do not appear here and
+ * will be rethrown without clearing the local session.
+ */
+const TERMINAL_REFRESH_ERROR_PATTERNS = [
+  'invalid_grant',
+  'invalid_token',
+  'revoked',
+  'expired',
+] as const;
+
+/**
+ * Internal error thrown by refreshSession() when the server explicitly rejects
+ * the refresh token. Carries the HTTP response status for terminal-error detection.
+ */
+class RefreshError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'RefreshError';
+  }
+}
 
 /**
  * AI Gateway SDK Client
@@ -146,6 +179,9 @@ export class AIGateway {
   private apiKey: string | undefined;
   /** @deprecated – use storage instead */
   private legacyAccessToken: string | undefined;
+
+  /** In-flight refresh promise; serializes concurrent token-refresh calls. */
+  private refreshPromise: Promise<RefreshResult> | null = null;
 
   /**
    * Create a new AIGateway instance.
@@ -321,7 +357,10 @@ export class AIGateway {
     };
 
     if (!json.success || !json.data) {
-      throw new Error(`AIGateway: Session refresh failed - ${json.error?.message ?? 'Unknown error'}`);
+      throw new RefreshError(
+        `AIGateway: Session refresh failed - ${json.error?.message ?? 'Unknown error'}`,
+        res.status,
+      );
     }
 
     await this.storage.set(STORAGE_KEYS.ACCESS_TOKEN, json.data.accessToken);
@@ -534,10 +573,74 @@ export class AIGateway {
   // ─────────────────────────────────────────────────────────────────────────
 
   private async getAuthHeader(): Promise<string> {
-    const stored = await this.storage.get(STORAGE_KEYS.ACCESS_TOKEN);
+    let stored = await this.storage.get(STORAGE_KEYS.ACCESS_TOKEN);
+
+    // Auto-refresh OAuth access tokens that are expired or about to expire.
+    // Only applies to the OAuth flow (stored token); legacy apiKey / setToken() paths are skipped.
+    if (stored) {
+      const exp = this.decodeTokenExpiry(stored);
+      const now = Math.floor(Date.now() / 1000);
+      if (exp !== null && exp - now < TOKEN_EXPIRY_BUFFER_SECONDS) {
+        const refreshToken = await this.storage.get(STORAGE_KEYS.REFRESH_TOKEN);
+        if (refreshToken) {
+          // Serialize concurrent refresh calls: if a refresh is already in-flight,
+          // await the same promise rather than issuing a duplicate request.
+          if (!this.refreshPromise) {
+            this.refreshPromise = this.refreshSession().finally(() => {
+              this.refreshPromise = null;
+            });
+          }
+          try {
+            const refreshed = await this.refreshPromise;
+            stored = refreshed.accessToken;
+          } catch (err) {
+            // Only sign out on terminal auth errors (HTTP 401/403, OAuth
+            // invalid_grant/invalid_token, or explicit revocation/expiry).
+            // Transient failures (network errors, 5xx, timeouts, bad JSON)
+            // must not clear the local session — the caller can retry.
+            const isTerminalAuthError =
+              (err instanceof RefreshError && (err.status === 401 || err.status === 403)) ||
+              (err instanceof Error && TERMINAL_REFRESH_ERROR_PATTERNS.some((p) => err.message.toLowerCase().includes(p)));
+            if (isTerminalAuthError) {
+              await this.signOut();
+              const reason = err instanceof Error ? err.message : String(err);
+              throw new Error(`AIGateway: Session expired. Please sign in again. (${reason})`);
+            }
+            throw err;
+          }
+        } else {
+          // No refresh token available — clear stale tokens and sign out.
+          await this.signOut();
+          throw new Error('AIGateway: Session expired. Please sign in again.');
+        }
+      }
+    }
+
     const token = stored ?? this.legacyAccessToken ?? this.apiKey;
     if (!token) throw new Error('AIGateway: No access token. Call signIn() and handleCallback() first.');
     return `Bearer ${token}`;
+  }
+
+  /**
+   * Decode the `exp` (expiry) claim from a JWT payload without verifying the signature.
+   * Returns the expiry as a Unix timestamp (seconds), or `null` if the token cannot be decoded
+   * or does not contain an `exp` claim.
+   */
+  private decodeTokenExpiry(token: string): number | null {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      // Support both browser (atob) and Node.js (Buffer) environments.
+      const json =
+        typeof atob === 'function'
+          ? atob(payloadB64)
+          : Buffer.from(payloadB64, 'base64').toString('utf8');
+      const payload = JSON.parse(json) as { exp?: unknown };
+      return typeof payload.exp === 'number' ? payload.exp : null;
+    } catch {
+      return null;
+    }
   }
 
   private getOAuthBaseUrl(): string {

@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import { createClient } from '@clickhouse/client';
 import { Kafka } from 'kafkajs';
 import { getAnalyticsConfig } from '@ai-gateway/config';
-import { createLogger, ok } from '@ai-gateway/utils';
+import { createLogger, getFastifyLoggerOptions, ok, securityHeadersPlugin } from '@ai-gateway/utils';
 import type { UsageEvent } from '@ai-gateway/types';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { UsageBatchBuffer, toRequestLogRow } from './services/usageBatch.js';
@@ -10,7 +10,8 @@ import { UsageBatchBuffer, toRequestLogRow } from './services/usageBatch.js';
 const logger = createLogger('analytics-service');
 const config = getAnalyticsConfig();
 
-const app = Fastify({ logger: false });
+const app = Fastify({ logger: getFastifyLoggerOptions() });
+app.register(securityHeadersPlugin);
 
 // ─── ClickHouse ───────────────────────────────
 const clickhouse = createClient({

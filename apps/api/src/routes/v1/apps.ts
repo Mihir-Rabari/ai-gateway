@@ -1,7 +1,9 @@
 import type { FastifyPluginAsync } from 'fastify';
 import pg from 'pg';
+import Redis from 'ioredis';
 import { requireAuth } from '../../middleware/requireAuth.js';
 import { ok, fail } from '@ai-gateway/utils';
+import { APP_CACHE_KEYS } from '@ai-gateway/config';
 import { AppRepository } from '../../repositories/AppRepository.js';
 import { AppService } from '../../services/AppService.js';
 
@@ -10,6 +12,15 @@ const pool = new pg.Pool({
 });
 const appRepository = new AppRepository(pool);
 const appService = new AppService(appRepository);
+
+// Redis client used only for best-effort cache invalidation. Configured to fail
+// fast so that a Redis outage never blocks the app mutation response.
+const redis = new Redis(process.env['REDIS_URL'] ?? 'redis://localhost:6379', {
+  lazyConnect: true,
+  maxRetriesPerRequest: 0,
+  enableOfflineQueue: false,
+});
+redis.connect().catch(() => undefined);
 
 export const appRoutes: FastifyPluginAsync = async (fastify) => {
   const analyticsServiceUrl = process.env['ANALYTICS_SERVICE_URL'] ?? 'http://localhost:3007';
@@ -67,6 +78,37 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
+  fastify.get('/apps/:id', {
+    preHandler: [requireAuth],
+    schema: {
+      tags: ['Developer Apps'],
+      description: 'Get a specific registered app',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: {
+          id: { type: 'string' },
+        },
+      },
+    },
+  }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    try {
+      fastify.log.info({ userId: req.userId, appId: id }, 'Fetching app for user');
+      const app = await appService.getApp(id, req.userId);
+      if (!app) {
+        return reply.status(404).send(fail({ name: 'NotFoundError', code: 'APP_NOT_FOUND', message: 'App not found', statusCode: 404 }));
+      }
+      fastify.log.info({ userId: req.userId, appId: id }, 'Fetched app');
+      return reply.send(ok(app));
+    } catch (err) {
+      const errObj = err instanceof Error ? { message: err.message, stack: err.stack } : { err };
+      fastify.log.error({ err: errObj, userId: (req as any).userId, appId: id }, 'Failed to fetch app');
+      return reply.status(500).send(fail({ name: 'Error', code: 'APP_FETCH_ERR', message: 'Failed to fetch app', statusCode: 500 }));
+    }
+  });
+
   fastify.delete('/apps/:id', {
     preHandler: [requireAuth],
     schema: {
@@ -84,10 +126,21 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (req, reply) => {
     const { id } = req.params as { id: string };
     try {
-      const success = await appService.deleteApp(id, req.userId);
-      if (!success) {
+      const result = await appService.deleteApp(id, req.userId);
+      if (!result.success) {
         return reply.status(404).send(fail({ name: 'NotFoundError', code: 'APP_NOT_FOUND', message: 'App not found', statusCode: 404 }));
       }
+      // Invalidate gateway read-through cache — best-effort, failure is acceptable
+      try {
+        const keysToDelete: string[] = [
+          APP_CACHE_KEYS.activeStatus(id),
+          APP_CACHE_KEYS.apiKeyHashes(id),
+        ];
+        if (result.clientId) {
+          keysToDelete.push(APP_CACHE_KEYS.clientSecret(result.clientId));
+        }
+        await redis.del(...keysToDelete);
+      } catch { /* ignore */ }
       return reply.send(ok({ success: true }));
     } catch (err) {
       fastify.log.error(err, 'Failed to delete app');
@@ -118,6 +171,11 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
       if (!result) {
         return reply.status(404).send(fail({ name: 'NotFoundError', code: 'APP_NOT_FOUND', message: 'App not found', statusCode: 404 }));
       }
+
+      // Invalidate the API-key hashes cache so the gateway picks up the new key
+      try {
+        await redis.del(APP_CACHE_KEYS.apiKeyHashes(id));
+      } catch { /* ignore */ }
 
       return reply.send(ok({ apiKey: result.apiKey }));
     } catch (err) {

@@ -1,15 +1,12 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { getBillingConfig } from '@ai-gateway/config';
-import { createLogger } from '@ai-gateway/utils';
-import { postgresPlugin } from './plugins/postgres.js';
-import { redisPlugin } from './plugins/redis.js';
-import { kafkaPlugin } from './plugins/kafka.js';
+import { createLogger, getFastifyLoggerOptions, postgresPlugin, redisPlugin, kafkaPlugin, errorHandlerPlugin, securityHeadersPlugin } from '@ai-gateway/utils';
 import { billingRoutes } from './routes/billingRoutes.js';
 
 const logger = createLogger('billing-service');
 const config = getBillingConfig();
-const app = Fastify({ logger: false });
+const app = Fastify({ logger: getFastifyLoggerOptions() });
 
 // Custom content type parser to capture raw request body for signature verification
 app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body, done) => {
@@ -24,6 +21,7 @@ app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body, 
 });
 
 async function bootstrap() {
+  await app.register(securityHeadersPlugin);
   await app.register(cors, {
     origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000', 'http://localhost:3009'],
     credentials: true,
@@ -36,18 +34,7 @@ async function bootstrap() {
   await app.register(billingRoutes, { prefix: '/billing' });
   app.get('/health', async () => ({ status: 'ok', service: 'billing-service' }));
 
-  app.setErrorHandler((error, _req, reply) => {
-    const appError = error as { statusCode?: number; code?: string; message?: string };
-    const statusCode = appError.statusCode ?? 500;
-    reply.status(statusCode).send({
-      success: false,
-      error: {
-        code: appError.code ?? 'INTERNAL',
-        message: appError.message ?? 'Internal server error',
-        statusCode,
-      },
-    });
-  });
+  await app.register(errorHandlerPlugin);
 
   await app.listen({ port: config.BILLING_SERVICE_PORT, host: '0.0.0.0' });
   logger.info(`💳 Billing service running on port ${config.BILLING_SERVICE_PORT}`);

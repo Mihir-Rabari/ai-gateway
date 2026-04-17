@@ -8,6 +8,8 @@ import type Redis from 'ioredis';
 
 const logger = createLogger('routing-service');
 
+const REDIS_MODEL_CONFIG_KEY = 'model:config';
+
 interface RouteResult {
   output: string;
   tokensInput: number;
@@ -44,38 +46,153 @@ interface RoutingServiceDeps {
   googleClient?: GoogleClientLike;
 }
 
-// Fallback chain per model
-const FALLBACK_MAP: Record<string, string> = {
-  'gpt-4o': 'gpt-3.5-turbo',
-  'gpt-4-turbo': 'gpt-3.5-turbo',
-  'claude-3-5-sonnet-20241022': 'claude-3-haiku-20240307',
-  'gemini-2.5-pro': 'gemini-2.5-flash',
+// ─────────────────────────────────────────
+// Model Configuration
+//
+// Default model-to-provider and fallback maps. These defaults can be
+// overridden at startup via MODEL_PROVIDER_JSON / MODEL_FALLBACK_JSON
+// environment variables, or at runtime by saving a new config to Redis
+// (see RoutingService.saveModelConfig / loadModelConfig).
+// ─────────────────────────────────────────
+
+export interface ModelConfig {
+  /** Maps model name → provider name */
+  modelProvider: Record<string, ProviderName>;
+  /** Maps model name → fallback model name */
+  fallbackMap: Record<string, string>;
+}
+
+export const DEFAULT_MODEL_CONFIG: ModelConfig = {
+  modelProvider: {
+    'gpt-4o': 'openai',
+    'gpt-4-turbo': 'openai',
+    'gpt-3.5-turbo': 'openai',
+    'claude-3-5-sonnet-20241022': 'anthropic',
+    'claude-3-haiku-20240307': 'anthropic',
+    'gemini-2.5-pro': 'google',
+    'gemini-2.5-flash': 'google',
+  },
+  fallbackMap: {
+    'gpt-4o': 'gpt-3.5-turbo',
+    'gpt-4-turbo': 'gpt-3.5-turbo',
+    'claude-3-5-sonnet-20241022': 'claude-3-haiku-20240307',
+    'gemini-2.5-pro': 'gemini-2.5-flash',
+  },
 };
 
-const MODEL_PROVIDER: Record<string, ProviderName> = {
-  'gpt-4o': 'openai',
-  'gpt-4-turbo': 'openai',
-  'gpt-3.5-turbo': 'openai',
-  'claude-3-5-sonnet-20241022': 'anthropic',
-  'claude-3-haiku-20240307': 'anthropic',
-  'gemini-2.5-pro': 'google',
-  'gemini-2.5-flash': 'google',
-};
+const VALID_PROVIDERS = new Set<string>(['openai', 'anthropic', 'google']);
+
+/**
+ * Validate that all provider values in a ModelConfig are known ProviderName
+ * values. Strips out unknown entries and returns the cleaned config.
+ */
+export function validateModelConfig(config: ModelConfig): ModelConfig {
+  const modelProvider: Record<string, ProviderName> = {};
+  for (const [model, provider] of Object.entries(config.modelProvider)) {
+    if (VALID_PROVIDERS.has(provider)) {
+      modelProvider[model] = provider as ProviderName;
+    } else {
+      logger.warn({ model, provider }, 'Unknown provider in model config — skipping entry');
+    }
+  }
+  return { modelProvider, fallbackMap: config.fallbackMap };
+}
+
+/**
+ * Build a ModelConfig by merging the hardcoded defaults with any
+ * JSON overrides supplied via environment variables.
+ *
+ * MODEL_PROVIDER_JSON – JSON object mapping model name → provider name
+ * MODEL_FALLBACK_JSON  – JSON object mapping model name → fallback model name
+ */
+export function buildModelConfigFromEnv(): ModelConfig {
+  const providerJson = process.env['MODEL_PROVIDER_JSON'];
+  const fallbackJson = process.env['MODEL_FALLBACK_JSON'];
+
+  let modelProvider = { ...DEFAULT_MODEL_CONFIG.modelProvider };
+  let fallbackMap = { ...DEFAULT_MODEL_CONFIG.fallbackMap };
+
+  if (providerJson) {
+    try {
+      modelProvider = { ...modelProvider, ...JSON.parse(providerJson) };
+    } catch {
+      logger.warn('MODEL_PROVIDER_JSON is not valid JSON — using defaults');
+    }
+  }
+
+  if (fallbackJson) {
+    try {
+      fallbackMap = { ...fallbackMap, ...JSON.parse(fallbackJson) };
+    } catch {
+      logger.warn('MODEL_FALLBACK_JSON is not valid JSON — using defaults');
+    }
+  }
+
+  return validateModelConfig({ modelProvider, fallbackMap });
+}
 
 export class RoutingService {
   private readonly openai: OpenAiClientLike;
   private readonly anthropic: AnthropicClientLike;
   private readonly genAI: GoogleClientLike;
   private readonly FAILURE_THRESHOLD = 5;
+  private modelConfig: ModelConfig;
 
   constructor(
     private readonly kafkaPublish: (topic: string, msg: object) => Promise<void>,
     private readonly redis: Redis,
     deps: RoutingServiceDeps = {},
+    modelConfig?: ModelConfig,
   ) {
     this.openai = deps.openaiClient ?? new OpenAI({ apiKey: process.env['OPENAI_API_KEY'] ?? '' });
     this.anthropic = deps.anthropicClient ?? new Anthropic({ apiKey: process.env['ANTHROPIC_API_KEY'] ?? '' });
     this.genAI = deps.googleClient ?? new GoogleGenerativeAI(process.env['GOOGLE_AI_API_KEY'] ?? '');
+    this.modelConfig = modelConfig ?? buildModelConfigFromEnv();
+  }
+
+  // ─── Model config persistence ──────────────────────────────────────
+
+  /**
+   * Load model config from Redis. Returns null when no config has been
+   * stored yet (callers should fall back to buildModelConfigFromEnv()).
+   */
+  static async loadModelConfig(redis: Redis): Promise<ModelConfig | null> {
+    const raw = await redis.get(REDIS_MODEL_CONFIG_KEY);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw) as ModelConfig;
+      return validateModelConfig(parsed);
+    } catch {
+      logger.warn('Stored model config in Redis is not valid JSON — ignoring');
+      return null;
+    }
+  }
+
+  /**
+   * Persist the given model config to Redis so it survives service restarts
+   * and is shared across routing-service replicas. Can be called as a static
+   * method so callers don't need to instantiate a full RoutingService.
+   */
+  static async saveModelConfigToRedis(redis: Redis, config: ModelConfig): Promise<void> {
+    const validated = validateModelConfig(config);
+    await redis.set(REDIS_MODEL_CONFIG_KEY, JSON.stringify(validated));
+    logger.info('Model config updated and saved to Redis');
+  }
+
+  /**
+   * Persist the given model config to Redis and update this instance's config.
+   * @deprecated Prefer the static RoutingService.saveModelConfigToRedis when a
+   * full service instance is not required.
+   */
+  async saveModelConfig(config: ModelConfig): Promise<void> {
+    const validated = validateModelConfig(config);
+    await RoutingService.saveModelConfigToRedis(this.redis, validated);
+    this.modelConfig = validated;
+  }
+
+  /** Return the currently active model configuration. */
+  getModelConfig(): ModelConfig {
+    return this.modelConfig;
   }
 
   async route(data: {
@@ -86,7 +203,9 @@ export class RoutingService {
     temperature?: number;
     stream?: boolean;
   }): Promise<RouteResult | AsyncIterable<string>> {
-    const provider = MODEL_PROVIDER[data.model];
+    const { modelProvider, fallbackMap } = this.modelConfig;
+
+    const provider = modelProvider[data.model];
     if (!provider) throw Errors.ROUTING_FAILED();
 
     const isPrimaryHealthy = await this.isHealthy(provider);
@@ -107,10 +226,10 @@ export class RoutingService {
       logger.warn({ model: data.model, provider }, 'Primary provider unhealthy, skipping to fallback');
     }
 
-    const fallbackModel = FALLBACK_MAP[data.model];
+    const fallbackModel = fallbackMap[data.model];
     if (fallbackModel === undefined) throw Errors.ROUTING_FAILED();
 
-    const fallbackProvider = MODEL_PROVIDER[fallbackModel];
+    const fallbackProvider = modelProvider[fallbackModel];
     if (fallbackProvider === undefined) throw Errors.ROUTING_FAILED();
 
     try {
@@ -157,12 +276,33 @@ export class RoutingService {
   }
 
   async getProvidersHealth() {
-    return Promise.all(['openai', 'anthropic', 'google'].map(async (p) => ({
-      name: p,
-      models: Object.keys(MODEL_PROVIDER).filter((model) => MODEL_PROVIDER[model] === p),
-      healthy: await this.isHealthy(p as ProviderName),
-      failureCount: Number(await this.redis.get(`provider:failures:${p}`) ?? '0'),
-    })));
+    const { modelProvider } = this.modelConfig;
+    // modelProvider values are guaranteed to be valid ProviderName entries
+    // because validateModelConfig filters out any unknown providers.
+    const providers = [...new Set(Object.values(modelProvider))];
+
+    if (providers.length === 0) return [];
+
+    // ⚡ Bolt: Batch Redis queries to avoid N+1 queries.
+    // Instead of querying `isHealthy` and `failures` individually per provider in a Promise.all,
+    // we use `mget` to fetch all statuses in a single round trip, significantly reducing latency.
+    const keysToFetch = providers.flatMap((p) => [
+      `provider:unhealthy:${p}`,
+      `provider:failures:${p}`,
+    ]);
+
+    const results = await this.redis.mget(keysToFetch);
+
+    return providers.map((p, index) => {
+      const unhealthyResult = results[index * 2];
+      const failureResult = results[index * 2 + 1];
+      return {
+        name: p,
+        models: Object.keys(modelProvider).filter((model) => modelProvider[model] === p),
+        healthy: unhealthyResult === null,
+        failureCount: Number(failureResult ?? '0'),
+      };
+    });
   }
 
   private callProvider(
@@ -220,6 +360,9 @@ export class RoutingService {
             yield `data: ${JSON.stringify({ output: chunkText })}\n\n`;
           }
         }
+        const finalResponse = await resultStream.response;
+        const usage = finalResponse.usageMetadata;
+        yield `data: ${JSON.stringify({ usage: { tokensInput: usage?.promptTokenCount ?? 0, tokensOutput: usage?.candidatesTokenCount ?? 0, tokensTotal: usage?.totalTokenCount ?? 0 }, provider: 'google' })}\n\n`;
         yield `data: [DONE]\n\n`;
       })();
     }
@@ -257,16 +400,25 @@ export class RoutingService {
         max_tokens: maxTokens,
         temperature,
         stream: true,
+        stream_options: { include_usage: true },
       });
 
       return (async function* () {
+        let tokensInput = 0;
+        let tokensOutput = 0;
+        let tokensTotal = 0;
         for await (const chunk of responseStream) {
           const content = chunk.choices[0]?.delta?.content || '';
           if (content) {
             yield `data: ${JSON.stringify({ output: content })}\n\n`;
           }
+          if (chunk.usage) {
+            tokensInput = chunk.usage.prompt_tokens ?? 0;
+            tokensOutput = chunk.usage.completion_tokens ?? 0;
+            tokensTotal = chunk.usage.total_tokens ?? 0;
+          }
         }
-        // Ideally we'd send final usage tokens here, but OpenAI stream usage requires extra config
+        yield `data: ${JSON.stringify({ usage: { tokensInput, tokensOutput, tokensTotal }, provider: 'openai' })}\n\n`;
         yield `data: [DONE]\n\n`;
       })();
     }
@@ -318,11 +470,22 @@ export class RoutingService {
       });
 
       return (async function* () {
+        let tokensInput = 0;
+        let tokensOutput = 0;
         for await (const chunk of responseStream) {
           if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
             yield `data: ${JSON.stringify({ output: chunk.delta.text })}\n\n`;
           }
+          if (chunk.type === 'message_start' && chunk.message?.usage) {
+            tokensInput = chunk.message.usage.input_tokens ?? 0;
+            tokensOutput = chunk.message.usage.output_tokens ?? 0;
+          }
+          if (chunk.type === 'message_delta' && chunk.usage) {
+            tokensOutput = chunk.usage.output_tokens ?? tokensOutput;
+          }
         }
+        const tokensTotal = tokensInput + tokensOutput;
+        yield `data: ${JSON.stringify({ usage: { tokensInput, tokensOutput, tokensTotal }, provider: 'anthropic' })}\n\n`;
         yield `data: [DONE]\n\n`;
       })();
     }

@@ -4,16 +4,18 @@ import { GatewayService } from '../services/gatewayService.js';
 import type { Message } from '@ai-gateway/types';
 
 export async function gatewayRoutes(fastify: FastifyInstance) {
-  const getService = () =>
-    new GatewayService({
-      authServiceUrl: process.env['AUTH_SERVICE_URL'] ?? 'http://localhost:3003',
-      creditServiceUrl: process.env['CREDIT_SERVICE_URL'] ?? 'http://localhost:3005',
-      routingServiceUrl: process.env['ROUTING_SERVICE_URL'] ?? 'http://localhost:3006',
-      kafkaPublish: fastify.kafka.publish.bind(fastify.kafka),
-      pgPool: fastify.pg,
-      redis: fastify.redis,
-      clientSecretEncryptionKey: process.env['CLIENT_SECRET_ENCRYPTION_KEY'],
-    });
+  // Create one shared GatewayService instance per server lifetime so that
+  // circuit-breaker state (and the token cache) persists across requests.
+  const service = new GatewayService({
+    authServiceUrl: process.env['AUTH_SERVICE_URL'] ?? 'http://localhost:3003',
+    creditServiceUrl: process.env['CREDIT_SERVICE_URL'] ?? 'http://localhost:3005',
+    routingServiceUrl: process.env['ROUTING_SERVICE_URL'] ?? 'http://localhost:3006',
+    kafkaPublish: fastify.kafka.publish.bind(fastify.kafka),
+    redis: fastify.redis,
+    tokenCacheTtlSeconds: process.env['TOKEN_CACHE_TTL_SECONDS']
+      ? Number(process.env['TOKEN_CACHE_TTL_SECONDS'])
+      : 60,
+  });
 
   // POST /gateway/request
   fastify.post(
@@ -65,7 +67,7 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
         const appJwt = req.headers['x-app-token'] as string | undefined;
 
         if (req.body.stream) {
-          const stream = await getService().processStreamRequest({
+          const stream = await service.processStreamRequest({
             token,
             appId,
             appApiKey,
@@ -97,7 +99,7 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        const result = await getService().processRequest({
+        const result = await service.processRequest({
           token,
           appId,
           appApiKey,
@@ -117,8 +119,23 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
     },
   );
 
-  // GET /gateway/models
+  // GET /gateway/models — delegates to routing-service so the list is always
+  // in sync with the active model config stored there.
   fastify.get('/models', async (_req, reply) => {
+    try {
+      const routingServiceUrl = process.env['ROUTING_SERVICE_URL'] ?? 'http://localhost:3006';
+      const res = await fetch(`${routingServiceUrl}/internal/routing/models`);
+      if (res.ok) {
+        const body = await res.json() as { success: boolean; data: { models: string[] } };
+        return reply.send(ok({ models: body.data.models }));
+      }
+    } catch {
+      // Routing service unavailable — fall through to hardcoded defaults.
+    }
+    // Fallback: return a static list so the gateway stays operational when the
+    // routing service is temporarily unreachable. This list mirrors the
+    // DEFAULT_MODEL_CONFIG in the routing service and is intentionally kept in
+    // sync via the shared source of truth (routing-service Redis config).
     return reply.send(ok({
       models: [
         'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo',

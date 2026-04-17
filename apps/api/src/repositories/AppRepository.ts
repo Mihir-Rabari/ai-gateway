@@ -91,12 +91,32 @@ export class AppRepository {
     }));
   }
 
-  async deleteApp(appId: string, developerId: string): Promise<boolean> {
+  async getAppById(developerId: string, appId: string): Promise<AppRow | null> {
+    const result = await this.pool.query<AppRow>(
+      `SELECT id, name, description, client_id as "clientId",
+              redirect_uris as "redirectUris", is_active as "isActive", created_at as "createdAt"
+       FROM registered_apps
+       WHERE developer_id = $1 AND id = $2 AND is_active = true`,
+      [developerId, appId],
+    );
+    if (result.rowCount === 0) return null;
+    const row = result.rows[0];
+    return {
+      ...row,
+      redirectUris: parseRedirectUris(row.redirectUris),
+    };
+  }
+
+  async deleteApp(appId: string, developerId: string): Promise<{ success: boolean; clientId: string | null }> {
     const result = await this.pool.query(
-      `UPDATE registered_apps SET is_active = false WHERE id = $1 AND developer_id = $2 RETURNING id`,
+      `UPDATE registered_apps SET is_active = false WHERE id = $1 AND developer_id = $2 RETURNING client_id`,
       [appId, developerId],
     );
-    return result.rowCount !== null && result.rowCount > 0;
+    const row = result.rows[0] as { client_id: string | null } | undefined;
+    return {
+      success: result.rowCount !== null && result.rowCount > 0,
+      clientId: row?.client_id ?? null,
+    };
   }
 
   async findActiveAppById(client: PoolClient, appId: string, developerId: string): Promise<boolean> {
