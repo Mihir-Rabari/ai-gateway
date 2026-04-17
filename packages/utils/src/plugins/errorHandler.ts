@@ -20,11 +20,16 @@ export const errorHandlerPlugin = fp(async (fastify: FastifyInstance) => {
     const appError = error as { statusCode?: number; code?: string; message?: string };
     const statusCode = appError.statusCode ?? 500;
     fastify.log.error({ err: error }, 'Unhandled error');
+
+    // Security: Never leak potentially sensitive error details on 5xx responses.
+    const isServerError = statusCode >= 500;
+    const safeMessage = isServerError ? 'Internal server error' : (appError.message ?? 'Internal server error');
+
     reply.status(statusCode).send({
       success: false,
       error: {
         code: appError.code ?? 'INTERNAL',
-        message: appError.message ?? 'Internal server error',
+        message: safeMessage,
         statusCode,
       },
     });

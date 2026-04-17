@@ -103,9 +103,10 @@ export const chatRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.status(res.status).send(text);
       }
     } catch (err) {
+      console.error(`[API Trace] Chat request failed:`, err);
       return reply.status(500).send({
         success: false,
-        error: { code: 'INTERNAL', message: err instanceof Error ? err.message : 'Unexpected server error', statusCode: 500 },
+        error: { code: 'INTERNAL', message: 'Unexpected server error', statusCode: 500 },
       });
     }
   });
