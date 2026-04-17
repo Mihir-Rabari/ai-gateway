@@ -3,7 +3,7 @@ import cors from '@fastify/cors';
 import formbody from '@fastify/formbody';
 import rateLimit from '@fastify/rate-limit';
 import { getAuthConfig } from '@ai-gateway/config';
-import { createLogger, getFastifyLoggerOptions, postgresPlugin, redisPlugin, kafkaPlugin, errorHandlerPlugin } from '@ai-gateway/utils';
+import { createLogger, getFastifyLoggerOptions, postgresPlugin, redisPlugin, kafkaPlugin, errorHandlerPlugin, securityHeadersPlugin } from '@ai-gateway/utils';
 import { authRoutes } from './routes/authRoutes.js';
 import { internalRoutes } from './routes/internalRoutes.js';
 import { oauthRoutes } from './routes/oauthRoutes.js';
@@ -18,6 +18,7 @@ async function bootstrap() {
   let auditConsumer: { disconnect: () => Promise<void> } | null = null;
 
   // ─── Plugins ───────────────────────────────────
+  await app.register(securityHeadersPlugin);
   await app.register(cors, {
     origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000', 'http://localhost:3009'],
     credentials: true,
