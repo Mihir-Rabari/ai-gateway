@@ -13,7 +13,10 @@ const config = getRoutingConfig();
 const app = Fastify({ logger: false });
 
 async function bootstrap() {
-  await app.register(cors);
+  await app.register(cors, {
+    origin: config.ALLOWED_ORIGINS.split(','),
+    credentials: true,
+  });
   await app.register(redisPlugin);
   await app.register(kafkaPlugin);
 

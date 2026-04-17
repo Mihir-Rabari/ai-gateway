@@ -17,6 +17,7 @@ const baseSchema = z.object({
   KAFKA_BROKERS: z.string(),
   KAFKA_CLIENT_ID: z.string().default('ai-gateway'),
   KAFKA_GROUP_ID: z.string().default('ai-gateway-group'),
+  ALLOWED_ORIGINS: z.string().default('http://localhost:3000'),
 });
 
 // ─────────────────────────────────────────
