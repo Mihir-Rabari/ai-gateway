@@ -91,6 +91,14 @@ export class AppRepository {
     }));
   }
 
+  async appExists(developerId: string, appId: string): Promise<boolean> {
+    const result = await this.pool.query(
+      `SELECT 1 FROM registered_apps WHERE developer_id = $1 AND id = $2 AND is_active = true`,
+      [developerId, appId]
+    );
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
   async getAppById(developerId: string, appId: string): Promise<AppRow | null> {
     const result = await this.pool.query<AppRow>(
       `SELECT id, name, description, client_id as "clientId",

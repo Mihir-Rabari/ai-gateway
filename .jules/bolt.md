@@ -4,3 +4,7 @@
 ## 2026-04-15 - Fetch Single App By ID
 **Learning:** The Console app was fetching the entire list of a developer's apps just to display the details of one specific app, which creates unnecessary overhead as the number of apps grows.
 **Action:** Always verify if there is an endpoint to fetch a single item by ID before falling back to fetching the entire list and filtering it on the client side. I implemented a GET `/apps/:id` endpoint and updated the frontend to consume it.
+
+## 2026-04-17 - Targeted Database Existence Checks
+**Learning:** Checking for an item's existence by fetching an entire list of items from the database and using `.some()` in memory is an anti-pattern that wastes memory and database bandwidth.
+**Action:** Use targeted database queries (e.g., `SELECT 1 FROM ...`) in the repository layer to efficiently verify existence without loading full records into memory.

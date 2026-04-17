@@ -45,6 +45,10 @@ export class AppService {
     return this.repo.findAppsByDeveloperId(developerId);
   }
 
+  async appExists(appId: string, developerId: string) {
+    return this.repo.appExists(developerId, appId);
+  }
+
   async getApp(appId: string, developerId: string) {
     return this.repo.getAppById(developerId, appId);
   }
