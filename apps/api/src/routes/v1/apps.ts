@@ -87,6 +87,41 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
+  fastify.get('/apps/:id', {
+    preHandler: [requireAuth],
+    schema: {
+      tags: ['Developer Apps'],
+      description: 'Get a specific registered app',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: {
+          id: { type: 'string' },
+        },
+      },
+    },
+  }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    try {
+      fastify.log.info({ userId: req.userId, appId: id }, 'Fetching app for user');
+      const app = await appService.getApp(id, req.userId);
+      if (!app) {
+        return reply.status(404).send(fail({ name: 'NotFoundError', code: 'APP_NOT_FOUND', message: 'App not found', statusCode: 404 }));
+      }
+      fastify.log.info({ userId: req.userId, appId: id }, 'Fetched app');
+      return reply.send(ok(app));
+    } catch (err) {
+      try {
+        const errObj = err instanceof Error ? { message: err.message, stack: err.stack } : { err };
+        fastify.log.error({ err: errObj, userId: (req as any).userId, appId: id }, 'Failed to fetch app');
+      } catch (logErr) {
+        console.error('Failed to log error for app fetch', logErr);
+      }
+      return reply.status(500).send(fail({ name: 'Error', code: 'APP_FETCH_ERR', message: 'Failed to fetch app', statusCode: 500 }));
+    }
+  });
+
   fastify.delete('/apps/:id', {
     preHandler: [requireAuth],
     schema: {

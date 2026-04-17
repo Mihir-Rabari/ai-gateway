@@ -2,6 +2,10 @@
 **Learning:** Checking multiple provider health statuses using `Promise.all` with individual `redis.get` calls creates an N+1 query pattern that adds unnecessary latency.
 **Action:** When querying multiple keys from Redis (especially in critical paths like routing health checks), use `redis.mget` to fetch all values in a single round-trip. Ensure the Redis mock in tests is updated to support `mget`.
 
-## $(date +%Y-%m-%d) - Targeted DB Queries over Full Collection Scans
+## 2025-04-15 - Fetch Single App By ID
+**Learning:** The Console app was fetching the entire list of a developer's apps just to display the details of one specific app, which creates unnecessary overhead as the number of apps grows.
+**Action:** Always verify if there is an endpoint to fetch a single item by ID before falling back to fetching the entire list and filtering it on the client side. I implemented a GET `/apps/:id` endpoint and updated the frontend to consume it.
+
+## 2025-04-15 - Targeted DB Queries over Full Collection Scans
 **Learning:** Checking resource existence by fetching an entire collection into memory (`appService.listApps`) and searching it via array methods (`.some()`) is an $O(N)$ operation that wastes database bandwidth and server memory.
 **Action:** Implement targeted $O(1)$ queries in the repository layer (e.g., `SELECT 1 FROM table WHERE ...`) and use them in API routes for existence checks.
