@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { getBillingConfig } from '@ai-gateway/config';
-import { createLogger, getFastifyLoggerOptions, postgresPlugin, redisPlugin, kafkaPlugin, errorHandlerPlugin } from '@ai-gateway/utils';
+import { createLogger, getFastifyLoggerOptions, postgresPlugin, redisPlugin, kafkaPlugin, errorHandlerPlugin, securityHeadersPlugin } from '@ai-gateway/utils';
 import { billingRoutes } from './routes/billingRoutes.js';
 
 const logger = createLogger('billing-service');
@@ -21,6 +21,7 @@ app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body, 
 });
 
 async function bootstrap() {
+  await app.register(securityHeadersPlugin);
   await app.register(cors, {
     origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000', 'http://localhost:3009'],
     credentials: true,

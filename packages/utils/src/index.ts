@@ -295,3 +295,4 @@ export { postgresPlugin } from './plugins/postgres.js';
 export { redisPlugin } from './plugins/redis.js';
 export { kafkaPlugin } from './plugins/kafka.js';
 export { errorHandlerPlugin } from './plugins/errorHandler.js';
+export { securityHeadersPlugin } from './plugins/securityHeaders.js';
