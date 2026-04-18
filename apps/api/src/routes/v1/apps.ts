@@ -253,8 +253,9 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = req.params as { id: string };
 
     try {
-      const apps = await appService.listApps(req.userId);
-      const exists = (apps as Array<{ id: string }>).some((app) => app.id === id);
+      // ⚡ Bolt: Fetch specific app instead of entire list to reduce DB overhead
+      const app = await appService.getApp(id, req.userId);
+      const exists = !!app;
 
       if (!exists) {
         return reply.status(404).send(fail({ name: 'NotFoundError', code: 'APP_NOT_FOUND', message: 'App not found', statusCode: 404 }));
