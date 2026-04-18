@@ -73,15 +73,9 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
     } catch (err) {
       // Log detailed error information for debugging (stack if available) along with userId
       try {
-        const errObj = err instanceof Error ? { message: err.message, stack: err.stack } : { err };
-        fastify.log.error({ err: errObj, userId: (req as any).userId }, 'Failed to fetch apps');
-        // Also print to stderr so it's captured in pm2 logs reliably
-        // eslint-disable-next-line no-console
-        console.error('Failed to fetch apps', JSON.stringify({ err: errObj, userId: (req as any).userId }));
+        fastify.log.error({ err, userId: (req as any).userId }, 'Failed to fetch apps');
       } catch (logErr) {
         // If logging itself fails, ensure we still send the generic 500
-        // eslint-disable-next-line no-console
-        console.error('Failed to log error for apps fetch', logErr);
       }
       return reply.status(500).send(fail({ name: 'Error', code: 'APP_FETCH_ERR', message: 'Failed to fetch apps', statusCode: 500 }));
     }
@@ -113,10 +107,8 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.send(ok(app));
     } catch (err) {
       try {
-        const errObj = err instanceof Error ? { message: err.message, stack: err.stack } : { err };
-        fastify.log.error({ err: errObj, userId: (req as any).userId, appId: id }, 'Failed to fetch app');
+        fastify.log.error({ err, userId: (req as any).userId, appId: id }, 'Failed to fetch app');
       } catch (logErr) {
-        console.error('Failed to log error for app fetch', logErr);
       }
       return reply.status(500).send(fail({ name: 'Error', code: 'APP_FETCH_ERR', message: 'Failed to fetch app', statusCode: 500 }));
     }

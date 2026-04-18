@@ -23,7 +23,7 @@ export const chatRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
   }, async (req, reply) => {
-    console.log(`[API Trace] Incoming /chat request. RequestID: ${req.id}`);
+    req.log.info(`[API Trace] Incoming /chat request. RequestID: ${req.id}`);
     try {
       // Forward to gateway with user's token
       const authHeader = req.headers['authorization'] as string;
@@ -45,14 +45,14 @@ export const chatRoutes: FastifyPluginAsync = async (fastify) => {
           body: JSON.stringify(req.body),
         });
       } catch (fetchErr) {
-        console.error(`[API Trace] Fetch failed to Gateway at ${gatewayUrl}:`, fetchErr);
+        req.log.error(fetchErr, `[API Trace] Fetch failed to Gateway at ${gatewayUrl}`);
         return reply.status(503).send({
           success: false,
           error: { code: 'GATEWAY_UNREACHABLE', message: 'AI Gateway service is unavailable. Please try again.', statusCode: 503 },
         });
       }
 
-      console.log(`[API Trace] Gateway response received. Status: ${res.status}, Content-Type: ${res.headers.get('content-type')}`);
+      req.log.info(`[API Trace] Gateway response received. Status: ${res.status}, Content-Type: ${res.headers.get('content-type')}`);
 
       const contentType = res.headers.get('content-type');
 
@@ -78,11 +78,11 @@ export const chatRoutes: FastifyPluginAsync = async (fastify) => {
             chunkCount++;
             const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
             if (chunkCount === 1) {
-              console.log(`[API Trace] First stream chunk received. Length: ${buffer.length}`);
+              req.log.info(`[API Trace] First stream chunk received. Length: ${buffer.length}`);
             }
             reply.raw.write(buffer);
           }
-          console.log(`[API Trace] Stream body ended. Total chunks: ${chunkCount}`);
+          req.log.info(`[API Trace] Stream body ended. Total chunks: ${chunkCount}`);
         }
         reply.raw.end();
         return;
@@ -103,9 +103,10 @@ export const chatRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.status(res.status).send(text);
       }
     } catch (err) {
+      req.log.error(err, 'Failed to process chat request');
       return reply.status(500).send({
         success: false,
-        error: { code: 'INTERNAL', message: err instanceof Error ? err.message : 'Unexpected server error', statusCode: 500 },
+        error: { code: 'INTERNAL', message: 'Internal server error', statusCode: 500 },
       });
     }
   });
