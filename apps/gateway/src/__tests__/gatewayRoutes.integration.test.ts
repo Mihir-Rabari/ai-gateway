@@ -71,6 +71,7 @@ describe('gatewayRoutes integration', () => {
     app.decorate('redis', {
       incr: async () => 1,
       expire: async () => 1,
+    eval: async () => 1,
     } as any);
 
     let lockCalled = false;
