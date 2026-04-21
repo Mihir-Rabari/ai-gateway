@@ -263,8 +263,16 @@ export class RoutingService {
 
   private async recordFailure(provider: ProviderName): Promise<void> {
     const key = `provider:failures:${provider}`;
-    const failures = await this.redis.incr(key);
-    await this.redis.expire(key, 300); // reset after 5 minutes
+    // Optimize: Use atomic Lua script to prevent race conditions and reduce network latency
+    const failures = await this.redis.eval(
+      `local current = redis.call('INCR', KEYS[1])
+       redis.call('EXPIRE', KEYS[1], ARGV[1])
+       return current`,
+      1,
+      key,
+      300
+    ) as number;
+
     if (failures >= this.FAILURE_THRESHOLD) {
       await this.markUnhealthy(provider);
       logger.warn({ provider, failures }, 'Provider circuit breaker tripped');
