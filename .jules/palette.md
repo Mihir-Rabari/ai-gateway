@@ -1,0 +1,3 @@
+## 2024-03-24 - [Invalid HTML Structure in Console App Links]
+ **Learning:** The Next.js frontend has a recurring accessibility issue where `<Button>` components are nested inside `<Link>` or `<a>` tags (e.g., `<Link href="..."><Button>...</Button></Link>`). This is invalid HTML5, creates redundant tab stops, and confuses screen readers.
+ **Action:** Refactor invalid `<Link><Button/></Link>` patterns by applying the Button component's visual styling (via a CSS-based button or utility classes) directly to the `<Link>` element, or by ensuring custom `<Button>` components use an `asChild` prop or forward props correctly.
