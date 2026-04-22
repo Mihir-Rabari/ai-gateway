@@ -10,6 +10,12 @@ const logger = createLogger('routing-service');
 
 const REDIS_MODEL_CONFIG_KEY = 'model:config';
 
+const SLIDING_WINDOW_LUA = `
+local current = redis.call("INCR", KEYS[1])
+redis.call("EXPIRE", KEYS[1], ARGV[1])
+return current
+`;
+
 interface RouteResult {
   output: string;
   tokensInput: number;
@@ -263,8 +269,7 @@ export class RoutingService {
 
   private async recordFailure(provider: ProviderName): Promise<void> {
     const key = `provider:failures:${provider}`;
-    const failures = await this.redis.incr(key);
-    await this.redis.expire(key, 300); // reset after 5 minutes
+    const failures = await this.redis.eval(SLIDING_WINDOW_LUA, 1, key, 300) as number; // reset after 5 minutes
     if (failures >= this.FAILURE_THRESHOLD) {
       await this.markUnhealthy(provider);
       logger.warn({ provider, failures }, 'Provider circuit breaker tripped');

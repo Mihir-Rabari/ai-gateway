@@ -21,6 +21,12 @@ function createRedisMock(initialState: Record<string, string> = {}) {
       return next;
     },
     expire: async () => 1,
+    eval: async (script: string, numKeys: number, key: string, ...args: any[]) => {
+      // Mock the SLIDING_WINDOW_LUA behavior
+      const next = Number(state.get(key) ?? '0') + 1;
+      state.set(key, String(next));
+      return next;
+    },
     del: async (...keys: string[]) => {
       let deleted = 0;
       for (const key of keys) {
