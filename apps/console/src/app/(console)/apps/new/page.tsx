@@ -63,7 +63,7 @@ export default function RegisterAppPage() {
           <Field label="App name" hint="Required"><TextInput value={name} onChange={(event) => setName(event.target.value)} placeholder="My AI product" required /></Field>
           <Field label="Description" hint="Optional"><TextInput value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Short summary of what the app does" /></Field>
           <Field label="Redirect URIs" hint="One per line"><TextArea value={redirectUrisRaw} onChange={(event) => setRedirectUrisRaw(event.target.value)} placeholder={"http://localhost:3000/callback\nhttps://myapp.com/callback"} /></Field>
-          <div className="flex flex-wrap gap-3"><Button type="submit" busy={loading}>{loading ? "Registering" : "Register app"}</Button><Link href="/apps"><Button variant="secondary">Cancel</Button></Link></div>
+          <div className="flex flex-wrap gap-3"><Button type="submit" busy={loading}>{loading ? "Registering" : "Register app"}</Button><Link href="/apps" className="inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium transition duration-200 disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 border border-white/10 bg-white/8 text-white hover:bg-white/14">Cancel</Link></div>
         </form>
       </Surface>
     </div>
