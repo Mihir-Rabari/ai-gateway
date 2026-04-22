@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { Button, Field, InlineMessage, ShellSection, Surface, TextArea, TextInput } from "@/components/console/system";
+import { Button, Field, IconButton, InlineMessage, ShellSection, Surface, TextArea, TextInput } from "@/components/console/system";
 
 type CreatedApp = {
   id: string;
@@ -81,7 +81,7 @@ function CredentialRow({ label, value, secret = false, onCopy }: { label: string
           <p className="mt-3 break-all font-mono text-sm text-white/82">{revealed ? value : "•".repeat(24)}</p>
         </div>
         <div className="flex items-center gap-2">
-          {secret ? <button type="button" onClick={() => setRevealed((current) => !current)} className="rounded-full border border-white/10 bg-white/[0.04] p-3 text-white/66 transition hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50" aria-label={revealed ? `Hide ${label}` : `Show ${label}`} title={revealed ? `Hide ${label}` : `Show ${label}`}>{revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button> : null}
+          {secret ? <IconButton onClick={() => setRevealed((current) => !current)} aria-label={revealed ? `Hide ${label}` : `Show ${label}`}>{revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</IconButton> : null}
           <Button variant="secondary" onClick={onCopy}>Copy</Button>
         </div>
       </div>
