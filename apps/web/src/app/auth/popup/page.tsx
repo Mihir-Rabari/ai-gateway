@@ -5,6 +5,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api, setAuthToken, setRefreshToken } from "@/lib/api";
 
+/**
+ * Whitelist of origins allowed to receive the authentication postMessage.
+ * Includes the main app and the dashboard console, plus any origins
+ * specified in the environment.
+ */
+const GET_ALLOWED_ORIGINS = () => {
+  const envOrigins = process.env.NEXT_PUBLIC_ALLOWED_ORIGINS?.split(',') ?? [];
+  const consoleUrl = process.env.NEXT_PUBLIC_CONSOLE_URL;
+  const defaultOrigins = ['http://localhost:3000', 'http://localhost:3009'];
+
+  const origins = new Set([...defaultOrigins, ...envOrigins]);
+  if (consoleUrl) {
+    try {
+      origins.add(new URL(consoleUrl).origin);
+    } catch { /* ignore invalid URL */ }
+  }
+  return Array.from(origins);
+};
+
 export default function AuthPopupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,18 +43,18 @@ export default function AuthPopupPage() {
         // Validate the origin passed by the SDK against allowed origins.
         const params = new URLSearchParams(window.location.search);
         const callbackOrigin = params.get('origin');
+        const allowedOrigins = GET_ALLOWED_ORIGINS();
 
-        const allowedOrigins = (process.env.NEXT_PUBLIC_ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:3009').split(',');
-
-        if (!callbackOrigin || !allowedOrigins.includes(callbackOrigin)) {
-          throw new Error('Invalid or missing callback origin.');
+        if (callbackOrigin && allowedOrigins.includes(callbackOrigin)) {
+          window.opener.postMessage(
+            { type: 'AI_GATEWAY_AUTH', accessToken: res.accessToken, user: res.user },
+            callbackOrigin
+          );
+          window.close();
+        } else {
+          console.error('Unauthorized or missing origin for auth popup:', callbackOrigin);
+          setError("Unauthorized callback origin.");
         }
-
-        window.opener.postMessage(
-          { type: 'AI_GATEWAY_AUTH', accessToken: res.accessToken, user: res.user },
-          callbackOrigin
-        );
-        window.close();
       } else {
         setError("This window was not opened as a popup.");
       }
