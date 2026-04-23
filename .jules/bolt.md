@@ -4,3 +4,6 @@
 ## 2026-04-15 - Fetch Single App By ID
 **Learning:** The Console app was fetching the entire list of a developer's apps just to display the details of one specific app, which creates unnecessary overhead as the number of apps grows.
 **Action:** Always verify if there is an endpoint to fetch a single item by ID before falling back to fetching the entire list and filtering it on the client side. I implemented a GET `/apps/:id` endpoint and updated the frontend to consume it.
+## 2025-04-22 - Gateway Rate Limiting Logic Using Redis Eval
+**Learning:** Sequential `incr` and `expire` logic for Redis rate limiting in Node.js creates network overhead and a race condition (e.g. server crash after `incr` and before `expire` leaves the key locked forever).
+**Action:** Replaced sequential `incr` and `expire` logic with an atomic Lua script `eval` command, which both minimizes round-trip latency and eliminates race conditions. Ensure the mock implementations in integration/unit tests properly stub `eval`.
