@@ -24,7 +24,13 @@ export default function AuthPopupPage() {
         // Use the origin passed by the SDK so the postMessage is restricted to
         // the correct opener origin instead of the insecure wildcard '*'.
         const params = new URLSearchParams(window.location.search);
-        const callbackOrigin = params.get('origin') ?? '*';
+        const callbackOrigin = params.get('origin');
+        const allowedOrigins = (process.env.NEXT_PUBLIC_ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:3009').split(',');
+
+        if (!callbackOrigin || !allowedOrigins.includes(callbackOrigin)) {
+          throw new Error("Invalid or untrusted origin for authentication popup.");
+        }
+
         window.opener.postMessage(
           { type: 'AI_GATEWAY_AUTH', accessToken: res.accessToken, user: res.user },
           callbackOrigin
