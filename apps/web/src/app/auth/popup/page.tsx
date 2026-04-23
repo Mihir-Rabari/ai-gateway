@@ -5,6 +5,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api, setAuthToken, setRefreshToken } from "@/lib/api";
 
+/**
+ * Whitelist of origins allowed to receive the authentication postMessage.
+ * Includes the main app and the dashboard console, plus any origins
+ * specified in the environment.
+ */
+const GET_ALLOWED_ORIGINS = () => {
+  const envOrigins = process.env.NEXT_PUBLIC_ALLOWED_ORIGINS?.split(',') ?? [];
+  const consoleUrl = process.env.NEXT_PUBLIC_CONSOLE_URL;
+  const defaultOrigins = ['http://localhost:3000', 'http://localhost:3009'];
+
+  const origins = new Set([...defaultOrigins, ...envOrigins]);
+  if (consoleUrl) {
+    try {
+      origins.add(new URL(consoleUrl).origin);
+    } catch { /* ignore invalid URL */ }
+  }
+  return Array.from(origins);
+};
+
 export default function AuthPopupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,12 +43,19 @@ export default function AuthPopupPage() {
         // Use the origin passed by the SDK so the postMessage is restricted to
         // the correct opener origin instead of the insecure wildcard '*'.
         const params = new URLSearchParams(window.location.search);
-        const callbackOrigin = params.get('origin') ?? '*';
-        window.opener.postMessage(
-          { type: 'AI_GATEWAY_AUTH', accessToken: res.accessToken, user: res.user },
-          callbackOrigin
-        );
-        window.close();
+        const callbackOrigin = params.get('origin');
+        const allowedOrigins = GET_ALLOWED_ORIGINS();
+
+        if (callbackOrigin && allowedOrigins.includes(callbackOrigin)) {
+          window.opener.postMessage(
+            { type: 'AI_GATEWAY_AUTH', accessToken: res.accessToken, user: res.user },
+            callbackOrigin
+          );
+          window.close();
+        } else {
+          console.error('Unauthorized or missing origin for auth popup:', callbackOrigin);
+          setError("Unauthorized callback origin.");
+        }
       } else {
         setError("This window was not opened as a popup.");
       }
