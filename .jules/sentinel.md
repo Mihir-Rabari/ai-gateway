@@ -8,7 +8,7 @@
 **Learning:** To maintain a minimal dependency footprint, it is possible and effective to implement a custom Fastify plugin (`securityHeadersPlugin`) using the `onSend` hook to manually inject these headers, rather than relying on external packages like `@fastify/helmet`.
 **Prevention:** Always ensure standard security headers are applied uniformly across all web and API services by default, preferably through a centralized middleware or plugin.
 
-## 2024-07-02 - [Fix Information Leakage in API Route]
-**Vulnerability:** The `/chat` API route in `apps/api/src/routes/v1/chat.ts` returned `err.message` directly in a 500 error response.
-**Learning:** Returning raw internal error messages (`err.message` or stack traces) can expose sensitive internal application logic, configurations, or system state to end-users and potential attackers. Error handling blocks must sanitize outputs.
-**Prevention:** Always log detailed errors internally (e.g., using `fastify.log.error`) and return sanitized, generic error messages (e.g., "Internal server error") in HTTP responses for 5xx server errors.
+## 2024-05-18 - Prevent Error Details Information Leakage
+**Vulnerability:** Fastify route catch-all handlers were logging full error details globally using `console.log`/`console.error` and sending raw `err.message` in 5xx JSON responses.
+**Learning:** Returning unhandled error properties (like `err.message` or stack traces) directly to the client exposes internal architectural and state information, creating an information leakage vulnerability. Additionally, global `console` logs do not easily tie errors back to a specific HTTP request, complicating auditing.
+**Prevention:** Always sanitize 5xx error responses with generic messages (e.g., 'Unexpected server error') before sending to the client. Use request-scoped structured logging (`req.log.info`, `req.log.error`) to log the detailed, raw error object internally, ensuring that logs are tied to request contexts securely.
