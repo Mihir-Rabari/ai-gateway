@@ -1,4 +1,5 @@
 import { fetch } from 'undici';
+import bcrypt from 'bcrypt';
 import { generateId, Errors, calculateCredits, createLogger, GatewayError } from '@ai-gateway/utils';
 import { KAFKA_TOPICS } from '@ai-gateway/config';
 import type { GatewayRequest, GatewayResponse, UsageEvent } from '@ai-gateway/types';
@@ -49,8 +50,8 @@ export class GatewayService {
     const requestId = generateId();
     const startTime = Date.now();
 
-    // Step 1: Validate user token
-    const user = await this.validateToken(input.token);
+    // Step 1: Validate user token or API key
+    const user = await this.validateToken(input.token, input.appId);
     logger.info({ requestId, userId: user.userId, model: input.model }, 'Processing request');
 
     // Step 2: Rate Limiting
@@ -151,7 +152,36 @@ export class GatewayService {
     return (result.rowCount ?? 0) > 0;
   }
 
-  private async validateToken(token: string): Promise<ValidatedUser> {
+  private async validateToken(token: string, appId: string): Promise<ValidatedUser> {
+    if (token.startsWith('agk_')) {
+      if (!appId || appId === 'unknown') {
+        throw Errors.INVALID_TOKEN();
+      }
+
+      // Fetch active API keys for this app and verify
+      const result = await this.clients.pgPool.query(
+        `SELECT k.key_hash, a.developer_id, u.plan_id, u.email
+         FROM api_keys k
+         JOIN registered_apps a ON k.app_id = a.id
+         JOIN users u ON a.developer_id = u.id
+         WHERE k.app_id = $1 AND k.revoked_at IS NULL AND a.is_active = true AND u.is_active = true`,
+        [appId]
+      );
+
+      for (const row of result.rows) {
+        const isValid = await bcrypt.compare(token, row.key_hash);
+        if (isValid) {
+          return {
+            userId: row.developer_id,
+            planId: row.plan_id,
+            email: row.email,
+          };
+        }
+      }
+
+      throw Errors.INVALID_TOKEN();
+    }
+
     const res = await fetch(`${this.clients.authServiceUrl}/internal/auth/validate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

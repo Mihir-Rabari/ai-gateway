@@ -9,3 +9,8 @@
 **Vulnerability:** Missing security headers on the Gateway service exposed it to common web vulnerabilities like clickjacking, MIME sniffing, and cross-site scripting (XSS).
 **Learning:** We can manually add security headers using Fastify's `onSend` hook without introducing new dependencies like `@fastify/helmet` to maintain boundary rules.
 **Prevention:** Ensure new services define essential security headers via hooks or custom middleware to provide defense-in-depth security.
+
+## 2024-04-01 - [API Key Authentication Authentication Bypass]
+**Vulnerability:** Gateway bypassed standard user/JWT validation if an API Key was used, but didn't actually implement API key validation. The system allowed requests to specify arbitrary appIds via headers without verifying app ownership via the token.
+**Learning:** In edge service layer gateways, different token types (JWT vs. API Key) require divergent and explicit authentication paths. Merely proxying tokens to an internal auth service meant API keys either failed, or if they didn't, left app ownership unvalidated.
+**Prevention:** API Keys should be checked immediately at the gateway layer by performing a bcrypt comparison of the incoming key against stored hashes associated with the provided application ID. This correctly links the request to the developer's user identity and enforces app ownership.
