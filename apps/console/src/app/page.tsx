@@ -63,11 +63,12 @@ export default function ConsolePage() {
                 usage, and earnings. Every route still speaks directly to the existing backend client.
               </p>
               <div className="mt-10 flex flex-wrap gap-3">
-                <Link href="/login">
-                  <Button className="h-12 px-6">
-                    Open dashboard
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
+                <Link
+                  href="/login"
+                  className="bg-white text-black hover:bg-white/86 inline-flex h-12 px-6 items-center justify-center gap-2 rounded-full text-sm font-medium transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                >
+                  Open dashboard
+                  <ArrowRight className="h-4 w-4" />
                 </Link>
                 <a
                   href={`${webUrl}/signup`}
