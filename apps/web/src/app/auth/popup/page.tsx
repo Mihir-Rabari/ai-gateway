@@ -21,10 +21,20 @@ export default function AuthPopupPage() {
       setAuthToken(res.accessToken);
       setRefreshToken(res.refreshToken);
       if (typeof window !== 'undefined' && window.opener) {
-        // Use the origin passed by the SDK so the postMessage is restricted to
-        // the correct opener origin instead of the insecure wildcard '*'.
+        // Validate target origin against trusted whitelist to prevent sensitive data leakage
+        // via window.opener.postMessage. Never use wildcard '*' for sensitive auth payloads.
         const params = new URLSearchParams(window.location.search);
-        const callbackOrigin = params.get('origin') ?? '*';
+        const callbackOrigin = params.get('origin');
+
+        const allowedOriginsStr = process.env.NEXT_PUBLIC_ALLOWED_ORIGINS ?? "http://localhost:3000,http://localhost:3009";
+        const allowedOrigins = allowedOriginsStr.split(',');
+
+        if (!callbackOrigin || !allowedOrigins.includes(callbackOrigin)) {
+          setError("Unauthorized callback origin.");
+          setLoading(false);
+          return;
+        }
+
         window.opener.postMessage(
           { type: 'AI_GATEWAY_AUTH', accessToken: res.accessToken, user: res.user },
           callbackOrigin
