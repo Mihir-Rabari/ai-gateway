@@ -1,6 +1,3 @@
-## 2025-04-12 - Batched Redis Operations in Routing Service
-**Learning:** Checking multiple provider health statuses using `Promise.all` with individual `redis.get` calls creates an N+1 query pattern that adds unnecessary latency.
-**Action:** When querying multiple keys from Redis (especially in critical paths like routing health checks), use `redis.mget` to fetch all values in a single round-trip. Ensure the Redis mock in tests is updated to support `mget`.
-## 2026-04-15 - Fetch Single App By ID
-**Learning:** The Console app was fetching the entire list of a developer's apps just to display the details of one specific app, which creates unnecessary overhead as the number of apps grows.
-**Action:** Always verify if there is an endpoint to fetch a single item by ID before falling back to fetching the entire list and filtering it on the client side. I implemented a GET `/apps/:id` endpoint and updated the frontend to consume it.
+## 2024-04-20 - [Atomic Rate Limiting with Redis Lua Scripts]
+**Learning:** Sequential `INCR` and conditional `EXPIRE` commands in Redis for rate limiting can leave un-expiring keys if the Node.js process crashes in between. Using `redis.eval` with a short Lua script ensures both operations are atomic and saves a network round trip. Test mocks that rely on `INCR`/`EXPIRE` will break and need an `eval` implementation.
+**Action:** Always prefer atomic `eval` Lua scripts over sequential Redis mutations for time-bound state like rate limits or distributed locks. When updating to `eval`, verify that the test environment's mock Redis implements a matching `eval` method.
