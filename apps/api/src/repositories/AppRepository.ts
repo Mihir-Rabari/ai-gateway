@@ -121,7 +121,15 @@ export class AppRepository {
 
   async findActiveAppById(client: PoolClient, appId: string, developerId: string): Promise<boolean> {
     const result = await client.query(
-      `SELECT id FROM registered_apps WHERE id = $1 AND developer_id = $2 AND is_active = true`,
+      `SELECT 1 FROM registered_apps WHERE id = $1 AND developer_id = $2 AND is_active = true`,
+      [appId, developerId],
+    );
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async hasApp(appId: string, developerId: string): Promise<boolean> {
+    const result = await this.pool.query(
+      `SELECT 1 FROM registered_apps WHERE id = $1 AND developer_id = $2 AND is_active = true`,
       [appId, developerId],
     );
     return result.rowCount !== null && result.rowCount > 0;

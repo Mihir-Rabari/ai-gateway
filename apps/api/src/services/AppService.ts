@@ -53,6 +53,10 @@ export class AppService {
     return this.repo.deleteApp(appId, developerId);
   }
 
+  async hasApp(appId: string, developerId: string): Promise<boolean> {
+    return this.repo.hasApp(appId, developerId);
+  }
+
   async rotateApiKey(appId: string, developerId: string) {
     const rawApiKey = `agk_${generateId()}${generateId()}`;
     const keyId = generateId();

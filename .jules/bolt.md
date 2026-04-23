@@ -4,3 +4,6 @@
 ## 2026-04-15 - Fetch Single App By ID
 **Learning:** The Console app was fetching the entire list of a developer's apps just to display the details of one specific app, which creates unnecessary overhead as the number of apps grows.
 **Action:** Always verify if there is an endpoint to fetch a single item by ID before falling back to fetching the entire list and filtering it on the client side. I implemented a GET `/apps/:id` endpoint and updated the frontend to consume it.
+## 2025-04-21 - Replace `.some()` on Lists with Targeted DB Query
+**Learning:** Using `appService.listApps(req.userId)` to fetch all apps and checking existence via `.some()` introduces an O(N) memory overhead and data fetching bottleneck.
+**Action:** Always prefer executing a targeted database query like `SELECT 1 FROM ... WHERE id = $1` instead of loading entire lists into memory for existence checks.
