@@ -74,6 +74,26 @@ export function MetricCard({
   );
 }
 
+export const IconButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { "aria-label": string }>(
+  function IconButton({ className, children, "aria-label": ariaLabel, title, ...props }, ref) {
+    return (
+      <button
+        ref={ref}
+        type="button"
+        className={cn(
+          "rounded-full border border-white/10 bg-white/[0.04] p-3 text-white/66 transition hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+          className
+        )}
+        aria-label={ariaLabel}
+        title={title ?? ariaLabel}
+        {...props}
+      >
+        {children}
+      </button>
+    );
+  }
+);
+
 export const Button = forwardRef<
   HTMLButtonElement,
   ButtonHTMLAttributes<HTMLButtonElement> & {

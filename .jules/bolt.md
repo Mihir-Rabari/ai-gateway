@@ -5,6 +5,10 @@
 **Learning:** The Console app was fetching the entire list of a developer's apps just to display the details of one specific app, which creates unnecessary overhead as the number of apps grows.
 **Action:** Always verify if there is an endpoint to fetch a single item by ID before falling back to fetching the entire list and filtering it on the client side. I implemented a GET `/apps/:id` endpoint and updated the frontend to consume it.
 
+## 2026-04-20 - Targeted DB Queries for Existence Checks
+**Learning:** Fetching a full list of resources into memory and using `Array.prototype.some()` to check for existence is inefficient and doesn't scale with user data.
+**Action:** Replace `listApps().some()` patterns with targeted `getApp()` or `count()` queries in the repository layer to minimize DB I/O, network latency, and memory allocation.
+
 ## 2025-04-12 - Optimize Redis sequential commands with Lua script
 **Learning:** Redis sequential commands (like \`incr\` followed conditionally by \`expire\`) can introduce race conditions and unnecessary network round-trips.
 **Action:** Replaced sequential \`incr\` and \`expire\` operations in rate limiting with a single atomic \`eval\` call using a Lua script to optimize performance and prevent un-expiring keys.
