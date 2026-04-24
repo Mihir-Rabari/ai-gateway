@@ -8,3 +8,6 @@
 ## 2026-04-20 - Targeted DB Queries for Existence Checks
 **Learning:** Fetching a full list of resources into memory and using `Array.prototype.some()` to check for existence is inefficient and doesn't scale with user data.
 **Action:** Replace `listApps().some()` patterns with targeted `getApp()` or `count()` queries in the repository layer to minimize DB I/O, network latency, and memory allocation.
+## 2024-04-24 - Atomic Redis Operations in Rate Limiter
+**Learning:** Sequential calls to `redis.incr` followed by `redis.expire` inside hot paths like a gateway rate limiter require multiple network round-trips to Redis and are not atomic, potentially leaving keys permanently un-expired if a crash occurs between the operations.
+**Action:** Replaced sequential operations with a single atomic Lua script via `redis.eval`. This saves a roundtrip and guarantees the expiration behavior atomicity without adding dependencies.
