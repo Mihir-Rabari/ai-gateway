@@ -8,3 +8,6 @@
 ## 2026-04-20 - Targeted DB Queries for Existence Checks
 **Learning:** Fetching a full list of resources into memory and using `Array.prototype.some()` to check for existence is inefficient and doesn't scale with user data.
 **Action:** Replace `listApps().some()` patterns with targeted `getApp()` or `count()` queries in the repository layer to minimize DB I/O, network latency, and memory allocation.
+## 2025-02-21 - [Atomic Redis Rate Limiting]
+**Learning:** Sequential Redis calls like `incr` and `expire` can cause race conditions under high concurrency and add unnecessary network round trips.
+**Action:** Use an atomic Lua script via `redis.eval()` to combine these operations safely on the Redis server.
