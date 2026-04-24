@@ -82,10 +82,17 @@ export class GatewayService {
     // Step 2: Rate Limiting
     const limit = this.getRateLimit(user.planId);
     const rateLimitKey = `ratelimit:gateway:${user.userId}`;
-    const currentUsage = await this.clients.redis.incr(rateLimitKey);
-    if (currentUsage === 1) {
-      await this.clients.redis.expire(rateLimitKey, 60);
-    }
+    // ⚡ Bolt: Replace sequential incr + expire with atomic Lua script
+    // This prevents race conditions and saves a network round trip
+    const luaScript = `
+      local current = redis.call('incr', KEYS[1])
+      if current == 1 then
+        redis.call('expire', KEYS[1], 60)
+      end
+      return current
+    `;
+    const currentUsage = await this.clients.redis.eval(luaScript, 1, rateLimitKey) as number;
+
     if (currentUsage > limit) {
       throw new GatewayError('RATE_LIMIT_EXCEEDED', 'Rate limit exceeded', 429);
     }
@@ -179,8 +186,15 @@ export class GatewayService {
 
     const limit = this.getRateLimit(user.planId);
     const rateLimitKey = `ratelimit:gateway:${user.userId}`;
-    const currentUsage = await this.clients.redis.incr(rateLimitKey);
-    if (currentUsage === 1) await this.clients.redis.expire(rateLimitKey, 60);
+    // ⚡ Bolt: Replace sequential incr + expire with atomic Lua script
+    const luaScript = `
+      local current = redis.call('incr', KEYS[1])
+      if current == 1 then
+        redis.call('expire', KEYS[1], 60)
+      end
+      return current
+    `;
+    const currentUsage = await this.clients.redis.eval(luaScript, 1, rateLimitKey) as number;
     if (currentUsage > limit) throw new GatewayError('RATE_LIMIT_EXCEEDED', 'Rate limit exceeded', 429);
 
     const appAccess = await this.validateAppAccess(input.appId, input.appApiKey, input.appJwt);
