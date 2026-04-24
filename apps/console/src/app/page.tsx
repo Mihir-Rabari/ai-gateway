@@ -41,7 +41,7 @@ export default function ConsolePage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <a href={webUrl} className="hidden text-sm text-white/54 transition hover:text-white md:block">
+            <a href={webUrl} target="_blank" rel="noopener noreferrer" className="hidden text-sm text-white/54 transition hover:text-white md:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
               Main website
             </a>
             <Link href="/login">
@@ -69,7 +69,7 @@ export default function ConsolePage() {
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
-                <a href={`${webUrl}/signup`}>
+                <a href={`${webUrl}/signup`} target="_blank" rel="noopener noreferrer" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-full">
                   <Button variant="secondary" className="h-12 px-6">
                     Create account
                   </Button>

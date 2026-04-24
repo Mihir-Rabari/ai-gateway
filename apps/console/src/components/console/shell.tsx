@@ -113,7 +113,9 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
             <div className="mt-auto space-y-3">
               <a
                 href={WEB_URL}
-                className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/66 transition hover:bg-white/[0.05] hover:text-white"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/66 transition hover:bg-white/[0.05] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
               >
                 Open main website
                 <ArrowUpRight className="h-4 w-4" />
