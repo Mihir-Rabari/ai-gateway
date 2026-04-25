@@ -8,3 +8,4 @@
 ## 2026-04-20 - Targeted DB Queries for Existence Checks
 **Learning:** Fetching a full list of resources into memory and using `Array.prototype.some()` to check for existence is inefficient and doesn't scale with user data.
 **Action:** Replace `listApps().some()` patterns with targeted `getApp()` or `count()` queries in the repository layer to minimize DB I/O, network latency, and memory allocation.
+## 2025-04-25 - Lua Syntax in Redis EVAL Scripts\n**Learning:** When writing inline Lua scripts for Redis `eval` in TypeScript, accidentally using JS syntax (`const`) instead of Lua syntax (`local`) causes runtime syntax errors in Redis.\n**Action:** Always verify Lua script syntax carefully and remember that the Redis engine compiles it as Lua 5.1.
