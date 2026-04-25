@@ -10,3 +10,7 @@
 **Vulnerability:** Fastify route catch-all handlers were logging full error details globally using `console.log`/`console.error` and sending raw `err.message` in 5xx JSON responses.
 **Learning:** Returning unhandled error properties (like `err.message` or stack traces) directly to the client exposes internal architectural and state information, creating an information leakage vulnerability. Additionally, global `console` logs do not easily tie errors back to a specific HTTP request, complicating auditing.
 **Prevention:** Always sanitize 5xx error responses with generic messages (e.g., 'Unexpected server error') before sending to the client. Use request-scoped structured logging (`req.log.info`, `req.log.error`) to log the detailed, raw error object internally, ensuring that logs are tied to request contexts securely.
+## 2024-05-24 - [Masked 5xx error messages in shared error handler]
+**Vulnerability:** Fastify's shared error handler plugin returned raw error messages for all HTTP status codes, potentially leaking sensitive information (e.g., stack traces, DB connection strings) to clients on 5xx errors.
+**Learning:** Returning `error.message` directly in a global 5xx error response allows internally generated error messages to be exposed to external users.
+**Prevention:** Always sanitize/mask error messages for status codes >= 500 before sending the response to the client. Detailed errors should only be logged internally (via `req.log.error`) using request-scoped structured logging.
