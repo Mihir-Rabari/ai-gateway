@@ -70,6 +70,7 @@ describe('gatewayRoutes integration', () => {
     } as any);
     app.decorate('redis', {
       incr: async () => 1,
+      eval: async () => 1,
       expire: async () => 1,
     } as any);
 
@@ -134,6 +135,7 @@ describe('gatewayRoutes integration', () => {
     app.decorate('pg', { query: async () => ({ rows: [], rowCount: 0 }) } as any);
     app.decorate('redis', {
       incr: async () => 1,
+      eval: async () => 1,
       expire: async () => 1,
     } as any);
 

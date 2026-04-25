@@ -70,6 +70,12 @@ function createRedisMockWithStore(store: Map<string, string> = new Map()) {
       store.set(key, String(next));
       return next;
     },
+    eval: async (...args: any[]) => {
+      const actualKey = typeof args[2] === 'string' ? args[2] : (Array.isArray(args[2]) ? args[2][0] : String(args[2]));
+      const next = Number(store.get(actualKey) ?? '0') + 1;
+      store.set(actualKey, String(next));
+      return next;
+    },
     expire: async () => 1,
     get: async (key: string) => store.get(key) ?? null,
     // redis.set(key, value, 'EX', ttl) — used by validateToken token cache
@@ -369,6 +375,7 @@ describe('GatewayService', () => {
     // Use a Redis mock that never returns cached tokens so every request reaches the auth service.
     const noopRedis = {
       incr: async () => 1,
+      eval: async () => 1,
       expire: async () => 1,
       get: async (_key: string) => null,
       set: async () => 'OK',
