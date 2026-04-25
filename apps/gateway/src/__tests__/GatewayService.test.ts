@@ -71,6 +71,13 @@ function createRedisMockWithStore(store: Map<string, string> = new Map()) {
       return next;
     },
     expire: async () => 1,
+    eval: async (_script: string, numKeys: number, ...args: (string | number)[]) => {
+      const key = String(args[0]);
+      // The lua script effectively does incr + conditional expire
+      const next = Number(store.get(key) ?? '0') + 1;
+      store.set(key, String(next));
+      return next;
+    },
     get: async (key: string) => store.get(key) ?? null,
     // redis.set(key, value, 'EX', ttl) — used by validateToken token cache
     set: async (key: string, value: string) => { store.set(key, value); return 'OK'; },
@@ -373,6 +380,7 @@ describe('GatewayService', () => {
       get: async (_key: string) => null,
       set: async () => 'OK',
       del: async () => 1,
+      eval: async () => 1,
     } as unknown as Redis;
 
     const service = new GatewayService({
