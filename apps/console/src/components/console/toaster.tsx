@@ -20,6 +20,7 @@ export function Toaster() {
           {toast.description ? <p className="mt-1 text-sm leading-6 text-white/60">{toast.description}</p> : null}
           <button
             type="button"
+            aria-label="Dismiss toast"
             onClick={() => dismiss(toast.id)}
             className="mt-3 text-xs uppercase tracking-[0.22em] text-white/38 transition hover:text-white/72 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
