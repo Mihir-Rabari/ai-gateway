@@ -71,6 +71,14 @@ function createRedisMockWithStore(store: Map<string, string> = new Map()) {
       return next;
     },
     expire: async () => 1,
+    eval: async (_script: string, numKeys: number, ...args: (string | number)[]) => {
+      // Very basic mock of the rate limit INCR + EXPIRE Lua script.
+      // Assumes args[0] is the key and args[1] is the TTL (if we were mocking TTL behavior).
+      const key = String(args[0]);
+      const next = Number(store.get(key) ?? '0') + 1;
+      store.set(key, String(next));
+      return next;
+    },
     get: async (key: string) => store.get(key) ?? null,
     // redis.set(key, value, 'EX', ttl) — used by validateToken token cache
     set: async (key: string, value: string) => { store.set(key, value); return 'OK'; },
@@ -370,6 +378,7 @@ describe('GatewayService', () => {
     const noopRedis = {
       incr: async () => 1,
       expire: async () => 1,
+      eval: async () => 1,
       get: async (_key: string) => null,
       set: async () => 'OK',
       del: async () => 1,
