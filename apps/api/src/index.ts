@@ -3,7 +3,7 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
-import { createLogger, getFastifyLoggerOptions, securityHeadersPlugin } from '@ai-gateway/utils';
+import { createLogger, getFastifyLoggerOptions, securityHeadersPlugin, errorHandlerPlugin } from '@ai-gateway/utils';
 
 const logger = createLogger('api');
 const app = Fastify({ logger: getFastifyLoggerOptions(), disableRequestLogging: true, genReqId: () => `req_${Date.now()}` });
@@ -69,6 +69,9 @@ async function bootstrap() {
 
   const developersM = await import('./routes/v1/developers.js');
   await app.register(developersM.developerRoutes, { prefix: '/api/v1' });
+
+  // Error Handler
+  await app.register(errorHandlerPlugin);
 
   // Security Headers
   app.addHook('onSend', async (req, reply) => {
