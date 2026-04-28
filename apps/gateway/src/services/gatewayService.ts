@@ -49,6 +49,14 @@ export class GatewayService {
   private readonly creditBreaker = new CircuitBreaker({ serviceName: 'Credit service' });
   private readonly routingBreaker = new CircuitBreaker({ serviceName: 'Routing service' });
 
+  private readonly RATE_LIMIT_LUA_SCRIPT = `
+    local current = redis.call('INCR', KEYS[1])
+    if current == 1 then
+      redis.call('EXPIRE', KEYS[1], ARGV[1])
+    end
+    return current
+  `;
+
   constructor(
     private readonly clients: ServiceClients,
     private readonly deps: GatewayServiceDeps = {},
@@ -82,10 +90,11 @@ export class GatewayService {
     // Step 2: Rate Limiting
     const limit = this.getRateLimit(user.planId);
     const rateLimitKey = `ratelimit:gateway:${user.userId}`;
-    const currentUsage = await this.clients.redis.incr(rateLimitKey);
-    if (currentUsage === 1) {
-      await this.clients.redis.expire(rateLimitKey, 60);
-    }
+
+    // ⚡ Bolt: Replace sequential incr + expire with a single atomic Lua script via eval
+    // to prevent race conditions where a crash between incr and expire leaves an un-expiring key.
+    const currentUsage = await this.clients.redis.eval(this.RATE_LIMIT_LUA_SCRIPT, 1, rateLimitKey, 60) as number;
+
     if (currentUsage > limit) {
       throw new GatewayError('RATE_LIMIT_EXCEEDED', 'Rate limit exceeded', 429);
     }
@@ -179,8 +188,11 @@ export class GatewayService {
 
     const limit = this.getRateLimit(user.planId);
     const rateLimitKey = `ratelimit:gateway:${user.userId}`;
-    const currentUsage = await this.clients.redis.incr(rateLimitKey);
-    if (currentUsage === 1) await this.clients.redis.expire(rateLimitKey, 60);
+
+    // ⚡ Bolt: Replace sequential incr + expire with a single atomic Lua script via eval
+    // to prevent race conditions where a crash between incr and expire leaves an un-expiring key.
+    const currentUsage = await this.clients.redis.eval(this.RATE_LIMIT_LUA_SCRIPT, 1, rateLimitKey, 60) as number;
+
     if (currentUsage > limit) throw new GatewayError('RATE_LIMIT_EXCEEDED', 'Rate limit exceeded', 429);
 
     const appAccess = await this.validateAppAccess(input.appId, input.appApiKey, input.appJwt);
