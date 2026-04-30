@@ -8,6 +8,7 @@
 ## 2026-04-20 - Targeted DB Queries for Existence Checks
 **Learning:** Fetching a full list of resources into memory and using `Array.prototype.some()` to check for existence is inefficient and doesn't scale with user data.
 **Action:** Replace `listApps().some()` patterns with targeted `getApp()` or `count()` queries in the repository layer to minimize DB I/O, network latency, and memory allocation.
-## 2025-04-28 - Atomic Redis Increment and Expiration
-**Learning:** In hot paths like rate limiting, executing `redis.incr` followed conditionally by `redis.expire` can lead to race conditions where a crash leaves a Redis key permanently un-expiring.
-**Action:** Replace sequential `incr` and `expire` logic with a single atomic Lua script executed via `redis.eval()`. Ensure the test mock `createRedisMockWithStore` supports `redis.eval`.
+
+## 2026-04-29 - Atomic Redis Rate Limiting
+**Learning:** Sequential calls to `redis.incr` and `redis.expire` for rate limiting can lead to race conditions where a crashed application or network failure leaves a key permanently un-expiring.
+**Action:** Replace sequential `incr` and `expire` logic with a single atomic Lua script executed via `redis.eval()`. Ensure the Lua script preserves the original expiration behavior (e.g., conditional `if current == 1 then`). Apply this to hot paths like rate limiting and update test mocks to support `eval`.
