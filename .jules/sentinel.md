@@ -14,3 +14,7 @@
 **Vulnerability:** The web authentication popup passed sensitive tokens back to its opener using `window.opener.postMessage(..., '*')` or relied solely on a user-provided `origin` query parameter without server-side/build-time validation, which is vulnerable to cross-origin data leakage if an attacker opens the popup from a malicious origin.
 **Learning:** `postMessage` calls must always explicitly specify the intended target origin, and relying solely on query parameters for security guarantees is flawed unless strictly validated against a known whitelist.
 **Prevention:** Always restrict `targetOrigin` to trusted domains defined via environment variables (`NEXT_PUBLIC_ALLOWED_ORIGINS`). Ensure strict validation before transmission.
+## 2026-04-30 - [Remove insecure CORS wildcard on stream responses]
+**Vulnerability:** The API chat route explicitly set `Access-Control-Allow-Origin: *` for streaming responses, bypassing the globally configured `@fastify/cors` policy.
+**Learning:** Hardcoding wildcard CORS headers in specific routes overrides centralized security configurations, potentially allowing any malicious origin to read sensitive AI chat stream data via cross-origin requests.
+**Prevention:** Rely on centralized CORS plugins (e.g., `@fastify/cors`) configured with a strict whitelist of allowed origins (e.g., `ALLOWED_ORIGINS`) and avoid manual overrides in individual route handlers.
