@@ -14,3 +14,7 @@
 **Vulnerability:** The web authentication popup passed sensitive tokens back to its opener using `window.opener.postMessage(..., '*')` or relied solely on a user-provided `origin` query parameter without server-side/build-time validation, which is vulnerable to cross-origin data leakage if an attacker opens the popup from a malicious origin.
 **Learning:** `postMessage` calls must always explicitly specify the intended target origin, and relying solely on query parameters for security guarantees is flawed unless strictly validated against a known whitelist.
 **Prevention:** Always restrict `targetOrigin` to trusted domains defined via environment variables (`NEXT_PUBLIC_ALLOWED_ORIGINS`). Ensure strict validation before transmission.
+## 2026-04-30 - Fix overly permissive CORS configuration
+**Vulnerability:** A route explicitly set `Access-Control-Allow-Origin: *` overriding global security policies.
+**Learning:** Manual CORS header configuration circumvents centralized security controls and allows potentially malicious cross-origin requests.
+**Prevention:** Never manually set CORS headers on individual fastify routes. Rely entirely on the globally registered `@fastify/cors` plugin.
