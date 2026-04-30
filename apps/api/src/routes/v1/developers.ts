@@ -66,7 +66,7 @@ export const developerRoutes: FastifyPluginAsync = async (fastify) => {
       const isDeveloper = (result.rowCount ?? 0) > 0;
       return reply.send(ok({ isDeveloper, enrolledAt: result.rows[0]?.enrolled_at ?? null }));
     } catch (err) {
-      req.log.error(err, 'Failed to fetch developer status');
+      fastify.log.error(err, 'Failed to fetch developer status');
       return reply.status(500).send(fail({ name: 'Error', code: 'DEV_STATUS_ERR', message: 'Failed to fetch developer status', statusCode: 500 }));
     }
   });
@@ -121,7 +121,7 @@ export const developerRoutes: FastifyPluginAsync = async (fastify) => {
         client.release();
       }
     } catch (err) {
-      req.log.error(err, 'Failed to enroll developer');
+      fastify.log.error(err, 'Failed to enroll developer');
       return reply.status(500).send(fail({ name: 'Error', code: 'DEV_ENROLL_ERR', message: 'Failed to enroll as developer', statusCode: 500 }));
     }
   });
