@@ -65,17 +65,19 @@ function createFetchMock(appValidateResult: 'allowed' | 'invalid_key' | 'forbidd
 
 function createRedisMockWithStore(store: Map<string, string> = new Map()) {
   const redis = {
-    eval: async (_script: string, _numKeys: number, key: string, _ttl: number) => {
-      const next = Number(store.get(key) ?? '0') + 1;
-      store.set(key, String(next));
-      return next;
-    },
     incr: async (key: string) => {
       const next = Number(store.get(key) ?? '0') + 1;
       store.set(key, String(next));
       return next;
     },
     expire: async () => 1,
+    eval: async (script: string, numkeys: number, ...keysAndArgs: (string | number)[]) => {
+      // Basic mock for the INCR/EXPIRE lua script
+      const key = String(keysAndArgs[0]);
+      const next = Number(store.get(key) ?? '0') + 1;
+      store.set(key, String(next));
+      return next;
+    },
     get: async (key: string) => store.get(key) ?? null,
     // redis.set(key, value, 'EX', ttl) — used by validateToken token cache
     set: async (key: string, value: string) => { store.set(key, value); return 'OK'; },
@@ -373,9 +375,9 @@ describe('GatewayService', () => {
 
     // Use a Redis mock that never returns cached tokens so every request reaches the auth service.
     const noopRedis = {
-      eval: async () => 1,
       incr: async () => 1,
       expire: async () => 1,
+      eval: async () => 1,
       get: async (_key: string) => null,
       set: async () => 'OK',
       del: async () => 1,

@@ -69,9 +69,9 @@ describe('gatewayRoutes integration', () => {
       },
     } as any);
     app.decorate('redis', {
-      eval: async () => 1,
       incr: async () => 1,
       expire: async () => 1,
+      eval: async () => 1,
     } as any);
 
     let lockCalled = false;
@@ -134,9 +134,9 @@ describe('gatewayRoutes integration', () => {
     app.decorate('kafka', { publish: async () => undefined } as any);
     app.decorate('pg', { query: async () => ({ rows: [], rowCount: 0 }) } as any);
     app.decorate('redis', {
-      eval: async () => 1,
       incr: async () => 1,
       expire: async () => 1,
+      eval: async () => 1,
     } as any);
 
     (GatewayService.prototype as unknown as GatewayPrototype).processStreamRequest = async function* () {

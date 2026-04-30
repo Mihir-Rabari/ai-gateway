@@ -10,7 +10,3 @@
 **Vulnerability:** Fastify route catch-all handlers were logging full error details globally using `console.log`/`console.error` and sending raw `err.message` in 5xx JSON responses.
 **Learning:** Returning unhandled error properties (like `err.message` or stack traces) directly to the client exposes internal architectural and state information, creating an information leakage vulnerability. Additionally, global `console` logs do not easily tie errors back to a specific HTTP request, complicating auditing.
 **Prevention:** Always sanitize 5xx error responses with generic messages (e.g., 'Unexpected server error') before sending to the client. Use request-scoped structured logging (`req.log.info`, `req.log.error`) to log the detailed, raw error object internally, ensuring that logs are tied to request contexts securely.
-## 2024-06-25 - [Fix Overly Permissive CORS Configuration]
-**Vulnerability:** The `/chat` endpoint manually set `Access-Control-Allow-Origin: *` for Server-Sent Events (SSE) responses, overriding the centralized whitelist-based CORS plugin.
-**Learning:** Setting raw CORS headers within individual Fastify routes bypasses security policies enforced at the global/application level, creating a vulnerability where restricted endpoints might be accessible from unauthorized domains.
-**Prevention:** Never manually set CORS headers (`Access-Control-Allow-Origin`) using `reply.raw.setHeader` in individual route handlers. Always defer to the globally registered `@fastify/cors` plugin that enforces the centralized `ALLOWED_ORIGINS` policy.
