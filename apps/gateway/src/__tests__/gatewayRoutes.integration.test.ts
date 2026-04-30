@@ -6,6 +6,7 @@ import { gatewayRoutes } from '../routes/gatewayRoutes.js';
 import { GatewayService } from '../services/gatewayService.js';
 
 type GatewayPrototype = {
+  getRateLimit: (planId: string) => number;
   validateToken: (token: string) => Promise<{ userId: string; planId: string; email: string }>;
   lockCredits: (userId: string, requestId: string, amount: number) => Promise<void>;
   confirmCredits: (userId: string, requestId: string) => Promise<void>;
@@ -20,12 +21,14 @@ type GatewayPrototype = {
   }) => AsyncGenerator<string>;
 };
 
+const originalGetRateLimit = (GatewayService.prototype as unknown as GatewayPrototype).getRateLimit;
 const originalValidateToken = (GatewayService.prototype as unknown as GatewayPrototype).validateToken;
 const originalLockCredits = (GatewayService.prototype as unknown as GatewayPrototype).lockCredits;
 const originalConfirmCredits = (GatewayService.prototype as unknown as GatewayPrototype).confirmCredits;
 const originalProcessStreamRequest = (GatewayService.prototype as unknown as GatewayPrototype).processStreamRequest;
 
 afterEach(() => {
+  (GatewayService.prototype as unknown as GatewayPrototype).getRateLimit = originalGetRateLimit;
   (GatewayService.prototype as unknown as GatewayPrototype).validateToken = originalValidateToken;
   (GatewayService.prototype as unknown as GatewayPrototype).lockCredits = originalLockCredits;
   (GatewayService.prototype as unknown as GatewayPrototype).confirmCredits = originalConfirmCredits;
@@ -69,13 +72,14 @@ describe('gatewayRoutes integration', () => {
       },
     } as any);
     app.decorate('redis', {
+      eval: async () => 1,
       incr: async () => 1,
       expire: async () => 1,
-      eval: async () => 1,
     } as any);
 
     let lockCalled = false;
     let confirmCalled = false;
+    (GatewayService.prototype as unknown as GatewayPrototype).getRateLimit = () => 1000;
     (GatewayService.prototype as unknown as GatewayPrototype).validateToken = async () => ({
       userId: 'user-1',
       planId: 'pro',
@@ -134,9 +138,9 @@ describe('gatewayRoutes integration', () => {
     app.decorate('kafka', { publish: async () => undefined } as any);
     app.decorate('pg', { query: async () => ({ rows: [], rowCount: 0 }) } as any);
     app.decorate('redis', {
+      eval: async () => 1,
       incr: async () => 1,
       expire: async () => 1,
-      eval: async () => 1,
     } as any);
 
     (GatewayService.prototype as unknown as GatewayPrototype).processStreamRequest = async function* () {
