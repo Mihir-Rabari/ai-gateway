@@ -65,6 +65,11 @@ function createFetchMock(appValidateResult: 'allowed' | 'invalid_key' | 'forbidd
 
 function createRedisMockWithStore(store: Map<string, string> = new Map()) {
   const redis = {
+    eval: async (_script: string, _numKeys: number, key: string, _ttl: number) => {
+      const next = Number(store.get(key) ?? '0') + 1;
+      store.set(key, String(next));
+      return next;
+    },
     incr: async (key: string) => {
       const next = Number(store.get(key) ?? '0') + 1;
       store.set(key, String(next));
@@ -375,6 +380,7 @@ describe('GatewayService', () => {
 
     // Use a Redis mock that never returns cached tokens so every request reaches the auth service.
     const noopRedis = {
+      eval: async () => 1,
       incr: async () => 1,
       expire: async () => 1,
       eval: async () => 1,
