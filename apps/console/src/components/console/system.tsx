@@ -8,6 +8,7 @@ import type {
 } from "react";
 import { forwardRef } from "react";
 import { Loader2 } from "lucide-react";
+import { Slot } from "@radix-ui/react-slot";
 import { cn } from "@/lib/utils";
 
 export function Surface({
@@ -99,8 +100,9 @@ export const Button = forwardRef<
   ButtonHTMLAttributes<HTMLButtonElement> & {
     variant?: "primary" | "secondary" | "ghost" | "danger";
     busy?: boolean;
+    asChild?: boolean;
   }
->(function Button({ className, variant = "primary", busy, children, disabled, ...props }, ref) {
+>(function Button({ className, variant = "primary", busy, asChild, children, disabled, ...props }, ref) {
   const palette = {
     primary: "bg-white text-black hover:bg-white/86",
     secondary: "border border-white/10 bg-white/8 text-white hover:bg-white/14",
@@ -108,8 +110,10 @@ export const Button = forwardRef<
     danger: "border border-red-300/20 bg-red-400/12 text-red-200 hover:bg-red-400/18",
   }[variant];
 
+  const Comp = asChild ? Slot : "button";
+
   return (
-    <button
+    <Comp
       ref={ref}
       disabled={disabled || busy}
       className={cn(
@@ -119,9 +123,15 @@ export const Button = forwardRef<
       )}
       {...props}
     >
-      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-      {children}
-    </button>
+      {asChild ? (
+        children
+      ) : (
+        <>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          {children}
+        </>
+      )}
+    </Comp>
   );
 });
 
