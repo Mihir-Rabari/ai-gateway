@@ -52,7 +52,7 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
       const appData = await appService.registerApp(req.userId, name, description, redirectUris ?? []);
       return reply.send(ok(appData));
     } catch (err) {
-      fastify.log.error(err, 'Failed to create app');
+      req.log.error({ err }, 'Failed to create app');
       return reply.status(500).send(fail({ name: 'Error', code: 'APP_CREATE_ERR', message: 'Failed to create app', statusCode: 500 }));
     }
   });
@@ -66,23 +66,12 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
     },
   }, async (req, reply) => {
     try {
-      fastify.log.info({ userId: req.userId }, 'Fetching apps for user');
+      req.log.info({ userId: req.userId }, 'Fetching apps for user');
       const apps = await appService.listApps(req.userId);
-      fastify.log.info({ userId: req.userId, appCount: Array.isArray(apps) ? apps.length : undefined }, 'Fetched apps');
+      req.log.info({ userId: req.userId, appCount: Array.isArray(apps) ? apps.length : undefined }, 'Fetched apps');
       return reply.send(ok(apps));
     } catch (err) {
-      // Log detailed error information for debugging (stack if available) along with userId
-      try {
-        const errObj = err instanceof Error ? { message: err.message, stack: err.stack } : { err };
-        fastify.log.error({ err: errObj, userId: (req as any).userId }, 'Failed to fetch apps');
-        // Also print to stderr so it's captured in pm2 logs reliably
-        // eslint-disable-next-line no-console
-        console.error('Failed to fetch apps', JSON.stringify({ err: errObj, userId: (req as any).userId }));
-      } catch (logErr) {
-        // If logging itself fails, ensure we still send the generic 500
-        // eslint-disable-next-line no-console
-        console.error('Failed to log error for apps fetch', logErr);
-      }
+      req.log.error({ err, userId: req.userId }, 'Failed to fetch apps');
       return reply.status(500).send(fail({ name: 'Error', code: 'APP_FETCH_ERR', message: 'Failed to fetch apps', statusCode: 500 }));
     }
   });
@@ -104,20 +93,15 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (req, reply) => {
     const { id } = req.params as { id: string };
     try {
-      fastify.log.info({ userId: req.userId, appId: id }, 'Fetching app for user');
+      req.log.info({ userId: req.userId, appId: id }, 'Fetching app for user');
       const app = await appService.getApp(id, req.userId);
       if (!app) {
         return reply.status(404).send(fail({ name: 'NotFoundError', code: 'APP_NOT_FOUND', message: 'App not found', statusCode: 404 }));
       }
-      fastify.log.info({ userId: req.userId, appId: id }, 'Fetched app');
+      req.log.info({ userId: req.userId, appId: id }, 'Fetched app');
       return reply.send(ok(app));
     } catch (err) {
-      try {
-        const errObj = err instanceof Error ? { message: err.message, stack: err.stack } : { err };
-        fastify.log.error({ err: errObj, userId: (req as any).userId, appId: id }, 'Failed to fetch app');
-      } catch (logErr) {
-        console.error('Failed to log error for app fetch', logErr);
-      }
+      req.log.error({ err, userId: req.userId, appId: id }, 'Failed to fetch app');
       return reply.status(500).send(fail({ name: 'Error', code: 'APP_FETCH_ERR', message: 'Failed to fetch app', statusCode: 500 }));
     }
   });
@@ -156,7 +140,7 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
       } catch { /* ignore */ }
       return reply.send(ok({ success: true }));
     } catch (err) {
-      fastify.log.error(err, 'Failed to delete app');
+      req.log.error({ err, appId: id }, 'Failed to delete app');
       return reply.status(500).send(fail({ name: 'Error', code: 'APP_DELETE_ERR', message: 'Failed to delete app', statusCode: 500 }));
     }
   });
@@ -192,7 +176,7 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
 
       return reply.send(ok({ apiKey: result.apiKey }));
     } catch (err) {
-      fastify.log.error(err, 'Failed to rotate API key');
+      req.log.error({ err, appId: id }, 'Failed to rotate API key');
       return reply.status(500).send(fail({ name: 'Error', code: 'APP_ROTATE_KEY_ERR', message: 'Failed to rotate API key', statusCode: 500 }));
     }
   });
@@ -230,7 +214,7 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
       }
       return reply.send(ok({ redirectUris }));
     } catch (err) {
-      fastify.log.error(err, 'Failed to update redirect URIs');
+      req.log.error({ err, appId: id }, 'Failed to update redirect URIs');
       return reply.status(500).send(fail({ name: 'Error', code: 'APP_UPDATE_REDIRECT_ERR', message: 'Failed to update redirect URIs', statusCode: 500 }));
     }
   });
@@ -263,7 +247,7 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
       const analyticsData = await analyticsRes.json();
       return reply.status(analyticsRes.status).send(analyticsData);
     } catch (err) {
-      fastify.log.error(err, 'Failed to fetch app usage');
+      req.log.error({ err, appId: id }, 'Failed to fetch app usage');
       return reply.status(500).send(fail({ name: 'Error', code: 'APP_USAGE_FETCH_ERR', message: 'Failed to fetch app usage', statusCode: 500 }));
     }
   });
