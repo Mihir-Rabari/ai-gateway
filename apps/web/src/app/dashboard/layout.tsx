@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import { api, getAuthToken, getRefreshToken, type UserProfile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { Menu, X } from "lucide-react";
 
 const CONSOLE_URL = process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009";
 
@@ -131,10 +132,12 @@ export default function DashboardLayout({
             <span className="font-semibold tracking-tight text-white/90">AI Gateway</span>
           </div>
           <button
-            className="p-2 text-white/50 transition-colors hover:text-white md:hidden"
+            className="p-2 text-white/50 transition-colors hover:text-white md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             onClick={() => setSidebarOpen(false)}
+            aria-label="Close menu"
+            title="Close menu"
           >
-            x
+            <X className="h-5 w-5" />
           </button>
         </div>
 
@@ -197,10 +200,12 @@ export default function DashboardLayout({
       <main className="flex min-w-0 flex-1 flex-col bg-black">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/10 bg-black/70 px-4 backdrop-blur md:px-6">
           <button
-            className="rounded-md p-2 text-white/60 transition-colors hover:bg-white/5 hover:text-white md:hidden"
+            className="rounded-md p-2 text-white/60 transition-colors hover:bg-white/5 hover:text-white md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
+            title="Open menu"
           >
-            menu
+            <Menu className="h-5 w-5" />
           </button>
           <h1 className="text-sm font-medium text-white/70">Control Center</h1>
           {isDeveloper && (
