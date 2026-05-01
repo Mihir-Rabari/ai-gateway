@@ -20,6 +20,15 @@ function createRedisMock(initialState: Record<string, string> = {}) {
       state.set(key, String(next));
       return next;
     },
+    eval: async (script: string, numkeys: number, ...keysAndArgs: (string | number)[]) => {
+      if (script.includes('INCR')) {
+        const key = keysAndArgs[0] as string;
+        const next = Number(state.get(key) ?? '0') + 1;
+        state.set(key, String(next));
+        return next;
+      }
+      return 1;
+    },
     expire: async () => 1,
     del: async (...keys: string[]) => {
       let deleted = 0;
