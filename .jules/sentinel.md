@@ -14,3 +14,7 @@
 **Vulnerability:** The web authentication popup passed sensitive tokens back to its opener using `window.opener.postMessage(..., '*')` or relied solely on a user-provided `origin` query parameter without server-side/build-time validation, which is vulnerable to cross-origin data leakage if an attacker opens the popup from a malicious origin.
 **Learning:** `postMessage` calls must always explicitly specify the intended target origin, and relying solely on query parameters for security guarantees is flawed unless strictly validated against a known whitelist.
 **Prevention:** Always restrict `targetOrigin` to trusted domains defined via environment variables (`NEXT_PUBLIC_ALLOWED_ORIGINS`). Ensure strict validation before transmission.
+## 2025-05-01 - Prevent Error Message Information Leakage
+**Vulnerability:** The global fastify error handler leaked sensitive raw error messages and internal details for 5xx errors to the client responses.
+**Learning:** Even though a global error handler was registered, it defaulted to sending `appError.message` which exposes database or service failures. Also, the logging wasn't using request-scoped structured logging (`req.log.error`).
+**Prevention:** Always mask 5xx error messages with a generic "Internal server error" string and ensure error logging uses request context (`req.log.error`) for proper tracing and security.
