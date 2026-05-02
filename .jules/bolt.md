@@ -11,3 +11,6 @@
 ## 2025-04-28 - Atomic Redis Increment and Expiration
 **Learning:** In hot paths like rate limiting, executing `redis.incr` followed conditionally by `redis.expire` can lead to race conditions where a crash leaves a Redis key permanently un-expiring.
 **Action:** Replace sequential `incr` and `expire` logic with a single atomic Lua script executed via `redis.eval()`. Ensure the test mock `createRedisMockWithStore` supports `redis.eval`.
+## 2026-05-02 - Remove redundant API calls when data is already available
+**Learning:** Both the web dashboard and console shell were making parallel requests to `/api/v1/me` and `/api/v1/credits/balance` on initial load. However, the `/me` endpoint already includes the user's `creditBalance`.
+**Action:** When fetching user profile data, rely on the `creditBalance` field included in the `/me` response instead of making a separate request to the credits service, reducing frontend network requests and backend load.
