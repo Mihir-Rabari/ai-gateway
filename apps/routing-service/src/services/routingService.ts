@@ -263,8 +263,14 @@ export class RoutingService {
 
   private async recordFailure(provider: ProviderName): Promise<void> {
     const key = `provider:failures:${provider}`;
-    const failures = await this.redis.incr(key);
-    await this.redis.expire(key, 300); // reset after 5 minutes
+    const LUA_SCRIPT = `
+      local key = KEYS[1]
+      local ttl = tonumber(ARGV[1])
+      local count = redis.call('INCR', key)
+      redis.call('EXPIRE', key, ttl)
+      return count
+    `;
+    const failures = await this.redis.eval(LUA_SCRIPT, 1, key, '300') as number; // reset after 5 minutes
     if (failures >= this.FAILURE_THRESHOLD) {
       await this.markUnhealthy(provider);
       logger.warn({ provider, failures }, 'Provider circuit breaker tripped');
