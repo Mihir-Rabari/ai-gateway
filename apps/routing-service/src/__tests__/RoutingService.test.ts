@@ -21,6 +21,18 @@ function createRedisMock(initialState: Record<string, string> = {}) {
       return next;
     },
     expire: async () => 1,
+    eval: async (script: string, numKeys: number, ...args: string[]) => {
+      // Simulate the specific INCR + EXPIRE script used in recordFailure
+      if (script.includes('INCR') && script.includes('EXPIRE')) {
+        const key = args[0];
+        if (key) {
+          const next = Number(state.get(key) ?? '0') + 1;
+          state.set(key, String(next));
+          return next;
+        }
+      }
+      return 1;
+    },
     del: async (...keys: string[]) => {
       let deleted = 0;
       for (const key of keys) {
