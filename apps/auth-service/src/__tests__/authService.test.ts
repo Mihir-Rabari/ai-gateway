@@ -16,12 +16,14 @@ const mockRedisGet = vi.fn();
 const mockRedisSetex = vi.fn();
 const mockRedisDel = vi.fn();
 const mockRedisKeys = vi.fn();
+const mockRedisScan = vi.fn().mockResolvedValue(['0', []]);
 
 const mockRedis = {
   get: mockRedisGet,
   setex: mockRedisSetex,
   del: mockRedisDel,
   keys: mockRedisKeys,
+  scan: mockRedisScan,
 } as unknown as import('ioredis').default;
 
 // Mock dependencies that are not easily stubbed by overriding the class instance

@@ -141,10 +141,15 @@ export class AuthService {
   // ─────────────────────────────────────────
 
   async logout(userId: string): Promise<void> {
-    const keys = await this.redis.keys(`refresh:${userId}:*`);
-    if (keys.length > 0) {
-      await this.redis.del(...keys);
-    }
+    let cursor = '0';
+    const pattern = `refresh:${userId}:*`;
+    do {
+      const [nextCursor, keys] = await this.redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+      cursor = nextCursor;
+      if (keys.length > 0) {
+        await this.redis.del(...keys);
+      }
+    } while (cursor !== '0');
   }
 
   // ─────────────────────────────────────────

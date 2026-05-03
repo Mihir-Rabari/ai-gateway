@@ -86,6 +86,18 @@ class InMemoryRedis {
     return removed;
   }
 
+
+  async scan(cursor: string, match: string, pattern: string, count: string, countValue: number): Promise<[string, string[]]> {
+    let matchedKeys: string[] = [];
+    if (!pattern.includes('*')) {
+      matchedKeys = this.values.has(pattern) ? [pattern] : [];
+    } else {
+      const prefix = pattern.split('*')[0] ?? '';
+      matchedKeys = [...this.values.keys()].filter((key) => key.startsWith(prefix));
+    }
+    return ['0', matchedKeys];
+  }
+
   async keys(pattern: string): Promise<string[]> {
     if (!pattern.includes('*')) {
       return this.values.has(pattern) ? [pattern] : [];
