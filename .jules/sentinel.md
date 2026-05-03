@@ -14,3 +14,7 @@
 **Vulnerability:** The web authentication popup passed sensitive tokens back to its opener using `window.opener.postMessage(..., '*')` or relied solely on a user-provided `origin` query parameter without server-side/build-time validation, which is vulnerable to cross-origin data leakage if an attacker opens the popup from a malicious origin.
 **Learning:** `postMessage` calls must always explicitly specify the intended target origin, and relying solely on query parameters for security guarantees is flawed unless strictly validated against a known whitelist.
 **Prevention:** Always restrict `targetOrigin` to trusted domains defined via environment variables (`NEXT_PUBLIC_ALLOWED_ORIGINS`). Ensure strict validation before transmission.
+## 2024-06-26 - [Remove console.error from apps API]
+**Vulnerability:** The /apps routes were using console.error and manually extracting err.stack and err.message which is brittle and less secure than structured request logging.
+**Learning:** Using global console.log/console.error in Fastify route handlers fails to tie errors to the specific HTTP request contexts. Manual error extraction can also throw TypeError if not careful.
+**Prevention:** Always use req.log.error(err, msg) in Fastify route handlers. Pino natively and safely handles error serialization, including stack traces.
