@@ -141,10 +141,16 @@ export class AuthService {
   // ─────────────────────────────────────────
 
   async logout(userId: string): Promise<void> {
-    const keys = await this.redis.keys(`refresh:${userId}:*`);
-    if (keys.length > 0) {
-      await this.redis.del(...keys);
-    }
+    // ⚡ Bolt: Replaced blocking redis.keys() with iterative redis.scan()
+    // redis.keys is O(N) and blocks the main thread, degrading performance.
+    let cursor = '0';
+    do {
+      const [nextCursor, keys] = await this.redis.scan(cursor, 'MATCH', `refresh:${userId}:*`, 'COUNT', 100);
+      cursor = nextCursor;
+      if (keys.length > 0) {
+        await this.redis.del(...keys);
+      }
+    } while (cursor !== '0');
   }
 
   // ─────────────────────────────────────────

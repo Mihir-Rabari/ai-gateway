@@ -16,12 +16,14 @@ const mockRedisGet = vi.fn();
 const mockRedisSetex = vi.fn();
 const mockRedisDel = vi.fn();
 const mockRedisKeys = vi.fn();
+const mockRedisScan = vi.fn();
 
 const mockRedis = {
   get: mockRedisGet,
   setex: mockRedisSetex,
   del: mockRedisDel,
   keys: mockRedisKeys,
+  scan: mockRedisScan,
 } as unknown as import('ioredis').default;
 
 // Mock dependencies that are not easily stubbed by overriding the class instance
@@ -278,6 +280,33 @@ describe('AuthService', () => {
       mockPgQuery.mockResolvedValueOnce({ rows: [] });
 
       await expect(authService.getUserById('missing-user')).rejects.toThrow(Errors.USER_NOT_FOUND());
+    });
+  });
+
+  describe('logout', () => {
+    it('should iteratively delete refresh tokens using scan', async () => {
+      mockRedisScan
+        .mockResolvedValueOnce(['10', ['refresh:user-1:token1', 'refresh:user-1:token2']])
+        .mockResolvedValueOnce(['0', ['refresh:user-1:token3']]);
+
+      await authService.logout('user-1');
+
+      expect(mockRedisScan).toHaveBeenCalledTimes(2);
+      expect(mockRedisScan).toHaveBeenNthCalledWith(1, '0', 'MATCH', 'refresh:user-1:*', 'COUNT', 100);
+      expect(mockRedisScan).toHaveBeenNthCalledWith(2, '10', 'MATCH', 'refresh:user-1:*', 'COUNT', 100);
+
+      expect(mockRedisDel).toHaveBeenCalledTimes(2);
+      expect(mockRedisDel).toHaveBeenNthCalledWith(1, 'refresh:user-1:token1', 'refresh:user-1:token2');
+      expect(mockRedisDel).toHaveBeenNthCalledWith(2, 'refresh:user-1:token3');
+    });
+
+    it('should handle zero tokens found', async () => {
+      mockRedisScan.mockResolvedValueOnce(['0', []]);
+
+      await authService.logout('user-1');
+
+      expect(mockRedisScan).toHaveBeenCalledTimes(1);
+      expect(mockRedisDel).not.toHaveBeenCalled();
     });
   });
 
