@@ -14,3 +14,7 @@
 **Vulnerability:** The web authentication popup passed sensitive tokens back to its opener using `window.opener.postMessage(..., '*')` or relied solely on a user-provided `origin` query parameter without server-side/build-time validation, which is vulnerable to cross-origin data leakage if an attacker opens the popup from a malicious origin.
 **Learning:** `postMessage` calls must always explicitly specify the intended target origin, and relying solely on query parameters for security guarantees is flawed unless strictly validated against a known whitelist.
 **Prevention:** Always restrict `targetOrigin` to trusted domains defined via environment variables (`NEXT_PUBLIC_ALLOWED_ORIGINS`). Ensure strict validation before transmission.
+## 2024-05-03 - Remove insecure CORS wildcard in SSE streaming
+**Vulnerability:** The `/chat` endpoint manually set `Access-Control-Allow-Origin: *` during Fastify reply hijacking for SSE streaming.
+**Learning:** Even when using `reply.hijack()` for Server-Sent Events, Fastify's globally registered `@fastify/cors` plugin handles CORS headers correctly. Manually setting headers can unintentionally override global security policies and introduce overly permissive CORS access.
+**Prevention:** Never manually set `Access-Control-Allow-Origin` in individual route handlers. Rely on centralized CORS plugins configured with strict whitelists.
