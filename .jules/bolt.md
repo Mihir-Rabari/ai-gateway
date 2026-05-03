@@ -11,3 +11,6 @@
 ## 2025-04-28 - Atomic Redis Increment and Expiration
 **Learning:** In hot paths like rate limiting, executing `redis.incr` followed conditionally by `redis.expire` can lead to race conditions where a crash leaves a Redis key permanently un-expiring.
 **Action:** Replace sequential `incr` and `expire` logic with a single atomic Lua script executed via `redis.eval()`. Ensure the test mock `createRedisMockWithStore` supports `redis.eval`.
+## 2024-11-21 - [Replace Redis KEYS with SCAN in auth service logout]
+**Learning:** Using `redis.keys()` in `AuthService.logout` is a blocking O(N) operation that can degrade Redis performance, especially with a large number of refresh tokens.
+**Action:** Used `redis.scanStream` to perform non-blocking iteration over the keys during logout.

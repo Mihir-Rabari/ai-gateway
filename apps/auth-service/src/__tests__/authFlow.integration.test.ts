@@ -86,12 +86,28 @@ class InMemoryRedis {
     return removed;
   }
 
-  async keys(pattern: string): Promise<string[]> {
-    if (!pattern.includes('*')) {
-      return this.values.has(pattern) ? [pattern] : [];
+  scanStream(options?: { match?: string; count?: number }) {
+    const match = options?.match ?? '*';
+    const keys: string[] = [];
+    if (!match.includes('*')) {
+      if (this.values.has(match)) keys.push(match);
+    } else {
+      const prefix = match.split('*')[0] ?? '';
+      keys.push(...[...this.values.keys()].filter((key) => key.startsWith(prefix)));
     }
-    const prefix = pattern.split('*')[0] ?? '';
-    return [...this.values.keys()].filter((key) => key.startsWith(prefix));
+
+    return {
+      [Symbol.asyncIterator]() {
+        let yielded = false;
+        return {
+          async next() {
+            if (yielded) return { done: true, value: undefined };
+            yielded = true;
+            return { done: false, value: keys };
+          }
+        };
+      }
+    };
   }
 }
 

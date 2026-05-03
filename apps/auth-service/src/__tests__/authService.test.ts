@@ -15,13 +15,13 @@ const mockPgPool = {
 const mockRedisGet = vi.fn();
 const mockRedisSetex = vi.fn();
 const mockRedisDel = vi.fn();
-const mockRedisKeys = vi.fn();
+const mockRedisScanStream = vi.fn();
 
 const mockRedis = {
   get: mockRedisGet,
   setex: mockRedisSetex,
   del: mockRedisDel,
-  keys: mockRedisKeys,
+  scanStream: mockRedisScanStream,
 } as unknown as import('ioredis').default;
 
 // Mock dependencies that are not easily stubbed by overriding the class instance
@@ -215,6 +215,45 @@ describe('AuthService', () => {
       mockRedisGet.mockResolvedValueOnce(null);
 
       await expect(authService.refresh('valid_refresh_token')).rejects.toThrow(Errors.TOKEN_EXPIRED());
+    });
+  });
+
+  describe('logout', () => {
+    it('should delete keys found via scanStream', async () => {
+      mockRedisScanStream.mockImplementationOnce(() => ({
+        [Symbol.asyncIterator]() {
+          let yielded = false;
+          return {
+            async next() {
+              if (yielded) return { done: true, value: undefined };
+              yielded = true;
+              return { done: false, value: ['refresh:user-1:key1', 'refresh:user-1:key2'] };
+            }
+          };
+        }
+      }));
+
+      await authService.logout('user-1');
+
+      expect(mockRedisScanStream).toHaveBeenCalledWith({ match: 'refresh:user-1:*', count: 100 });
+      expect(mockRedisDel).toHaveBeenCalledWith('refresh:user-1:key1', 'refresh:user-1:key2');
+    });
+
+    it('should do nothing if no keys are found', async () => {
+      mockRedisScanStream.mockImplementationOnce(() => ({
+        [Symbol.asyncIterator]() {
+          return {
+            async next() {
+              return { done: true, value: undefined };
+            }
+          };
+        }
+      }));
+
+      await authService.logout('user-1');
+
+      expect(mockRedisScanStream).toHaveBeenCalledWith({ match: 'refresh:user-1:*', count: 100 });
+      expect(mockRedisDel).not.toHaveBeenCalled();
     });
   });
 
