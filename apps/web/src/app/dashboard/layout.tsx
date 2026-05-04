@@ -37,12 +37,13 @@ export default function DashboardLayout({
 
     const bootstrap = async () => {
       try {
-        const [me, balance, devStatus] = await Promise.all([
+        // ⚡ Bolt: `api.auth.me()` already includes `creditBalance`.
+        // Removed redundant `api.credits.getBalance()` call to reduce network requests.
+        const [me, devStatus] = await Promise.all([
           api.auth.me(),
-          api.credits.getBalance(),
           api.developers.getStatus().catch(() => ({ isDeveloper: false, enrolledAt: null })),
         ]);
-        setUser({ ...me, creditBalance: balance.balance });
+        setUser(me);
         setIsDeveloper(devStatus.isDeveloper);
       } catch {
         router.replace("/login");

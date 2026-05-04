@@ -33,8 +33,10 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
 
     const load = async () => {
       try {
-        const [me, balance] = await Promise.all([api.auth.me(), api.credits.getBalance()]);
-        setUser({ ...me, creditBalance: balance.balance });
+        // ⚡ Bolt: `api.auth.me()` already includes `creditBalance`.
+        // Removed redundant `api.credits.getBalance()` call to reduce network requests.
+        const me = await api.auth.me();
+        setUser(me);
       } catch {
         router.replace("/login");
       } finally {
