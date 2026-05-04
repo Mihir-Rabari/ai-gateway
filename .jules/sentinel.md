@@ -14,6 +14,10 @@
 **Vulnerability:** The web authentication popup passed sensitive tokens back to its opener using `window.opener.postMessage(..., '*')` or relied solely on a user-provided `origin` query parameter without server-side/build-time validation, which is vulnerable to cross-origin data leakage if an attacker opens the popup from a malicious origin.
 **Learning:** `postMessage` calls must always explicitly specify the intended target origin, and relying solely on query parameters for security guarantees is flawed unless strictly validated against a known whitelist.
 **Prevention:** Always restrict `targetOrigin` to trusted domains defined via environment variables (`NEXT_PUBLIC_ALLOWED_ORIGINS`). Ensure strict validation before transmission.
+## 2024-05-18 - [Remove Wildcard CORS Header in SSE Streams]
+**Vulnerability:** A route handler for chat streams manually set `Access-Control-Allow-Origin: *` before hijacking the response for Server-Sent Events (SSE). This created an overly permissive CORS configuration that bypassed the globally registered, centralized CORS policy.
+**Learning:** Manual CORS headers should never be applied in individual route handlers, even when bypassing standard Fastify hooks using `reply.hijack()`. Doing so overrides the centralized security policy (like `ALLOWED_ORIGINS`) and can expose sensitive endpoints to cross-origin requests from malicious domains.
+**Prevention:** Always rely on the globally registered `@fastify/cors` plugin to enforce the centralized CORS policy. Do not use `reply.raw.setHeader` for CORS headers under any circumstances.
 ## 2024-05-03 - Remove insecure CORS wildcard in SSE streaming
 **Vulnerability:** The `/chat` endpoint manually set `Access-Control-Allow-Origin: *` during Fastify reply hijacking for SSE streaming.
 **Learning:** Even when using `reply.hijack()` for Server-Sent Events, Fastify's globally registered `@fastify/cors` plugin handles CORS headers correctly. Manually setting headers can unintentionally override global security policies and introduce overly permissive CORS access.
