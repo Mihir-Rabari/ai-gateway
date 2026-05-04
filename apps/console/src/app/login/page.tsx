@@ -67,8 +67,8 @@ export default function LoginPage() {
             </form>
 
             <div className="mt-8 flex flex-wrap items-center justify-between gap-3 text-sm text-white/46">
-              <Link href="/" className="inline-flex items-center gap-2 transition hover:text-white/82"><ArrowLeft className="h-4 w-4" />Back to landing</Link>
-              <a href={`${webUrl}/signup`} className="transition hover:text-white/82">Create account</a>
+              <Link href="/" className="inline-flex items-center gap-2 rounded-md transition hover:text-white/82 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"><ArrowLeft className="h-4 w-4" />Back to landing</Link>
+              <a href={`${webUrl}/signup`} target="_blank" rel="noopener noreferrer" className="rounded-md transition hover:text-white/82 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">Create account</a>
             </div>
           </div>
         </Surface>
