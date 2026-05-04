@@ -1,9 +1,16 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ok, fail, type GatewayError } from '@ai-gateway/utils';
 import { AuthService } from '../services/authService.js';
+import { AppValidationService } from '../services/appValidationService.js';
+import { AppRepository } from '../repositories/appRepository.js';
 
 export async function internalRoutes(fastify: FastifyInstance) {
   const authService = new AuthService(fastify.pg, fastify.redis);
+  const appValidationService = new AppValidationService(
+    new AppRepository(fastify.pg),
+    fastify.redis,
+    process.env['CLIENT_SECRET_ENCRYPTION_KEY'],
+  );
 
   /**
    * POST /internal/auth/validate
@@ -54,6 +61,39 @@ export async function internalRoutes(fastify: FastifyInstance) {
           .status((err as GatewayError).statusCode ?? 404)
           .send(fail(err as GatewayError));
       }
+    },
+  );
+
+  /**
+   * POST /internal/auth/apps/validate
+   * Used by the Gateway to validate app access (JWT, API key, or active status).
+   * Encapsulates all registered_apps logic so the Gateway never queries the DB directly.
+   */
+  fastify.post(
+    '/apps/validate',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['appId'],
+          properties: {
+            appId: { type: 'string' },
+            appApiKey: { type: 'string' },
+            appJwt: { type: 'string' },
+          },
+        },
+      },
+    },
+    async (
+      req: FastifyRequest<{ Body: { appId: string; appApiKey?: string; appJwt?: string } }>,
+      reply: FastifyReply,
+    ) => {
+      const result = await appValidationService.validate(
+        req.body.appId,
+        req.body.appApiKey,
+        req.body.appJwt,
+      );
+      return reply.send(ok({ result }));
     },
   );
 }

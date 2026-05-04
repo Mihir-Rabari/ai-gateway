@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Menu, X } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import { api, getAuthToken, getRefreshToken, type UserProfile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 
-const CONSOLE_URL = process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3002";
+const CONSOLE_URL = process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009";
 
 const navLinks = [
   { href: "/dashboard", label: "Overview" },
@@ -25,6 +26,8 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [isDeveloper, setIsDeveloper] = useState<boolean | null>(null);
+  const [enrolling, setEnrolling] = useState(false);
 
   useEffect(() => {
     const token = getAuthToken();
@@ -35,9 +38,14 @@ export default function DashboardLayout({
 
     const bootstrap = async () => {
       try {
-        const me = await api.auth.me();
-        const balance = await api.credits.getBalance();
-        setUser({ ...me, creditBalance: balance.balance });
+        // ⚡ Bolt: `api.auth.me()` already includes `creditBalance`.
+        // Removed redundant `api.credits.getBalance()` call to reduce network requests.
+        const [me, devStatus] = await Promise.all([
+          api.auth.me(),
+          api.developers.getStatus().catch(() => ({ isDeveloper: false, enrolledAt: null })),
+        ]);
+        setUser(me);
+        setIsDeveloper(devStatus.isDeveloper);
       } catch {
         router.replace("/login");
       } finally {
@@ -75,6 +83,26 @@ export default function DashboardLayout({
     router.replace("/login");
   };
 
+  const handleBecomeDeveloper = async () => {
+    setEnrolling(true);
+    try {
+      await api.developers.enroll();
+      setIsDeveloper(true);
+      toast({
+        title: "Developer access enabled",
+        description: "You can now access the Developer Console.",
+      });
+    } catch (err) {
+      toast({
+        title: "Enrollment failed",
+        description: err instanceof Error ? err.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setEnrolling(false);
+    }
+  };
+
   if (checkingAuth) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black text-white">
@@ -105,10 +133,12 @@ export default function DashboardLayout({
             <span className="font-semibold tracking-tight text-white/90">AI Gateway</span>
           </div>
           <button
-            className="p-2 text-white/50 transition-colors hover:text-white md:hidden"
+            className="p-2 text-white/50 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 md:hidden"
             onClick={() => setSidebarOpen(false)}
+            aria-label="Close menu"
+            title="Close menu"
           >
-            x
+            <X className="h-5 w-5" />
           </button>
         </div>
 
@@ -139,12 +169,25 @@ export default function DashboardLayout({
               <p className="mt-1 text-xs text-white/70">{user.creditBalance} credits</p>
             </div>
           ) : null}
-          <a
-            href={`${CONSOLE_URL}?token=${encodeURIComponent(getAuthToken() ?? "")}&rt=${encodeURIComponent(getRefreshToken() ?? "")}`}
-            className="block w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-center text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            Developer Console →
-          </a>
+
+          {isDeveloper ? (
+            <a
+              href={`${CONSOLE_URL}?token=${encodeURIComponent(getAuthToken() ?? "")}&rt=${encodeURIComponent(getRefreshToken() ?? "")}`}
+              className="block w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-center text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              Developer Console →
+            </a>
+          ) : (
+            <Button
+              variant="outline"
+              className="w-full border-white/20 bg-transparent text-white hover:bg-white/10"
+              disabled={enrolling}
+              onClick={handleBecomeDeveloper}
+            >
+              {enrolling ? "Enrolling…" : "Become a Developer"}
+            </Button>
+          )}
+
           <Button
             variant="outline"
             className="w-full border-white/20 bg-transparent text-white hover:bg-white/10"
@@ -158,15 +201,19 @@ export default function DashboardLayout({
       <main className="flex min-w-0 flex-1 flex-col bg-black">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/10 bg-black/70 px-4 backdrop-blur md:px-6">
           <button
-            className="rounded-md p-2 text-white/60 transition-colors hover:bg-white/5 hover:text-white md:hidden"
+            className="rounded-md p-2 text-white/60 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 md:hidden"
             onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
+            title="Open menu"
           >
-            menu
+            <Menu className="h-5 w-5" />
           </button>
           <h1 className="text-sm font-medium text-white/70">Control Center</h1>
-          <a href={`${CONSOLE_URL}?token=${encodeURIComponent(getAuthToken() ?? "")}&rt=${encodeURIComponent(getRefreshToken() ?? "")}`}>
-            <Button className="bg-white text-black hover:bg-white/90">Dev Console</Button>
-          </a>
+          {isDeveloper && (
+            <a href={`${CONSOLE_URL}?token=${encodeURIComponent(getAuthToken() ?? "")}&rt=${encodeURIComponent(getRefreshToken() ?? "")}`}>
+              <Button className="bg-white text-black hover:bg-white/90">Dev Console</Button>
+            </a>
+          )}
         </header>
 
         <div className="flex-1 overflow-auto p-4 md:p-8">

@@ -69,6 +69,8 @@ export type DeveloperApp = {
   id: string;
   name: string;
   description?: string | null;
+  clientId?: string | null;
+  redirectUris?: string[];
   isActive: boolean;
   createdAt: string;
 };
@@ -167,14 +169,23 @@ const fetchApi = async <T>(
 ): Promise<T> => {
   const shouldAttachAuth = config.auth ?? true;
   const token = shouldAttachAuth ? getAuthToken() : null;
+  const hasJsonBody =
+    options.body !== undefined &&
+    options.body !== null &&
+    !(options.body instanceof FormData);
+  const headers = new Headers(options.headers ?? {});
+
+  if (hasJsonBody && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
 
   const response = await fetch(resolveUrl(url), {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
+    headers,
   });
 
   const text = await response.text();
@@ -299,10 +310,24 @@ export const api = {
   },
   apps: {
     list: async () => fetchApi<DeveloperApp[]>("/api/v1/apps"),
-    create: async (name: string, description?: string) => {
-      return fetchApi<{ id: string; name: string; description?: string; apiKey: string }>(
+    create: async (name: string, description?: string, redirectUris?: string[]) => {
+      return fetchApi<{
+        id: string;
+        name: string;
+        description?: string;
+        apiKey: string;
+        clientId: string;
+        clientSecret: string;
+        redirectUris: string[];
+      }>(
         "/api/v1/apps",
-        { method: "POST", body: JSON.stringify({ name, description }) },
+        { method: "POST", body: JSON.stringify({ name, description, redirectUris: redirectUris ?? [] }) },
+      );
+    },
+    updateRedirectUris: async (appId: string, redirectUris: string[]) => {
+      return fetchApi<{ redirectUris: string[] }>(
+        `/api/v1/apps/${appId}/redirect-uris`,
+        { method: "PUT", body: JSON.stringify({ redirectUris }) },
       );
     },
     rotateKey: async (appId: string) => {
@@ -331,5 +356,11 @@ export const api = {
       });
     },
     cancel: async () => fetchApi<Subscription>("/api/v1/billing/cancel", { method: "POST" }),
+  },
+  developers: {
+    getStatus: async () =>
+      fetchApi<{ isDeveloper: boolean; enrolledAt: string | null }>("/api/v1/developers/status"),
+    enroll: async () =>
+      fetchApi<{ enrolled: boolean }>("/api/v1/developers/enroll", { method: "POST" }),
   },
 };
