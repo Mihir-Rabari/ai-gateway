@@ -13,6 +13,7 @@ type ToasterToast = {
   variant?: "default" | "destructive";
 };
 
+
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
   UPDATE_TOAST: "UPDATE_TOAST",
