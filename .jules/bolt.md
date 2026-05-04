@@ -22,6 +22,7 @@
 ## 2024-05-03 - [performance improvement] Replace blocking redis.keys with scan
 **Learning:** redis.keys is an O(N) blocking operation that can halt the Redis main thread, causing latency spikes in high-traffic applications.
 **Action:** Replaced redis.keys with a cursor-based redis.scan loop in the logout path to ensure non-blocking cleanup of refresh tokens.
+
 ## 2024-05-02 - Remove redundant credit balance API calls
 **Learning:** The /me endpoint already returns the user's creditBalance. Fetching it separately on initial load is unnecessary and increases server load.
 **Action:** Removed redundant api.credits.getBalance() calls from the console shell and dashboard layout, relying on the user object from api.auth.me().
