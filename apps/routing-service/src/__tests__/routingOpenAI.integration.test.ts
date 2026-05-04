@@ -8,6 +8,7 @@ function createRedisMock() {
 
   return {
     get: async (key: string) => state.get(key) ?? null,
+    mget: async (keys: string[]) => keys.map((k) => state.get(k) ?? null),
     setex: async (key: string, _ttl: number, value: string) => {
       state.set(key, value);
       return 'OK';
