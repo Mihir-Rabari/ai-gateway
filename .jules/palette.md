@@ -13,3 +13,6 @@
 ## 2024-04-24 - Improve external link accessibility and security
 **Learning:** External links should always use noopener noreferrer for security and have clear focus indicators for accessibility.
 **Action:** Added target="_blank", rel="noopener noreferrer", and focus-visible classes to the external website link in the console shell.
+## 2024-04-30 - [UX improvement] Add keyboard focus indicators to console shell
+**Learning:** Keyboard users need a clear visual indication of which navigation element is currently focused.
+**Action:** Added focus-visible:ring-2 to all navigation links in the console shell, ensuring consistent keyboard accessibility across the platform.
