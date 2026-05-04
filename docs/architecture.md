@@ -47,7 +47,7 @@
 
 | From | To | Method |
 |------|----|--------|
-| Gateway | Auth Service | HTTP (sync — request validation) |
+| Gateway | Auth Service | HTTP (sync — user and app key validation) |
 | Gateway | Credit Service | HTTP (sync — lock/confirm/release) |
 | Gateway | Routing Service | HTTP (sync — model call) |
 | Any service | Analytics | Kafka (async — fire and forget) |
@@ -58,7 +58,7 @@
 
 ```
 1. App sends request → Gateway
-2. Gateway → Auth Service: validate token
+2. Gateway → Auth Service: validate user token and app API key
 3. Gateway → Credit Service: check + lock credits
 4. Gateway → Routing Service: call AI model
 5. Routing Service → AI Provider: API call

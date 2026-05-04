@@ -1,35 +1,31 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import formbody from '@fastify/formbody';
 import rateLimit from '@fastify/rate-limit';
 import { getAuthConfig } from '@ai-gateway/config';
-import { createLogger } from '@ai-gateway/utils';
-import { postgresPlugin } from './plugins/postgres.js';
-import { redisPlugin } from './plugins/redis.js';
-import { kafkaPlugin } from './plugins/kafka.js';
+import { createLogger, getFastifyLoggerOptions, postgresPlugin, redisPlugin, kafkaPlugin, errorHandlerPlugin, securityHeadersPlugin } from '@ai-gateway/utils';
 import { authRoutes } from './routes/authRoutes.js';
 import { internalRoutes } from './routes/internalRoutes.js';
+import { oauthRoutes } from './routes/oauthRoutes.js';
 import { startAuthAuditConsumer } from './events/authAuditConsumer.js';
 
 const logger = createLogger('auth-service');
 const config = getAuthConfig();
 
-const app = Fastify({
-  logger: {
-    level: process.env['LOG_LEVEL'] ?? 'info',
-    transport:
-      config.NODE_ENV === 'development'
-        ? { target: 'pino-pretty', options: { colorize: true } }
-        : undefined,
-  },
-});
+const app = Fastify({ logger: getFastifyLoggerOptions() });
 
 async function bootstrap() {
   let auditConsumer: { disconnect: () => Promise<void> } | null = null;
 
   // ─── Plugins ───────────────────────────────────
+  await app.register(securityHeadersPlugin);
   await app.register(cors, {
-    origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000', 'http://localhost:3002'],
+    origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000', 'http://localhost:3009'],
+    credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
+  await app.register(formbody);
 
   await app.register(postgresPlugin);
   await app.register(redisPlugin);
@@ -58,24 +54,13 @@ async function bootstrap() {
   // ─── Routes ────────────────────────────────────
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(internalRoutes, { prefix: '/internal/auth' });
+  await app.register(oauthRoutes, { prefix: '/oauth' });
 
   // ─── Health Check ──────────────────────────────
   app.get('/health', async () => ({ status: 'ok', service: 'auth-service' }));
 
   // ─── Error Handler ─────────────────────────────
-  app.setErrorHandler((error, _req, reply) => {
-    logger.error({ error }, 'Unhandled error');
-    const appError = error as { statusCode?: number; code?: string; message?: string };
-    const statusCode = appError.statusCode ?? 500;
-    reply.status(statusCode).send({
-      success: false,
-      error: {
-        code: appError.code ?? 'INTERNAL',
-        message: appError.message ?? 'Internal server error',
-        statusCode,
-      },
-    });
-  });
+  await app.register(errorHandlerPlugin);
 
   // ─── Start ─────────────────────────────────────
   await app.listen({ port: config.AUTH_SERVICE_PORT, host: '0.0.0.0' });
