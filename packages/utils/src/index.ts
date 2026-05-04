@@ -172,8 +172,15 @@ export const withRetry = async <T>(
 // Validation Helpers
 // ─────────────────────────────────────────
 
-export const isValidEmail = (email: string): boolean =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+export const isValidEmail = (email: string): boolean => {
+  // Robust RFC-aligned regex that prevents common bypasses like double dots or missing TLDs
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  if (!email || email.length > 254) return false;
+  if (!emailRegex.test(email)) return false;
+  const parts = email.split('@');
+  if (parts[1] && !parts[1].includes('.')) return false; // Ensure TLD presence
+  return true;
+};
 
 export const isValidUUID = (id: string): boolean =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
