@@ -8,11 +8,6 @@ import type { FastifyInstance } from 'fastify';
 
 const logger = createLogger('billing-service-class');
 
-const razorpay = new Razorpay({
-  key_id: process.env['RAZORPAY_KEY_ID'] ?? '',
-  key_secret: process.env['RAZORPAY_KEY_SECRET'] ?? '',
-});
-
 interface RazorpayClientLike {
   subscriptions: {
     create: (input: {
@@ -31,6 +26,10 @@ interface BillingServiceDeps {
 }
 
 export class BillingService {
+  // Lazily instantiated so the constructor is NOT called at module-load time.
+  // This lets tests import BillingService without valid Razorpay credentials.
+  private _razorpayClient?: RazorpayClientLike;
+
   constructor(
     private readonly repo: BillingRepository,
     private readonly fastify: FastifyInstance,
@@ -38,7 +37,16 @@ export class BillingService {
   ) {}
 
   private get razorpayClient(): RazorpayClientLike {
-    return this.deps.razorpayClient ?? (razorpay as unknown as RazorpayClientLike);
+    if (this.deps.razorpayClient) {
+      return this.deps.razorpayClient;
+    }
+    if (!this._razorpayClient) {
+      this._razorpayClient = new Razorpay({
+        key_id: process.env['RAZORPAY_KEY_ID'] ?? '',
+        key_secret: process.env['RAZORPAY_KEY_SECRET'] ?? '',
+      }) as unknown as RazorpayClientLike;
+    }
+    return this._razorpayClient;
   }
 
   private get httpFetch(): typeof fetch {
