@@ -11,6 +11,16 @@ import { CircuitBreaker } from './circuitBreaker.js';
 
 const logger = createLogger('gateway-service');
 
+
+const RATE_LIMIT_LUA = `
+  local current = redis.call("INCR", KEYS[1])
+  if current == 1 then
+    redis.call("EXPIRE", KEYS[1], ARGV[1])
+  end
+  return current
+`;
+
+
 interface ServiceClients {
   authServiceUrl: string;
   creditServiceUrl: string;
@@ -84,14 +94,7 @@ export class GatewayService {
     // Step 2: Rate Limiting
     const limit = this.getRateLimit(user.planId);
     const rateLimitKey = `ratelimit:gateway:${user.userId}`;
-    const rateLimitScript = `
-      local current = redis.call("INCR", KEYS[1])
-      if current == 1 then
-        redis.call("EXPIRE", KEYS[1], 60)
-      end
-      return current
-    `;
-    const currentUsage = await this.clients.redis.eval(rateLimitScript, 1, rateLimitKey) as number;
+    const currentUsage = await this.clients.redis.eval(RATE_LIMIT_LUA, 1, rateLimitKey, '60') as number;
     if (currentUsage > limit) {
       throw new GatewayError('RATE_LIMIT_EXCEEDED', 'Rate limit exceeded', 429);
     }
@@ -185,14 +188,7 @@ export class GatewayService {
 
     const limit = this.getRateLimit(user.planId);
     const rateLimitKey = `ratelimit:gateway:${user.userId}`;
-    const rateLimitScript = `
-      local current = redis.call("INCR", KEYS[1])
-      if current == 1 then
-        redis.call("EXPIRE", KEYS[1], 60)
-      end
-      return current
-    `;
-    const currentUsage = await this.clients.redis.eval(rateLimitScript, 1, rateLimitKey) as number;
+    const currentUsage = await this.clients.redis.eval(RATE_LIMIT_LUA, 1, rateLimitKey, '60') as number;
     if (currentUsage > limit) throw new GatewayError('RATE_LIMIT_EXCEEDED', 'Rate limit exceeded', 429);
 
     const appAccess = await this.validateAppAccess(input.appId, input.appApiKey, input.appJwt);
