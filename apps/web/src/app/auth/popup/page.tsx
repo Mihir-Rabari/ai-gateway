@@ -55,7 +55,10 @@ export default function AuthPopupPage() {
         } else {
           console.error('Unauthorized or missing origin for auth popup:', callbackOrigin);
           setError("Unauthorized callback origin.");
+<<<<<<< HEAD
           setLoading(false);
+=======
+>>>>>>> origin/main
         }
       } else {
         setError("This window was not opened as a popup.");
