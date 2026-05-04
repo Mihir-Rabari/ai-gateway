@@ -20,16 +20,23 @@ export const errorHandlerPlugin = fp(async (fastify: FastifyInstance) => {
     const appError = error as { statusCode?: number; code?: string; message?: string };
     const statusCode = appError.statusCode ?? 500;
     req.log.error({ err: error }, 'Unhandled error');
+<<<<<<< HEAD
 
     // Mask messages for 5xx errors to prevent information leakage
     const isServerError = statusCode >= 500;
     const message = isServerError ? 'Internal server error' : (appError.message ?? 'Internal server error');
 
+=======
+>>>>>>> origin/main
     reply.status(statusCode).send({
       success: false,
       error: {
         code: appError.code ?? 'INTERNAL',
+<<<<<<< HEAD
         message,
+=======
+        message: statusCode >= 500 ? 'Internal server error' : (appError.message ?? 'Internal server error'),
+>>>>>>> origin/main
         statusCode,
       },
     });

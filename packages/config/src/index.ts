@@ -17,6 +17,7 @@ const baseSchema = z.object({
   KAFKA_BROKERS: z.string(),
   KAFKA_CLIENT_ID: z.string().default('ai-gateway'),
   KAFKA_GROUP_ID: z.string().default('ai-gateway-group'),
+  ALLOWED_ORIGINS: z.string().default('http://localhost:3000'),
   // Kafka topic names — override these to use custom topic names without code changes
   KAFKA_TOPIC_AUTH: z.string().default('auth.events'),
   KAFKA_TOPIC_CREDIT: z.string().default('credit.events'),
