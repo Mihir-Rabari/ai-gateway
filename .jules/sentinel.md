@@ -89,3 +89,7 @@
 **Vulnerability:** Fastify catch-all handlers were directly sending raw appError.message on 500 errors to the client, exposing internal implementation details, and relying on fastify.log.error instead of request-scoped logging.
 **Learning:** Updated errorHandlerPlugin to exclusively return generic 'Internal server error' messages to the client if the statusCode is >= 500. Additionally, updated the logger to use req.log.error to correctly capture and correlate the real error contexts server-side.
 **Prevention:** Always mask 5xx error responses with generic messages. Use request-scoped structured logging (req.log.error) to log the detailed, raw error object internally, ensuring that logs are tied to request contexts securely.
+## 2024-06-25 - [Fix improper logging and potential information leakage in API routes]
+**Vulnerability:** Fastify route catch blocks in the API service (apps.ts, developers.ts) were logging raw error objects (including err.stack) globally using console.error and fastify.log.error instead of using the secure, request-scoped logger.
+**Learning:** Replaced all instances of fastify.log and console.error with the secure, request-scoped req.log.error and req.log.info. Removed manual, unsafe errObj construction.
+**Prevention:** Always use request-scoped structured logging (req.log.error) instead of global loggers or console.error in route handlers to ensure proper traceability and prevent sensitive information from bypassing log redaction.
