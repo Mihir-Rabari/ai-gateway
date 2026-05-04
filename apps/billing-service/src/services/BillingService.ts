@@ -8,20 +8,69 @@ import type { FastifyInstance } from 'fastify';
 
 const logger = createLogger('billing-service-class');
 
-const razorpay = new Razorpay({
-  key_id: process.env['RAZORPAY_KEY_ID'] ?? '',
-  key_secret: process.env['RAZORPAY_KEY_SECRET'] ?? '',
-});
+interface RazorpayClientLike {
+  subscriptions: {
+    create: (input: {
+      plan_id: string;
+      total_count: number;
+      quantity: number;
+      customer_notify: number;
+    }) => Promise<{ id: string }>;
+    cancel: (id: string, options: unknown) => Promise<void>;
+  };
+}
+
+interface BillingServiceDeps {
+  razorpayClient?: RazorpayClientLike;
+  httpFetch?: typeof fetch;
+}
 
 export class BillingService {
+  // Lazily instantiated so the constructor is NOT called at module-load time.
+  // This lets tests import BillingService without valid Razorpay credentials.
+  private _razorpayClient?: RazorpayClientLike;
+
   constructor(
     private readonly repo: BillingRepository,
     private readonly fastify: FastifyInstance,
+    private readonly deps: BillingServiceDeps = {},
   ) {}
 
+  private get razorpayClient(): RazorpayClientLike {
+    if (this.deps.razorpayClient) {
+      return this.deps.razorpayClient;
+    }
+    if (!this._razorpayClient) {
+      this._razorpayClient = new Razorpay({
+        key_id: process.env['RAZORPAY_KEY_ID'] ?? '',
+        key_secret: process.env['RAZORPAY_KEY_SECRET'] ?? '',
+      }) as unknown as RazorpayClientLike;
+    }
+    return this._razorpayClient;
+  }
+
+  private get httpFetch(): typeof fetch {
+    return this.deps.httpFetch ?? fetch;
+  }
+
+  private resolveRazorpayPlanId(planId: 'pro' | 'max'): string {
+    const razorpayPlanId =
+      planId === 'pro' ? process.env['RAZORPAY_PLAN_ID_PRO']
+      : planId === 'max' ? process.env['RAZORPAY_PLAN_ID_MAX']
+      : null;
+
+    if (!razorpayPlanId) {
+      throw new Error(`Missing Razorpay plan mapping for ${planId}`);
+    }
+
+    return razorpayPlanId;
+  }
+
   async createSubscription(userId: string, planId: 'pro' | 'max') {
-    const subscription = await razorpay.subscriptions.create({
-      plan_id: planId,
+    const razorpayPlanId = this.resolveRazorpayPlanId(planId);
+
+    const subscription = await this.razorpayClient.subscriptions.create({
+      plan_id: razorpayPlanId,
       total_count: 12,
       quantity: 1,
       customer_notify: 1,
@@ -65,7 +114,7 @@ export class BillingService {
         await this.repo.updateSubscriptionStatus(subId!, 'active');
         await this.repo.updateUserPlan(userId, planId);
 
-        await fetch(`${process.env['CREDIT_SERVICE_URL'] ?? 'http://localhost:3005'}/credits/add`, {
+        await this.httpFetch(`${process.env['CREDIT_SERVICE_URL'] ?? 'http://localhost:3005'}/credits/add`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId, amount: planCredits, reason: 'subscription' }),
@@ -106,16 +155,16 @@ export class BillingService {
           logger.error(err, 'Failed to publish billing event');
         });
       } else if (event === 'payment.failed') {
-        const billingEvent = {
+        const billingEvent: BillingEvent = {
           eventId: generateId(),
           topic: 'billing.events',
-          type: 'billing.payment.failed' as unknown as BillingEvent['type'],
+          type: 'billing.payment.failed',
           userId,
           planId: planId as BillingEvent['planId'],
           amountPaise: payload.payment?.entity.amount ?? 0,
           timestamp: new Date().toISOString(),
           version: '1.0',
-        } as BillingEvent;
+        };
 
         void this.fastify.kafka.publish(KAFKA_TOPICS.BILLING, billingEvent).catch((err) => {
           logger.error(err, 'Failed to publish billing event for payment failure');
@@ -140,7 +189,7 @@ export class BillingService {
 
     // Razorpay typed issue bypass without `any`.
     // The library typing for cancel might be limited.
-    await (razorpay.subscriptions.cancel as unknown as (id: string, options: unknown) => Promise<void>)(
+    await this.razorpayClient.subscriptions.cancel(
       razorpaySubscriptionId,
       { cancel_at_cycle_end: 1 }
     );

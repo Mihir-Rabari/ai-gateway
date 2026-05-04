@@ -1,7 +1,43 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Token Storage abstraction
+// Allows developers to plug in their own persistence (e.g. localStorage, DB).
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface TokenStorage {
+  get(key: string): string | null | Promise<string | null>;
+  set(key: string, value: string): void | Promise<void>;
+  remove(key: string): void | Promise<void>;
+}
+
+/** Default in-memory storage (cleared on page reload). */
+class MemoryStorage implements TokenStorage {
+  private readonly store = new Map<string, string>();
+  get(key: string) { return this.store.get(key) ?? null; }
+  set(key: string, value: string) { this.store.set(key, value); }
+  remove(key: string) { this.store.delete(key); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Config
+// ─────────────────────────────────────────────────────────────────────────────
+
 export interface AIGatewayConfig {
-  appId: string;
-  apiKey?: string;
+  /** OAuth clientId obtained after registering an app. */
+  clientId: string;
+  /** The redirect URI registered with AI Gateway (must match exactly). */
+  redirectUri: string;
+  /** Base URL of the AI Gateway API. Defaults to https://api.ai-gateway.io */
   baseUrl?: string;
+  /** Base URL of the AI Gateway Auth service. Defaults to https://auth.ai-gateway.io */
+  authUrl?: string;
+  /** Custom token persistence layer. Defaults to in-memory. */
+  storage?: TokenStorage;
+
+  // ── Legacy / API-key mode ──
+  /** @deprecated Use clientId + redirectUri OAuth flow instead */
+  appId?: string;
+  /** @deprecated Use signIn() OAuth flow instead */
+  apiKey?: string;
 }
 
 export interface ChatMessage {
@@ -33,57 +69,365 @@ export interface CreditsResult {
   planId: 'free' | 'pro' | 'max';
 }
 
+export interface UserResult {
+  id: string;
+  email: string;
+  name: string;
+  planId: 'free' | 'pro' | 'max';
+  creditBalance: number;
+}
+
+export interface SignInResult {
+  accessToken: string;
+  refreshToken: string;
+  user: UserResult;
+}
+
+export interface RefreshResult {
+  accessToken: string;
+  refreshToken: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Storage keys
+// ─────────────────────────────────────────────────────────────────────────────
+
+const STORAGE_KEYS = {
+  ACCESS_TOKEN: 'ai_gw_access_token',
+  REFRESH_TOKEN: 'ai_gw_refresh_token',
+  OAUTH_STATE: 'ai_gw_oauth_state',
+  USER: 'ai_gw_user',
+} as const;
+
+/**
+ * Number of random bytes used for OAuth CSRF state generation.
+ * 24 bytes = 192 bits of entropy, which exceeds the OWASP CSRF prevention
+ * recommendation of ≥ 128 bits (OWASP CSRF Cheat Sheet, "Synchronizer Token
+ * Pattern") and is sufficient to make brute-force guessing infeasible.
+ */
+const STATE_ENTROPY_BYTES = 24;
+
+/**
+ * Lifetime of a signed X-App-Token JWT in seconds.
+ * Short-lived to limit the blast radius of a leaked token in transit.
+ */
+const APP_TOKEN_EXPIRY_SECONDS = 60; // 1 minute
+
+/**
+ * Number of seconds before an access token's expiry at which the SDK will
+ * proactively refresh it. Avoids clock-skew and latency issues.
+ */
+const TOKEN_EXPIRY_BUFFER_SECONDS = 30;
+
+/**
+ * OAuth error codes and message keywords that indicate the refresh token is
+ * permanently invalid. A match causes the SDK to sign the user out rather than
+ * silently retrying.  Transient errors (network, 5xx) do not appear here and
+ * will be rethrown without clearing the local session.
+ */
+const TERMINAL_REFRESH_ERROR_PATTERNS = [
+  'invalid_grant',
+  'invalid_token',
+  'revoked',
+  'expired',
+] as const;
+
+/**
+ * Internal error thrown by refreshSession() when the server explicitly rejects
+ * the refresh token. Carries the HTTP response status for terminal-error detection.
+ */
+class RefreshError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'RefreshError';
+  }
+}
+
 /**
  * AI Gateway SDK Client
  *
- * Initialize this class to interact with the AI Gateway.
- * It manages authentication, credit checks, and sending requests to AI models.
+ * Implements a Google OAuth-style authentication and AI request pipeline.
+ *
+ * ## Quick Start (OAuth flow)
+ * ```ts
+ * const ai = new AIGateway({ clientId: 'client_xxx', redirectUri: 'http://localhost:3000/callback' });
+ * await ai.signIn();            // redirects browser to consent page
+ * // --- after redirect back ---
+ * await ai.handleCallback();    // exchanges code, stores tokens
+ * const result = await ai.chat({ model: 'gpt-4o', messages: [{ role: 'user', content: 'Hi' }] });
+ * ```
  */
 export class AIGateway {
-  private readonly appId: string;
+  private readonly clientId: string;
+  private readonly redirectUri: string;
   private readonly baseUrl: string;
+  private readonly authUrl: string;
+  private readonly storage: TokenStorage;
+
+  // Stored after handleCallback() for signing X-App-Token JWTs on each request.
+  // ⚠️  Only safe in server-side (Node.js) environments — never expose client
+  //     secrets in browser code or commit them to source control.
+  private clientSecret: string | undefined;
+
+  // Legacy API-key mode
+  /** @deprecated */
+  private readonly appId: string;
+  /** @deprecated */
   private apiKey: string | undefined;
-  private accessToken: string | undefined;
+  /** @deprecated – use storage instead */
+  private legacyAccessToken: string | undefined;
+
+  /** In-flight refresh promise; serializes concurrent token-refresh calls. */
+  private refreshPromise: Promise<RefreshResult> | null = null;
 
   /**
    * Create a new AIGateway instance.
    *
-   * @param config - The configuration options
-   * @param config.appId - The developer's app ID registered with AI Gateway
-   * @param config.apiKey - The user's API key (optional if using `signIn()`)
-   * @param config.baseUrl - Override the default API URL
+   * @param config.clientId  - OAuth clientId obtained from the developer console
+   * @param config.redirectUri - Redirect URI registered with AI Gateway
+   * @param config.baseUrl   - Override the API base URL
+   * @param config.authUrl   - Override the auth service URL
+   * @param config.storage   - Custom token storage (default: in-memory)
    */
   constructor(config: AIGatewayConfig) {
-    this.appId = config.appId;
-    this.apiKey = config.apiKey;
+    const clientId = config.clientId ?? config.appId ?? '';
+    if (!clientId) {
+      throw new Error('AIGateway: clientId (or appId) is required');
+    }
+    this.clientId = clientId;
+    this.redirectUri = config.redirectUri ?? '';
     this.baseUrl = config.baseUrl ?? 'https://api.ai-gateway.io';
+    this.authUrl = config.authUrl ?? 'https://auth.ai-gateway.io';
+    this.storage = config.storage ?? new MemoryStorage();
+    // Keep legacy appId only when explicitly provided, don't conflate with clientId
+    this.appId = config.appId ?? '';
+    this.apiKey = config.apiKey;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Auth — OAuth flow
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Redirect the user's browser to the AI Gateway sign-in page.
+   *
+   * The browser will be redirected to `redirectUri?code=...&state=...` after login.
+   * Call `handleCallback()` on that page to exchange the code for tokens.
+   *
+   * @throws {Error} If running outside a browser environment
+   */
+  async signIn(): Promise<void> {
+    const signInUrl = await this.getSignInUrl();
+    if (typeof window === 'undefined') {
+      throw new Error('AIGateway.signIn() can only be called in a browser environment');
+    }
+    window.location.href = signInUrl;
   }
 
   /**
-   * Set the user's access token obtained via `signIn()`.
-   *
-   * @param token - The JWT access token
+   * Build the OAuth authorize URL and persist the anti-CSRF state token.
    */
-  setToken(token: string): void {
-    this.accessToken = token;
+  async getSignInUrl(): Promise<string> {
+    if (typeof window === 'undefined') {
+      throw new Error('AIGateway.getSignInUrl() can only be called in a browser environment');
+    }
+    if (!this.clientId) {
+      throw new Error('AIGateway: clientId is required for signIn()');
+    }
+    if (!this.redirectUri) {
+      throw new Error('AIGateway: redirectUri is required for signIn()');
+    }
+
+    const state = this.generateState();
+    await this.storage.set(STORAGE_KEYS.OAUTH_STATE, state);
+
+    const url = new URL(`${this.getOAuthBaseUrl()}/oauth/authorize`);
+    url.searchParams.set('client_id', this.clientId);
+    url.searchParams.set('redirect_uri', this.redirectUri);
+    url.searchParams.set('response_type', 'code');
+    url.searchParams.set('scope', 'basic');
+    url.searchParams.set('state', state);
+    return url.toString();
   }
 
-  private getAuthHeader(): string {
-    const token = this.accessToken ?? this.apiKey;
-    if (!token) throw new Error('AIGateway: No API key or access token set. Call signIn() first.');
-    return `Bearer ${token}`;
+  /**
+   * Check whether a URL currently contains OAuth callback parameters.
+   */
+  hasAuthCallback(url?: string): boolean {
+    const href = url ?? (typeof window !== 'undefined' ? window.location.href : '');
+    if (!href) return false;
+    const params = new URL(href).searchParams;
+    return params.has('code');
   }
+
+  /**
+   * Handle the OAuth callback on the redirect URI page.
+   *
+   * Parses `code` and `state` from the current URL, validates the state to
+   * prevent CSRF, exchanges the code for access + refresh tokens, and stores them.
+   *
+   * @param clientSecret - Your app's clientSecret (kept server-side in production)
+   * @param url - The callback URL to parse (defaults to `window.location.href`)
+   * @returns User and tokens after successful exchange
+   * @throws {Error} On state mismatch, missing code, or token exchange failure
+   */
+  async handleCallback(clientSecret: string, url?: string): Promise<SignInResult> {
+    const href = url ?? (typeof window !== 'undefined' ? window.location.href : '');
+    const params = new URL(href).searchParams;
+
+    const code = params.get('code');
+    const state = params.get('state');
+
+    if (!code) {
+      throw new Error('AIGateway: No authorization code found in callback URL');
+    }
+
+    const storedState = await this.storage.get(STORAGE_KEYS.OAUTH_STATE);
+    // Enforce CSRF protection:
+    // - If we stored a state but the callback omitted it → reject (state may have been stripped by an attacker).
+    // - If both are present and they differ → reject.
+    if (storedState && !state) {
+      await this.storage.remove(STORAGE_KEYS.OAUTH_STATE);
+      throw new Error('AIGateway: OAuth state missing from callback — possible CSRF attack');
+    }
+    if (state && storedState && state !== storedState) {
+      await this.storage.remove(STORAGE_KEYS.OAUTH_STATE);
+      throw new Error('AIGateway: OAuth state mismatch — possible CSRF attack');
+    }
+    await this.storage.remove(STORAGE_KEYS.OAUTH_STATE);
+
+    const result = await this.exchangeCode(code, clientSecret);
+
+    // Keep the secret in-memory so each subsequent AI request can be signed
+    // with a short-lived X-App-Token JWT (server-side environments only).
+    this.clientSecret = clientSecret;
+
+    await this.storage.set(STORAGE_KEYS.ACCESS_TOKEN, result.accessToken);
+    await this.storage.set(STORAGE_KEYS.REFRESH_TOKEN, result.refreshToken);
+    await this.storage.set(STORAGE_KEYS.USER, JSON.stringify(result.user));
+
+    return result;
+  }
+
+  /**
+   * Clear all stored tokens and sign the user out.
+   */
+  async signOut(): Promise<void> {
+    // Capture the token before clearing so we can call the server logout endpoint
+    const token = await this.storage.get(STORAGE_KEYS.ACCESS_TOKEN) ?? this.legacyAccessToken;
+
+    await this.storage.remove(STORAGE_KEYS.ACCESS_TOKEN);
+    await this.storage.remove(STORAGE_KEYS.REFRESH_TOKEN);
+    await this.storage.remove(STORAGE_KEYS.USER);
+    this.legacyAccessToken = undefined;
+
+    // Best-effort server logout (ignore errors)
+    try {
+      if (token) {
+        await fetch(`${this.getAuthApiBaseUrl()}/logout`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+    } catch { /* ignore */ }
+  }
+
+  /**
+   * Refresh an expired session using the stored refresh token.
+   */
+  async refreshSession(): Promise<RefreshResult> {
+    const refreshToken = await this.storage.get(STORAGE_KEYS.REFRESH_TOKEN);
+    if (!refreshToken) {
+      throw new Error('AIGateway: No refresh token available');
+    }
+
+    const res = await fetch(`${this.getAuthApiBaseUrl()}/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    const json = await res.json() as {
+      success: boolean;
+      data?: RefreshResult;
+      error?: { message?: string };
+    };
+
+    if (!json.success || !json.data) {
+      throw new RefreshError(
+        `AIGateway: Session refresh failed - ${json.error?.message ?? 'Unknown error'}`,
+        res.status,
+      );
+    }
+
+    await this.storage.set(STORAGE_KEYS.ACCESS_TOKEN, json.data.accessToken);
+    await this.storage.set(STORAGE_KEYS.REFRESH_TOKEN, json.data.refreshToken);
+
+    return json.data;
+  }
+
+  /**
+   * Get the currently authenticated user's profile.
+   *
+   * @returns User profile, or null if not signed in
+   */
+  async getUser(): Promise<UserResult | null> {
+    const cached = await this.storage.get(STORAGE_KEYS.USER);
+    if (cached) {
+      try {
+        return JSON.parse(cached) as UserResult;
+      } catch { /* fall through to API */ }
+    }
+
+    try {
+      const res = await fetch(`${this.baseUrl}/api/v1/me`, {
+        headers: { Authorization: await this.getAuthHeader() },
+      });
+      if (!res.ok) return null;
+      const json = await res.json() as { success: boolean; data?: UserResult };
+      if (!json.success || !json.data) return null;
+      await this.storage.set(STORAGE_KEYS.USER, JSON.stringify(json.data));
+      return json.data;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Check if a user is currently authenticated.
+   */
+  async isAuthenticated(): Promise<boolean> {
+    const token = await this.storage.get(STORAGE_KEYS.ACCESS_TOKEN);
+    return !!(token || this.legacyAccessToken || this.apiKey);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Auth — Legacy / token helpers
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Manually set an access token (e.g., received from your own backend).
+   * @deprecated Prefer the OAuth `signIn()` → `handleCallback()` flow.
+   */
+  setToken(token: string): void {
+    this.legacyAccessToken = token;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // AI Requests
+  // ─────────────────────────────────────────────────────────────────────────
 
   /**
    * Send a chat message to any AI model.
    *
-   * @param options - Chat configuration
-   * @param options.model - Model ID (e.g. 'gpt-4o', 'claude-3-5-sonnet')
+   * @param options.model    - Model ID (e.g. 'gpt-4o', 'claude-3-5-sonnet')
    * @param options.messages - Conversation history
    * @param options.maxTokens - Maximum tokens to generate (default: 1024)
-   * @param options.temperature - Sampling temperature (0-1)
+   * @param options.temperature - Sampling temperature (0–1)
    * @returns Chat result with output text and token/credit usage
-   * @throws {Error} When insufficient credits or provider error
    *
    * @example
    * const result = await ai.chat({
@@ -92,12 +436,14 @@ export class AIGateway {
    * });
    */
   async chat(options: ChatOptions): Promise<ChatResult> {
+    const appToken = await this.signAppToken();
     const res = await fetch(`${this.baseUrl}/api/v1/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: this.getAuthHeader(),
-        'X-App-Id': this.appId,
+        Authorization: await this.getAuthHeader(),
+        'X-App-Id': this.clientId || this.appId,
+        ...(appToken ? { 'X-App-Token': appToken } : {}),
       },
       body: JSON.stringify({
         model: options.model,
@@ -120,14 +466,101 @@ export class AIGateway {
   }
 
   /**
-   * Get the current user's credit balance and plan.
+   * Stream a chat response token-by-token using Server-Sent Events.
    *
-   * @returns The credit balance and plan ID
-   * @throws {Error} If fetching credits fails
+   * @param options - Same as `chat()`
+   * @returns An async iterable yielding raw SSE data strings
+   *
+   * @example
+   * for await (const chunk of ai.stream({ model: 'gpt-4o', messages: [...] })) {
+   *   process.stdout.write(chunk);
+   * }
+   */
+  async *stream(options: ChatOptions): AsyncIterable<string> {
+    const appToken = await this.signAppToken();
+    const res = await fetch(`${this.baseUrl}/api/v1/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: await this.getAuthHeader(),
+        'X-App-Id': this.clientId || this.appId,
+        ...(appToken ? { 'X-App-Token': appToken } : {}),
+      },
+      body: JSON.stringify({
+        model: options.model,
+        messages: options.messages,
+        maxTokens: options.maxTokens,
+        temperature: options.temperature,
+        stream: true,
+      }),
+    });
+
+    if (!res.ok) {
+      let message = 'Unknown error';
+      try {
+        const json = await res.json() as { error?: { message: string } };
+        message = json.error?.message ?? message;
+      } catch { /* ignore parse errors */ }
+      throw new Error(`AIGateway stream error: ${message}`);
+    }
+
+    if (!res.body) {
+      throw new Error('AIGateway: No response body for streaming');
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split('\n');
+        // Keep the last partial line in the buffer
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('data: ')) {
+            const payload = trimmed.slice(6).trim();
+            if (payload && payload !== '[DONE]') {
+              yield payload;
+            }
+          }
+        }
+      }
+
+      // Process any remaining data in buffer after stream ends
+      const finalLine = buffer.trim();
+      if (finalLine.startsWith('data: ')) {
+        const payload = finalLine.slice(6).trim();
+        if (payload && payload !== '[DONE]') {
+          yield payload;
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  }
+
+  /**
+   * Get the current user's credit balance and plan.
+   */
+  async getCredits(): Promise<CreditsResult> {
+    return this.credits();
+  }
+
+  /**
+   * Get the current user's credit balance and plan.
+   * @alias getCredits
    */
   async credits(): Promise<CreditsResult> {
     const res = await fetch(`${this.baseUrl}/api/v1/credits`, {
-      headers: { Authorization: this.getAuthHeader() },
+      headers: { Authorization: await this.getAuthHeader() },
     });
 
     const json = await res.json() as { success: boolean; data?: CreditsResult };
@@ -135,20 +568,189 @@ export class AIGateway {
     return json.data;
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Internal helpers
+  // ─────────────────────────────────────────────────────────────────────────
+
+  private async getAuthHeader(): Promise<string> {
+    let stored = await this.storage.get(STORAGE_KEYS.ACCESS_TOKEN);
+
+    // Auto-refresh OAuth access tokens that are expired or about to expire.
+    // Only applies to the OAuth flow (stored token); legacy apiKey / setToken() paths are skipped.
+    if (stored) {
+      const exp = this.decodeTokenExpiry(stored);
+      const now = Math.floor(Date.now() / 1000);
+      if (exp !== null && exp - now < TOKEN_EXPIRY_BUFFER_SECONDS) {
+        const refreshToken = await this.storage.get(STORAGE_KEYS.REFRESH_TOKEN);
+        if (refreshToken) {
+          // Serialize concurrent refresh calls: if a refresh is already in-flight,
+          // await the same promise rather than issuing a duplicate request.
+          if (!this.refreshPromise) {
+            this.refreshPromise = this.refreshSession().finally(() => {
+              this.refreshPromise = null;
+            });
+          }
+          try {
+            const refreshed = await this.refreshPromise;
+            stored = refreshed.accessToken;
+          } catch (err) {
+            // Only sign out on terminal auth errors (HTTP 401/403, OAuth
+            // invalid_grant/invalid_token, or explicit revocation/expiry).
+            // Transient failures (network errors, 5xx, timeouts, bad JSON)
+            // must not clear the local session — the caller can retry.
+            const isTerminalAuthError =
+              (err instanceof RefreshError && (err.status === 401 || err.status === 403)) ||
+              (err instanceof Error && TERMINAL_REFRESH_ERROR_PATTERNS.some((p) => err.message.toLowerCase().includes(p)));
+            if (isTerminalAuthError) {
+              await this.signOut();
+              const reason = err instanceof Error ? err.message : String(err);
+              throw new Error(`AIGateway: Session expired. Please sign in again. (${reason})`);
+            }
+            throw err;
+          }
+        } else {
+          // No refresh token available — clear stale tokens and sign out.
+          await this.signOut();
+          throw new Error('AIGateway: Session expired. Please sign in again.');
+        }
+      }
+    }
+
+    const token = stored ?? this.legacyAccessToken ?? this.apiKey;
+    if (!token) throw new Error('AIGateway: No access token. Call signIn() and handleCallback() first.');
+    return `Bearer ${token}`;
+  }
+
   /**
-   * Open a popup for the user to sign in with AI Gateway and authorize the app.
+   * Decode the `exp` (expiry) claim from a JWT payload without verifying the signature.
+   * Returns the expiry as a Unix timestamp (seconds), or `null` if the token cannot be decoded
+   * or does not contain an `exp` claim.
+   */
+  private decodeTokenExpiry(token: string): number | null {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      // Support both browser (atob) and Node.js (Buffer) environments.
+      const json =
+        typeof atob === 'function'
+          ? atob(payloadB64)
+          : Buffer.from(payloadB64, 'base64').toString('utf8');
+      const payload = JSON.parse(json) as { exp?: unknown };
+      return typeof payload.exp === 'number' ? payload.exp : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private getOAuthBaseUrl(): string {
+    return this.authUrl.replace(/\/auth\/?$/, '');
+  }
+
+  private getAuthApiBaseUrl(): string {
+    return /\/auth\/?$/.test(this.authUrl) ? this.authUrl.replace(/\/$/, '') : `${this.authUrl.replace(/\/$/, '')}/auth`;
+  }
+
+  /**
+   * Build a short-lived HS256 JWT signed with the stored client secret.
    *
-   * @param options - Sign in options
-   * @param options.appId - The developer's app ID registered with AI Gateway
-   * @param options.popupUrl - The URL of the auth popup (optional)
-   * @param options.width - Width of the popup window
-   * @param options.height - Height of the popup window
-   * @returns The user's access token and basic user info
-   * @throws {Error} If the popup fails to open or is closed before signing in
+   * Sent as `X-App-Token` on each AI request so the gateway can verify
+   * the request originates from the legitimate developer app.
    *
-   * @example
-   * const { token, user } = await AIGateway.signIn({ appId: 'app_123' });
-   * ai.setToken(token);
+   * Returns `undefined` when no client secret is available (e.g. pure
+   * browser flows where the secret was never stored).
+   */
+  private async signAppToken(): Promise<string | undefined> {
+    if (!this.clientSecret || !this.clientId) return undefined;
+    if (typeof crypto === 'undefined' || !crypto.subtle) return undefined;
+
+    const now = Math.floor(Date.now() / 1000);
+    const header = this.base64urlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    const payload = this.base64urlEncode(JSON.stringify({
+      clientId: this.clientId,
+      iat: now,
+      exp: now + APP_TOKEN_EXPIRY_SECONDS,
+    }));
+    const signingInput = `${header}.${payload}`;
+
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(this.clientSecret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign'],
+    );
+    const sigBuf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signingInput));
+    return `${signingInput}.${this.base64urlEncodeBuffer(sigBuf)}`;
+  }
+
+  /** Encode a UTF-8 string as base64url (no padding). */
+  private base64urlEncode(str: string): string {
+    const bytes = new TextEncoder().encode(str);
+    let binary = '';
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return btoa(binary).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  }
+
+  /** Encode a raw ArrayBuffer as base64url (no padding). */
+  private base64urlEncodeBuffer(buf: ArrayBuffer): string {
+    let binary = '';
+    const bytes = new Uint8Array(buf);
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return btoa(binary).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  }
+
+  private generateState(): string {
+    if (typeof crypto === 'undefined' || !crypto.getRandomValues) {
+      throw new Error('AIGateway: Web Crypto API is required for CSRF state generation. Use a modern browser or Node.js 15+.');
+    }
+    const arr = new Uint8Array(STATE_ENTROPY_BYTES);
+    crypto.getRandomValues(arr);
+    return Array.from(arr, (b) => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  /**
+   * Exchange an authorization code for tokens (server-side step).
+   * In a production app, call this from your backend to keep clientSecret safe.
+   */
+  private async exchangeCode(code: string, clientSecret: string): Promise<SignInResult> {
+    const res = await fetch(`${this.getOAuthBaseUrl()}/oauth/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: this.clientId,
+        client_secret: clientSecret,
+        code,
+        redirect_uri: this.redirectUri,
+        grant_type: 'authorization_code',
+      }),
+    });
+
+    const json = await res.json() as {
+      success: boolean;
+      data?: { accessToken: string; refreshToken: string; user: UserResult };
+      error?: { message: string };
+    };
+
+    if (!json.success || !json.data) {
+      throw new Error(`AIGateway: Token exchange failed — ${json.error?.message ?? 'Unknown error'}`);
+    }
+
+    return {
+      accessToken: json.data.accessToken,
+      refreshToken: json.data.refreshToken,
+      user: json.data.user,
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Legacy static sign-in (popup-based, kept for backward compatibility)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * @deprecated Use the instance `signIn()` + `handleCallback()` OAuth flow.
+   *
+   * Opens a popup for the user to sign in with AI Gateway.
    */
   static async signIn(options: {
     appId: string;
@@ -160,11 +762,20 @@ export class AIGateway {
     const width = options.width ?? 420;
     const height = options.height ?? 560;
 
+    let expectedOrigin: string;
+    try {
+      expectedOrigin = new URL(url).origin;
+    } catch {
+      throw new Error('AIGateway: Invalid popupUrl provided to signIn()');
+    }
+
     const left = Math.round((window.screen.width - width) / 2);
     const top = Math.round((window.screen.height - height) / 2);
 
+    const popupSrc = `${url}?appId=${encodeURIComponent(options.appId)}&origin=${encodeURIComponent(window.location.origin)}`;
+
     const popup = window.open(
-      `${url}?appId=${options.appId}`,
+      popupSrc,
       'ai-gateway-auth',
       `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=no`
     );
@@ -174,6 +785,8 @@ export class AIGateway {
     }
 
     return new Promise((resolve, reject) => {
+      let pollClosed: ReturnType<typeof setInterval>;
+
       const timeout = setTimeout(() => {
         reject(new Error('AIGateway: Auth timed out (2 minutes)'));
         cleanup();
@@ -181,12 +794,12 @@ export class AIGateway {
 
       function cleanup() {
         clearTimeout(timeout);
+        clearInterval(pollClosed);
         window.removeEventListener('message', handleMessage);
       }
 
       function handleMessage(event: MessageEvent) {
-        // Only accept messages from our popup
-        if (!url.startsWith(event.origin) && event.origin !== window.location.origin) return;
+        if (event.origin !== expectedOrigin) return;
 
         const data = event.data as { type?: string; accessToken?: string; user?: unknown };
         if (data.type === 'AI_GATEWAY_AUTH' && data.accessToken) {
@@ -200,10 +813,8 @@ export class AIGateway {
 
       window.addEventListener('message', handleMessage);
 
-      // Detect if popup was closed without auth
-      const pollClosed = setInterval(() => {
+      pollClosed = setInterval(() => {
         if (popup.closed) {
-          clearInterval(pollClosed);
           cleanup();
           reject(new Error('AIGateway: Auth popup was closed'));
         }

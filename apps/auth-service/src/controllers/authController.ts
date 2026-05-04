@@ -41,6 +41,10 @@ export class AuthController {
   ) {
     try {
       const result = await this.authService.login(req.body);
+      const fastify = req.server as { kafka: { publish: (topic: string, msg: object) => Promise<void> } };
+      void authEvents.userLogin(fastify.kafka.publish, result.user.id).catch(
+        (e: unknown) => logger.error(e, 'Failed to publish user.login event'),
+      );
       return reply.send(ok(result));
     } catch (err) {
       logger.error({ err, email: req.body.email }, 'Login failed');

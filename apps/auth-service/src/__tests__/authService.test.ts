@@ -252,6 +252,35 @@ describe('AuthService', () => {
     });
   });
 
+  describe('getUserById', () => {
+    it('should return a user for an existing id', async () => {
+      mockPgQuery.mockResolvedValueOnce({
+        rows: [{
+          id: 'user-1',
+          email: 'test@example.com',
+          name: 'Test User',
+          passwordHash: 'hashed_password',
+          planId: 'free',
+          creditBalance: 100,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }],
+      });
+
+      const user = await authService.getUserById('user-1');
+
+      expect(user).toHaveProperty('id', 'user-1');
+      expect(user).toHaveProperty('email', 'test@example.com');
+      expect(user).toHaveProperty('name', 'Test User');
+    });
+
+    it('should throw USER_NOT_FOUND when the user id does not exist', async () => {
+      mockPgQuery.mockResolvedValueOnce({ rows: [] });
+
+      await expect(authService.getUserById('missing-user')).rejects.toThrow(Errors.USER_NOT_FOUND());
+    });
+  });
+
   describe('validateToken', () => {
     it('should return payload for valid access token', async () => {
       mockRedisGet.mockResolvedValueOnce(null); // not blacklisted

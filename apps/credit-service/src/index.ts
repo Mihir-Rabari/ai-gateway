@@ -1,18 +1,21 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { getCreditConfig } from '@ai-gateway/config';
-import { createLogger } from '@ai-gateway/utils';
-import { postgresPlugin } from './plugins/postgres.js';
-import { redisPlugin } from './plugins/redis.js';
-import { kafkaPlugin } from './plugins/kafka.js';
+import { createLogger, getFastifyLoggerOptions, postgresPlugin, redisPlugin, kafkaPlugin, errorHandlerPlugin, securityHeadersPlugin } from '@ai-gateway/utils';
 import { creditRoutes } from './routes/creditRoutes.js';
 
 const logger = createLogger('credit-service');
 const config = getCreditConfig();
-const app = Fastify({ logger: false });
+const app = Fastify({ logger: getFastifyLoggerOptions() });
 
 async function bootstrap() {
-  await app.register(cors);
+  await app.register(securityHeadersPlugin);
+  await app.register(cors, {
+    origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000', 'http://localhost:3009'],
+    credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
   await app.register(postgresPlugin);
   await app.register(redisPlugin);
   await app.register(kafkaPlugin);
@@ -20,17 +23,7 @@ async function bootstrap() {
 
   app.get('/health', async () => ({ status: 'ok', service: 'credit-service' }));
 
-  app.setErrorHandler((error, _req, reply) => {
-    const statusCode = (error as { statusCode?: number }).statusCode ?? 500;
-    reply.status(statusCode).send({
-      success: false,
-      error: {
-        code: (error as { code?: string }).code ?? 'INTERNAL',
-        message: error.message,
-        statusCode,
-      },
-    });
-  });
+  await app.register(errorHandlerPlugin);
 
   await app.listen({ port: config.CREDIT_SERVICE_PORT, host: '0.0.0.0' });
   logger.info(`💰 Credit service running on port ${config.CREDIT_SERVICE_PORT}`);

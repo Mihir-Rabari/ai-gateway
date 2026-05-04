@@ -15,7 +15,6 @@
 
 ## Agent 1 — Infrastructure & DevOps
 
-**Doc:** `docs/agents/tasks/01-infra.md`
 **Owns:** `docker-compose.yml`, `infra/`, `.env.example`, `turbo.json`
 
 - [x] Docker Compose with Postgres, Redis, Kafka, ClickHouse
@@ -36,7 +35,6 @@
 
 ## Agent 2 — Auth Service
 
-**Doc:** `docs/agents/tasks/02-auth-service.md`
 **Owns:** `apps/auth-service/`
 
 - [x] Signup endpoint (POST /auth/signup)
@@ -52,16 +50,15 @@
 - [x] Email validation + normalization on signup
 - [x] Password strength validation
 - [x] GET /auth/me endpoint (return current user from token)
-- [ ] GET /users/:id endpoint (internal — for gateway use)
-- [ ] Auth events consumer (listen to auth.events for audit log)
+- [x] GET /users/:id endpoint (internal — for gateway use)
+- [x] Auth events consumer (listen to auth.events for audit log)
 - [x] Unit tests for authService (mock Redis + Postgres)
-- [ ] Integration test for full signup → login → refresh flow
+- [x] Integration test for full signup → login → refresh flow
 
 ---
 
 ## Agent 3 — Credit Service
 
-**Doc:** `docs/agents/tasks/03-credit-service.md`
 **Owns:** `apps/credit-service/`
 
 - [x] GET /credits/balance?userId=
@@ -76,14 +73,13 @@
 - [x] Low credit alert event publish to Kafka (when balance < 10)
 - [x] User repository using the shared DB pool
 - [x] Full unit tests for CreditService (lock → confirm → release flow)
-- [ ] Integration test with real Redis (testcontainers or separate Redis)
+- [x] Integration test with real Redis (testcontainers or separate Redis)
 - [x] Idempotency: confirm/release use requestId deduplication
 
 ---
 
 ## Agent 4 — Gateway Service (AI Request Engine)
 
-**Doc:** `docs/agents/tasks/04-gateway-service.md`
 **Owns:** `apps/gateway/`
 
 - [x] POST /gateway/request (main AI request endpoint)
@@ -93,20 +89,19 @@
 - [x] Kafka usage event publishing
 - [x] App API key validation (validate `x-app-id` header against registered_apps table)
 - [x] Request ID generation + response headers
-- [ ] Streaming response support (SSE or chunked transfer)
+- [x] Streaming response support (SSE or chunked transfer)
 - [x] Request timeout handling (30s timeout, release credits on timeout)
-- [ ] Retry logic for transient provider errors (via `withRetry` from utils)
+- [x] Retry logic for transient provider errors (via `withRetry` from utils)
 - [x] Full gateway plugin setup (postgres, redis, kafka)
 - [x] Rate limiting per user per minute
 - [x] GET /gateway/status endpoint (health + provider availability)
-- [ ] Unit tests for GatewayService mocking all external calls
-- [ ] Integration test: mock auth + credit, real routing call
+- [x] Unit tests for GatewayService mocking all external calls
+- [x] Integration test: mock auth + credit, real routing call
 
 ---
 
 ## Agent 5 — Routing Service
 
-**Doc:** `docs/agents/tasks/05-routing-service.md`
 **Owns:** `apps/routing-service/`
 
 - [x] POST /internal/routing/route (main routing endpoint)
@@ -117,17 +112,16 @@
 - [x] Google Gemini integration (via `@google/generative-ai`)
 - [x] Provider health tracking (Redis-backed — mark unhealthy for 60s on failure)
 - [x] Streaming support (pass through SSE from provider)
-- [ ] Model-to-provider mapping with proper fallback chain
-- [ ] Provider latency tracking (publish latency to Kafka)
+- [x] Model-to-provider mapping with proper fallback chain
+- [x] Provider latency tracking (publish latency to Kafka)
 - [x] Circuit breaker pattern (stop routing to provider after 5 consecutive failures)
-- [ ] Unit tests for RoutingService (mock OpenAI + Anthropic clients)
-- [ ] Integration test: real OpenAI call (with test API key)
+- [x] Unit tests for RoutingService (mock OpenAI + Anthropic clients)
+- [x] Integration test: real OpenAI call (with test API key)
 
 ---
 
 ## Agent 6 — Billing Service
 
-**Doc:** `docs/agents/tasks/06-billing-service.md`
 **Owns:** `apps/billing-service/`
 
 - [x] GET /billing/plans
@@ -142,14 +136,13 @@
 - [x] POST /billing/cancel (cancel current subscription)
 - [x] Credit addition calls credit-service HTTP API (not direct DB)
 - [x] Webhook idempotency (store processed event IDs in Redis)
-- [ ] Unit tests for BillingService (mock Razorpay + credit-service)
-- [ ] Webhook test with Razorpay test events
+- [x] Unit tests for BillingService (mock Razorpay + credit-service)
+- [x] Webhook test with Razorpay test events
 
 ---
 
 ## Agent 7 — Analytics Service + Worker
 
-**Doc:** `docs/agents/tasks/07-analytics-worker.md`
 **Owns:** `apps/analytics-service/`, `apps/worker/`
 
 - [x] Kafka consumer for `usage.events`
@@ -158,19 +151,18 @@
 - [x] Worker: revenue split (20% to developer wallet)
 - [x] GET /analytics/usage/app?appId= (per-app usage for devs)
 - [x] GET /analytics/dashboard?userId= (dashboard summary — requests, tokens, credits, models used)
-- [ ] GET /analytics/models (global model usage breakdown)
+- [x] GET /analytics/models (global model usage breakdown)
 - [x] ClickHouse schema initialization fix (use HTTP API on startup, not file mount)
 - [x] Worker: handle `billing.events` (subscription lifecycle tracking)
 - [x] Worker: handle `auth.events` (user creation tracking)
 - [x] Error handling for bad Kafka messages (dead letter logging)
 - [x] Analytics service graceful shutdown (flush batch before exit)
-- [ ] Unit tests for batch flush logic
+- [x] Unit tests for batch flush logic
 
 ---
 
 ## Agent 8 — API Aggregation Layer
 
-**Doc:** `docs/agents/tasks/08-api-service.md`
 **Owns:** `apps/api/`
 
 - [x] Placeholder src/index.ts
@@ -186,14 +178,13 @@
 - [x] DELETE /api/v1/apps/:id
 - [x] POST /api/v1/apps/:id/keys (generate API key)
 - [x] OpenAPI/Swagger spec auto-generation (`@fastify/swagger`)
-- [ ] Request logging middleware (log requestId, userId, latency)
+- [x] Request logging middleware (log requestId, userId, latency)
 - [x] Proper auth middleware (validate JWT on all protected routes)
 
 ---
 
 ## Agent 9 — Frontend (Web App)
 
-**Doc:** `docs/agents/tasks/09-frontend.md`
 **Owns:** `apps/web/`
 
 - [x] Next.js bootstrapped with Tailwind v4
@@ -223,12 +214,11 @@
 
 ## Agent 10 — SDK + Auth Widget
 
-**Doc:** `docs/agents/tasks/10-sdk-auth-widget.md`
 **Owns:** `packages/sdk-js/`, auth widget frontend JS
 
 - [x] Finish SDK implementation (`packages/sdk-js/src/index.ts`)
 - [x] `ai.chat()` method — full request flow
-- [ ] `ai.stream()` method — streaming response
+- [x] `ai.stream()` method — streaming response
 - [x] `ai.credits()` — get current balance
 - [x] `AIGateway.signIn()` — opens auth popup window (`/auth/popup`)
 - [x] Popup `postMessage` protocol (send token back to parent)
@@ -247,7 +237,7 @@
 - [ ] **Docker Desktop must be running** → `docker-compose up -d`
 - [x] **ClickHouse init** — doesn't use `initdb.d` — needs HTTP API schema creation
 - [x] **Kafka listener fix** — `KAFKA_ADVERTISED_LISTENERS` needs `PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092`
-- [ ] **Landing page rebuild** — current Tailwind v4 has syntax issues, migrate to shadcn
+- [x] **Landing page rebuild** — current Tailwind v4 has syntax issues, migrate to shadcn
 - [ ] **.env real values** — `OPENAI_API_KEY`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` must be set
 
 ---
@@ -256,15 +246,122 @@
 
 | Agent | Module | Status | % Done |
 |-------|--------|--------|--------|
-| 1 | Infra | Partial | 70% |
-| 2 | Auth Service | Partial | 80% |
-| 3 | Credit Service | Partial | 85% |
-| 4 | Gateway | Partial | 75% |
-| 5 | Routing | Partial | 70% |
-| 6 | Billing | Partial | 60% |
-| 7 | Analytics + Worker | Partial | 65% |
-| 8 | API Layer | Not Started | 5% |
+| 1 | Infra | Partial | 95% |
+| 2 | Auth Service | Done | 100% |
+| 3 | Credit Service | Done | 100% |
+| 4 | Gateway | Done | 100% |
+| 5 | Routing | Done | 100% |
+| 6 | Billing | Done | 100% |
+| 7 | Analytics + Worker | Done | 100% |
+| 8 | API Layer | Done | 100% |
 | 9 | Frontend | Done | 100% |
 | 10 | SDK + Auth Widget | Done | 100% |
 
-**Overall MVP Progress: ~70%**
+**Overall MVP Progress: ~96%**
+
+---
+
+## Backend Stabilization Sprint - Codex
+
+Focus: backend-first completion and contract cleanup before the next frontend pass.
+
+- [x] Add missing `api_keys` table to PostgreSQL schema
+- [x] Add missing `user_events` table to PostgreSQL schema
+- [x] Fix API -> billing-service subscription contract by injecting authenticated `userId`
+- [x] Expose API routes for billing subscription status and cancellation
+- [x] Add `/api/v1/usage/summary` alias for the current dashboard client
+- [x] Restore `user.login` Kafka event publishing from auth-service
+- [x] Add Razorpay plan ID placeholders to `.env.example`
+- [x] Add runnable test scripts for auth-service and credit-service
+- [x] Add gateway unit tests for first-party app bypass + app-key validation
+- [x] Run and stabilize auth-service tests in CI/local pipeline
+- [x] Run and stabilize credit-service tests in CI/local pipeline
+- [x] Add billing-service unit tests for plan mapping and webhook handling
+- [x] Add worker tests for `usage.events` and `auth.events`
+- [x] Add API route tests for billing and usage alias coverage
+- [x] Reconcile gateway app-key behavior with SDK expectations
+- [x] Return explicit invalid app-key errors from gateway for bad developer keys
+- [x] Add routing-service unit tests for primary selection, fallback, and provider health
+- [x] Add internal auth user lookup endpoint for gateway-facing backend consumers
+- [x] Replace the stale Dependabot web dependency PR with a clean Next.js security upgrade on current `main`
+- [x] Upgrade backend services to Fastify v5-compatible dependency majors and `bcrypt` v6 to remove the production audit findings
+- [x] Remove the unused `@fastify/jwt` auth-service dependency after confirming auth already uses `jsonwebtoken` directly
+- [x] Re-run backend builds/tests and confirm `pnpm audit --prod --json` reports zero production vulnerabilities
+- [x] Add `/analytics/models` global model usage endpoint
+- [x] Add analytics batch buffer unit tests and wire analytics service into monorepo `test` pipeline
+- [x] Add latency timing to routing events for both primary and fallback provider selections
+- [x] Add auth-service integration-style signup/login/refresh flow test with refresh token rotation validation
+- [x] Add credit-service real-Redis integration test path (auto-skip when Redis is unavailable)
+- [x] Add billing webhook route integration tests for Razorpay signature validation and idempotent event handling
+- [x] Add gateway route integration test for `/gateway/request` with mocked auth/credit flow and real routing HTTP call
+- [x] Harden monorepo test scripts against Windows `spawn EPERM` by disabling node test isolation where required
+
+## Backend P1 Follow-Up - Codex
+
+- [x] Add auth-service consumer for `auth.events` audit trail ingestion path (env-gated with idempotent inserts)
+- [x] Add routing-service integration test gated by `OPENAI_API_KEY` for a real provider call
+- [x] Add gateway streaming route integration test that verifies SSE framing and completion behavior
+
+## Frontend Real-Data Pass - Codex (2026-04-05)
+
+- [x] Replace frontend API mock fallback layer with typed real backend calls
+- [x] Wire login/signup/popup auth to store both access and refresh tokens
+- [x] Replace dashboard mock cards/lists with live credits, usage, models, and transactions
+- [x] Protect `/dashboard` and `/dev` layouts with auth checks and real user context loading
+- [x] Replace `/dev`, `/dev/apps`, `/dev/apps/new`, `/dev/apps/[id]`, `/dev/earnings`, `/dev/docs` mock flows with live data
+- [x] Add API aggregation route `GET /api/v1/apps/:id/usage` for app-level analytics
+- [x] Revalidate monorepo via `pnpm build`
+- [x] Revalidate monorepo via `pnpm test`
+- [x] Prepare npm SDK package metadata for public publish (`files`, `publishConfig`, widget d.ts, prepublish checks)
+- [!] Publish `@ai-gateway/sdk-js@0.1.0` blocked by npm 2FA OTP requirement (`EOTP`)
+
+## Remaining Execution Tasks
+
+- [x] Run full stack smoke test with Docker (`docker compose up -d` + API flow checks)
+- [ ] Complete npm publish with account OTP (`npm publish --access public --otp=<code>`) from `packages/sdk-js`
+
+## Runtime Stabilization Follow-Up - Codex (2026-04-05)
+
+- [x] Add safe localhost defaults for API internal dependency URLs (`AUTH_SERVICE_URL`, `GATEWAY_URL`, `CREDIT_SERVICE_URL`, `BILLING_SERVICE_URL`, `ANALYTICS_SERVICE_URL`)
+- [x] Add safe localhost fallback for API app-route `DATABASE_URL` pool
+- [x] Fix analytics `DateTime64` query param formatting for app usage endpoint
+
+## Developer Console & UX Redesign Sprint (2026-04-06 to 2026-04-09)
+
+- [x] Split developer portal into a standalone `apps/console` application
+- [x] Redesign developer console UI and restore the developer onboarding flow
+- [x] Enable and harden cross-app handshakes, robust auth with silent token refresh, and CORS configurations
+- [x] Resolve dev port conflicts (e.g., port 3002 overlap between gateway and console)
+- [x] Migrate console dependencies to `@base-ui/react`
+
+## PM2 Infrastructure & Alignment Sprint (2026-04-07 to 2026-04-08)
+
+- [x] Add PM2 ecosystem configuration (`ecosystem.config.js`) and start scripts
+- [x] Fix PM2 spawn bugs on Windows (using `pnpm.cmd` wrapper)
+- [x] Perform full end-to-end system alignment and bug squash pass
+
+## Enterprise Auth & SDK Overhaul Sprint (2026-04-08 to 2026-04-09)
+
+- [x] Complete rewrite of SDK incorporating an OAuth-style authentication system
+- [x] Introduce Client Secret encryption and secure JWT app-auth
+- [x] Expose OAuth credentials (clientId, clientSecret, redirectUris) cleanly in the developer console
+- [x] Add native streamlined SDK chat example application
+- [x] Implement flat 1-credit flat developer commission payouts
+- [x] Clean up code review findings (magic numbers extraction, CSRF hardening, input validation)
+
+## Security & Resilience Hardening Sprint (2026-04-10 to 2026-04-11)
+
+- [x] Roll out upstream circuit breakers to handle provider outages gracefully
+- [x] Introduce Redis read-through cache for app validation (with fail-open resilience)
+- [x] Dramatically reduce JWT access token lifetime (from 100 years down to 15 minutes) with SDK auto-refresh backing
+- [x] Enforce robust JWT expiration validation in the gateway verification path
+- [x] Inject advanced security headers (CSP, X-Frame-Options, HSTS) into the API service
+
+## Architecture & Code Quality Polish Sprint (2026-04-12)
+
+- [x] Encapsulate `registered_apps` logic completely into `auth-service` and remove gateway DB access (#37)
+- [x] Fix and use native LLM provider usage metrics for accurate SSE streaming token billing (#36)
+- [x] Extract shared Fastify plugins (Postgres, Redis, Kafka, ErrorHandler) into `@ai-gateway/utils` (#38)
+- [x] Make Kafka topics and AI model routing configuration dynamic via environment overrides (#39)
+- [x] Standardize Fastify logger setup across all services via the common utils package (#40)
+- [x] Bump `npm_and_yarn` group dependencies across the repository (#41)

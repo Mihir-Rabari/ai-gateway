@@ -1,293 +1,350 @@
 import Link from "next/link";
+import {
+  ArrowRight,
+  Check,
+  CreditCard,
+  Gauge,
+  Layers,
+  ShieldCheck,
+  Sparkles,
+  TrendingUp,
+  Workflow,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+
+const pillars = [
+  {
+    title: "Universal Model Layer",
+    description: "Route OpenAI, Anthropic, and Google with one stable integration contract.",
+    icon: Layers,
+  },
+  {
+    title: "Latency Aware Routing",
+    description: "Auto-select model and provider path based on performance and budget goals.",
+    icon: Gauge,
+  },
+  {
+    title: "Revenue Ready Billing",
+    description: "Built-in credits and usage tracking for SaaS monetization from day one.",
+    icon: CreditCard,
+  },
+  {
+    title: "Enterprise Safety Rails",
+    description: "Request policies, failover controls, and audit visibility without extra tooling.",
+    icon: ShieldCheck,
+  },
+];
+
+const plans = [
+  {
+    name: "Starter",
+    price: "INR 0",
+    note: "/month",
+    description: "For prototypes and hacks.",
+    features: ["100 monthly credits", "Core model access", "Community support"],
+    cta: "Start free",
+    featured: false,
+  },
+  {
+    name: "Pro",
+    price: "INR 499",
+    note: "/month",
+    description: "For serious products.",
+    features: ["1,000 monthly credits", "All model families", "Higher throughput", "Email support"],
+    cta: "Upgrade to Pro",
+    featured: true,
+  },
+  {
+    name: "Scale",
+    price: "INR 1,499",
+    note: "/month",
+    description: "For teams in production.",
+    features: ["5,000 monthly credits", "Priority routing", "Team analytics", "Priority support"],
+    cta: "Go Scale",
+    featured: false,
+  },
+];
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-white/20">
-      {/* Navbar */}
-      <nav className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/50 backdrop-blur-md">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
-          <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-md bg-white text-black flex items-center justify-center font-bold text-xs">
-              AI
-            </div>
-            <span className="text-lg font-bold tracking-tight">AI Gateway</span>
+    <div className="relative min-h-screen overflow-x-hidden bg-[#f4f7ff] text-slate-950">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-32 left-[-10rem] h-[28rem] w-[28rem] rounded-full bg-cyan-300/30 blur-3xl" />
+        <div className="absolute right-[-10rem] top-20 h-[28rem] w-[28rem] rounded-full bg-emerald-300/30 blur-3xl" />
+        <div className="absolute bottom-[-14rem] left-1/2 h-[30rem] w-[30rem] -translate-x-1/2 rounded-full bg-violet-300/20 blur-3xl" />
+      </div>
+
+      <nav className="sticky top-0 z-50 border-b border-slate-900/10 bg-white/70 backdrop-blur-xl">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-slate-950 text-xs font-bold text-white">AG</div>
+            <p className="text-lg font-bold tracking-tight">AI Gateway</p>
           </div>
-          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-white/70">
-            <Link href="#how-it-works" className="hover:text-white transition-colors">How it works</Link>
-            <Link href="#pricing" className="hover:text-white transition-colors">Pricing</Link>
-            <Link href="#developers" className="hover:text-white transition-colors">Developers</Link>
+          <div className="hidden items-center gap-7 text-sm text-slate-600 md:flex">
+            <Link href="#capabilities" className="transition-colors hover:text-slate-950">
+              Capabilities
+            </Link>
+            <Link href="#how" className="transition-colors hover:text-slate-950">
+              How it works
+            </Link>
+            <Link href="#pricing" className="transition-colors hover:text-slate-950">
+              Pricing
+            </Link>
           </div>
-          <div className="flex items-center gap-4">
-            <Link href="/login" className="text-sm font-medium text-white/70 hover:text-white transition-colors hidden sm:block">
+          <div className="flex items-center gap-3">
+            <Link href="/login" className="hidden text-sm font-medium text-slate-600 transition-colors hover:text-slate-950 sm:block">
               Sign in
             </Link>
             <Link href="/signup">
-              <Button className="bg-white text-black hover:bg-white/90 rounded-full">
-                Get Started
-              </Button>
+              <Button className="rounded-full bg-slate-950 text-white hover:bg-slate-800">Get Started</Button>
             </Link>
           </div>
         </div>
       </nav>
 
-      <main className="flex-1">
-        {/* Hero Section */}
-        <section className="relative overflow-hidden pt-24 pb-32 md:pt-32 md:pb-40">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.08)_0,transparent_100%)] pointer-events-none" />
-          <div className="container mx-auto px-4 md:px-6 relative z-10 flex flex-col items-center text-center">
-            <Badge variant="outline" className="mb-6 border-white/20 bg-white/5 text-white/80 rounded-full px-3 py-1">
-              v1.0 is now live
-            </Badge>
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tighter max-w-4xl mb-6">
-              One gateway. <br className="hidden md:block" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/50">Infinite AI.</span>
-            </h1>
-            <p className="text-lg md:text-xl text-white/60 max-w-2xl mb-10">
-              The unified API for OpenAI, Anthropic, and Google. Buy credits once, use them across any model. Built for developers and users.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link href="/signup">
-                <Button size="lg" className="bg-white text-black hover:bg-white/90 rounded-full px-8 h-12 text-base">
-                  Start for free
-                </Button>
-              </Link>
-              <Link href="/docs">
-                <Button size="lg" variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10 rounded-full px-8 h-12 text-base">
-                  Read docs
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* How it Works Section */}
-        <section id="how-it-works" className="py-24 border-t border-white/10">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">How it works</h2>
-              <p className="text-white/60 max-w-2xl mx-auto">Three simple steps to integrate world-class AI models into your workflow.</p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-8 md:gap-12">
-              {[
-                { step: "1", title: "Connect", desc: "Get your API key or sign in to your dashboard to get started immediately." },
-                { step: "2", title: "Use", desc: "Call any supported model (GPT-4, Claude 3, Gemini) with a single unified API." },
-                { step: "3", title: "Scale", desc: "Pay only for what you use. We handle rate limits, fallbacks, and billing." },
-              ].map((item) => (
-                <div key={item.step} className="flex flex-col items-center text-center group">
-                  <div className="w-12 h-12 rounded-full border border-white/20 bg-white/5 flex items-center justify-center text-xl font-bold mb-6 group-hover:bg-white group-hover:text-black transition-colors">
-                    {item.step}
-                  </div>
-                  <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
-                  <p className="text-white/60 leading-relaxed">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Pricing Section */}
-        <section id="pricing" className="py-24 border-t border-white/10 bg-black/50">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple, transparent pricing</h2>
-              <p className="text-white/60 max-w-2xl mx-auto">No hidden fees. Subscribe to a plan that fits your needs.</p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              {/* Free Plan */}
-              <Card className="bg-black border-white/10 flex flex-col">
-                <CardHeader>
-                  <CardTitle className="text-xl">Free</CardTitle>
-                  <CardDescription className="text-white/60">For exploring the API</CardDescription>
-                  <div className="mt-4 flex items-baseline text-4xl font-bold">
-                    ₹0
-                    <span className="ml-1 text-xl font-medium text-white/50">/mo</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-1">
-                  <ul className="space-y-3 text-sm text-white/70">
-                    <li className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                      100 Credits / month
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                      Limited models
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                      Standard rate limits
-                    </li>
-                  </ul>
-                </CardContent>
-                <CardFooter>
-                  <Link href="/signup" className="w-full">
-                    <Button variant="outline" className="w-full border-white/20 hover:bg-white/10">Get Started</Button>
-                  </Link>
-                </CardFooter>
-              </Card>
-
-              {/* Pro Plan */}
-              <Card className="bg-white/5 border-white/20 flex flex-col relative overflow-hidden">
-                <div className="absolute top-0 right-0 px-3 py-1 bg-white text-black text-xs font-bold tracking-wider uppercase transform rounded-bl-lg">
-                  Popular
-                </div>
-                <CardHeader>
-                  <CardTitle className="text-xl">Pro</CardTitle>
-                  <CardDescription className="text-white/60">For professionals and indie hackers</CardDescription>
-                  <div className="mt-4 flex items-baseline text-4xl font-bold text-white">
-                    ₹499
-                    <span className="ml-1 text-xl font-medium text-white/50">/mo</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-1">
-                  <ul className="space-y-3 text-sm text-white/80">
-                    <li className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                      1,000 Credits / month
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                      All models included
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                      Increased rate limits
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                      Email support
-                    </li>
-                  </ul>
-                </CardContent>
-                <CardFooter>
-                  <Link href="/signup" className="w-full">
-                    <Button className="w-full bg-white text-black hover:bg-white/90">Subscribe</Button>
-                  </Link>
-                </CardFooter>
-              </Card>
-
-              {/* Max Plan */}
-              <Card className="bg-black border-white/10 flex flex-col">
-                <CardHeader>
-                  <CardTitle className="text-xl">Max</CardTitle>
-                  <CardDescription className="text-white/60">For teams and production apps</CardDescription>
-                  <div className="mt-4 flex items-baseline text-4xl font-bold">
-                    ₹1,499
-                    <span className="ml-1 text-xl font-medium text-white/50">/mo</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-1">
-                  <ul className="space-y-3 text-sm text-white/70">
-                    <li className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                      5,000 Credits / month
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                      All models included
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                      Priority routing
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                      24/7 Priority support
-                    </li>
-                  </ul>
-                </CardContent>
-                <CardFooter>
-                  <Link href="/signup" className="w-full">
-                    <Button variant="outline" className="w-full border-white/20 hover:bg-white/10">Subscribe</Button>
-                  </Link>
-                </CardFooter>
-              </Card>
-            </div>
-          </div>
-        </section>
-
-        {/* Developer Section */}
-        <section id="developers" className="py-24 border-t border-white/10">
-          <div className="container mx-auto px-4 md:px-6 flex flex-col lg:flex-row items-center gap-12">
-            <div className="lg:w-1/2">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6">Built for developers</h2>
-              <p className="text-white/60 text-lg mb-8 leading-relaxed">
-                Integrate AI Gateway into your app in minutes. Earn a 20% revenue split on all credits consumed through your integration.
+      <main className="relative z-10">
+        <section className="container mx-auto px-4 pb-16 pt-14 md:px-6 md:pb-20 md:pt-20 lg:px-8">
+          <div className="grid items-center gap-10 lg:grid-cols-12">
+            <div className="lg:col-span-7">
+              <Badge className="mb-6 rounded-full border-slate-900/15 bg-white/80 px-4 py-1.5 text-slate-800">
+                <Sparkles className="mr-2 h-3.5 w-3.5" />
+                Product-grade AI runtime
+              </Badge>
+              <h1 className="animate-slide-up text-balance text-5xl font-black leading-[0.95] tracking-tight md:text-7xl">
+                Ship AI features faster
+                <span className="block bg-gradient-to-r from-cyan-600 via-blue-600 to-emerald-600 bg-clip-text text-transparent">
+                  without model lock-in.
+                </span>
+              </h1>
+              <p className="animate-slide-up-delay mt-6 max-w-2xl text-lg leading-relaxed text-slate-600 md:text-xl">
+                One API, one wallet, one dashboard. Use frontier models across providers with built-in routing,
+                credits, and reliability controls.
               </p>
-              <ul className="space-y-4 mb-8">
-                {[
-                  "Official JavaScript/TypeScript SDK",
-                  "Unified API for OpenAI, Anthropic, Google",
-                  "Built-in 'Sign in with AI Gateway' widget",
-                  "Automated revenue sharing"
-                ].map((feature, i) => (
-                  <li key={i} className="flex items-center gap-3 text-white/80">
-                    <div className="h-5 w-5 rounded-full bg-white/10 flex items-center justify-center">
-                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    </div>
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/dev">
-                <Button className="bg-white text-black hover:bg-white/90">
-                  Go to Developer Portal
-                </Button>
-              </Link>
-            </div>
-
-            <div className="lg:w-1/2 w-full">
-              <div className="rounded-xl border border-white/10 bg-[#0a0a0a] overflow-hidden">
-                <div className="flex items-center px-4 py-3 border-b border-white/5 bg-black">
-                  <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/50" />
-                    <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/50" />
-                  </div>
-                  <div className="mx-auto text-xs text-white/40 font-mono">index.ts</div>
-                </div>
-                <div className="p-4 md:p-6 overflow-x-auto text-sm font-mono leading-relaxed">
-                  <span className="text-purple-400">import</span> {"{"} AIGateway {"}"} <span className="text-purple-400">from</span> <span className="text-green-400">'@ai-gateway/sdk-js'</span>;<br/><br/>
-                  <span className="text-white/40">// 1. Sign in the user</span><br/>
-                  <span className="text-purple-400">const</span> token = <span className="text-purple-400">await</span> AIGateway.<span className="text-blue-400">signIn</span>({"{"}<br/>
-                  &nbsp;&nbsp;appId: <span className="text-green-400">'app_12345'</span><br/>
-                  {"}"});<br/><br/>
-                  <span className="text-white/40">// 2. Initialize SDK</span><br/>
-                  <span className="text-purple-400">const</span> ai = <span className="text-purple-400">new</span> <span className="text-yellow-200">AIGateway</span>({"{"} token {"}"});<br/><br/>
-                  <span className="text-white/40">// 3. Call any model</span><br/>
-                  <span className="text-purple-400">const</span> response = <span className="text-purple-400">await</span> ai.<span className="text-blue-400">chat</span>({"{"}<br/>
-                  &nbsp;&nbsp;model: <span className="text-green-400">'claude-3-5-sonnet'</span>,<br/>
-                  &nbsp;&nbsp;messages: [{"{"} role: <span className="text-green-400">'user'</span>, content: <span className="text-green-400">'Hello!'</span> {"}"}]<br/>
-                  {"}"});<br/>
-                </div>
+              <div className="animate-slide-up-delay-2 mt-8 flex flex-wrap items-center gap-3">
+                <Link href="/signup">
+                  <Button size="lg" className="group rounded-full bg-slate-950 px-7 text-white hover:bg-slate-800">
+                    Build with AI Gateway
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Button>
+                </Link>
+                <a href={`${process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009"}/docs`}>
+                  <Button size="lg" variant="outline" className="rounded-full border-slate-900/20 bg-white/80 px-7">
+                    Read docs
+                  </Button>
+                </a>
+              </div>
+              <div className="mt-7 flex flex-wrap gap-6 text-sm text-slate-600">
+                <span className="inline-flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-emerald-600" />
+                  18.2M monthly requests
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <Workflow className="h-4 w-4 text-blue-600" />
+                  &lt; 120ms failover
+                </span>
               </div>
             </div>
+
+            <div className="lg:col-span-5">
+              <Card className="overflow-hidden border-slate-900/10 bg-white/85 shadow-2xl shadow-cyan-900/10 backdrop-blur">
+                <CardHeader className="border-b border-slate-900/10 bg-gradient-to-r from-slate-950 to-slate-800 text-white">
+                  <CardTitle className="text-xl">Live Routing Console</CardTitle>
+                  <CardDescription className="text-slate-300">
+                    Realtime traffic distribution by model and health.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 p-5">
+                  <div className="rounded-xl border border-slate-900/10 bg-slate-50 p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Current mix</p>
+                      <Badge className="rounded-full bg-emerald-100 text-emerald-700">Healthy</Badge>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>claude-3-5-sonnet</span>
+                        <span className="font-semibold">44%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>gpt-4.1</span>
+                        <span className="font-semibold">31%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>gemini-2.0</span>
+                        <span className="font-semibold">25%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-lg border border-slate-900/10 bg-white p-3">
+                      <p className="text-slate-500">P95 latency</p>
+                      <p className="mt-1 text-lg font-bold">842ms</p>
+                    </div>
+                    <div className="rounded-lg border border-slate-900/10 bg-white p-3">
+                      <p className="text-slate-500">Success rate</p>
+                      <p className="mt-1 text-lg font-bold">99.93%</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
+        </section>
+
+        <section id="capabilities" className="container mx-auto px-4 py-8 md:px-6 md:py-10 lg:px-8">
+          <div className="grid gap-5 md:grid-cols-2">
+            <Card className="border-slate-900/10 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white">
+              <CardHeader>
+                <Badge className="w-fit rounded-full bg-white/10 text-white">Control plane</Badge>
+                <CardTitle className="mt-3 text-3xl font-black leading-tight md:text-4xl">
+                  Built for modern AI products, not demos.
+                </CardTitle>
+                <CardDescription className="text-slate-300">
+                  Everything teams need to move from idea to production without rewriting infra every quarter.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <div className="grid gap-5 sm:grid-cols-2">
+              {pillars.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Card key={item.title} className="border-slate-900/10 bg-white/90">
+                    <CardHeader>
+                      <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-white">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <CardTitle className="text-xl">{item.title}</CardTitle>
+                      <CardDescription className="text-slate-600">{item.description}</CardDescription>
+                    </CardHeader>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section id="how" className="container mx-auto px-4 py-16 md:px-6 md:py-20 lg:px-8">
+          <div className="mb-10 text-center">
+            <h2 className="text-4xl font-black tracking-tight md:text-5xl">How teams launch in one sprint</h2>
+            <p className="mx-auto mt-3 max-w-2xl text-slate-600">
+              One setup flow, clear metrics, and billing that scales with customer usage.
+            </p>
+          </div>
+          <div className="grid gap-5 md:grid-cols-3">
+            <Card className="border-slate-900/10 bg-white/90">
+              <CardHeader>
+                <CardDescription className="font-mono tracking-widest">01 CONNECT</CardDescription>
+                <CardTitle>Create app + API key</CardTitle>
+                <CardDescription>Provision app credentials and start in minutes from the developer portal.</CardDescription>
+              </CardHeader>
+            </Card>
+            <Card className="border-slate-900/10 bg-white/90">
+              <CardHeader>
+                <CardDescription className="font-mono tracking-widest">02 SHIP</CardDescription>
+                <CardTitle>Call one endpoint</CardTitle>
+                <CardDescription>Switch model providers dynamically without changing your product code path.</CardDescription>
+              </CardHeader>
+            </Card>
+            <Card className="border-slate-900/10 bg-white/90">
+              <CardHeader>
+                <CardDescription className="font-mono tracking-widest">03 SCALE</CardDescription>
+                <CardTitle>Track cost + reliability</CardTitle>
+                <CardDescription>Use usage analytics and routing controls to protect margin and performance.</CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </section>
+
+        <section id="pricing" className="container mx-auto px-4 pb-20 md:px-6 md:pb-24 lg:px-8">
+          <div className="mb-10 text-center">
+            <h2 className="text-4xl font-black tracking-tight md:text-5xl">Pricing with real production intent</h2>
+            <p className="mx-auto mt-3 max-w-2xl text-slate-600">Straightforward plans with shared credits across providers.</p>
+          </div>
+          <div className="grid gap-5 md:grid-cols-3">
+            {plans.map((plan) => (
+              <Card
+                key={plan.name}
+                className={`flex flex-col justify-between border-slate-900/10 bg-white/90 ${
+                  plan.featured ? "relative ring-2 ring-slate-950" : ""
+                }`}
+              >
+                {plan.featured ? <Badge className="absolute right-4 top-4 rounded-full bg-slate-950 text-white">Recommended</Badge> : null}
+                <div>
+                  <CardHeader>
+                    <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                    <CardDescription className="text-slate-600">{plan.description}</CardDescription>
+                    <div className="mt-4 flex items-end gap-1">
+                      <span className="text-4xl font-black">{plan.price}</span>
+                      <span className="pb-1 text-slate-500">{plan.note}</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {plan.features.map((feature) => (
+                      <p key={feature} className="flex items-center gap-2 text-sm text-slate-700">
+                        <Check className="h-4 w-4 text-emerald-600" />
+                        {feature}
+                      </p>
+                    ))}
+                  </CardContent>
+                </div>
+                <CardFooter>
+                  <Link href="/signup" className="w-full">
+                    <Button className={`w-full rounded-full ${plan.featured ? "bg-slate-950 text-white hover:bg-slate-800" : ""}`} variant={plan.featured ? "default" : "outline"}>
+                      {plan.cta}
+                    </Button>
+                  </Link>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        <section className="container mx-auto px-4 pb-24 md:px-6 lg:px-8">
+          <Card className="border-slate-900/10 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white shadow-2xl shadow-cyan-900/20">
+            <CardContent className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center md:p-10">
+              <div>
+                <p className="text-sm font-medium uppercase tracking-wider text-white/85">Launch now</p>
+                <h3 className="mt-2 text-3xl font-black leading-tight md:text-4xl">Make your first production call today.</h3>
+                <p className="mt-2 max-w-xl text-white/90">
+                  Integrate in minutes, then scale traffic with confidence using one unified model gateway.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Link href="/signup">
+                  <Button size="lg" className="rounded-full bg-white text-slate-950 hover:bg-white/90">
+                    Create account
+                  </Button>
+                </Link>
+                <a href={process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009"}>
+                  <Button size="lg" variant="outline" className="rounded-full border-white/60 bg-transparent text-white hover:bg-white/10">
+                    Open developer console
+                  </Button>
+                </a>
+              </div>
+            </CardContent>
+          </Card>
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-white/10 py-12">
-        <div className="container mx-auto px-4 md:px-6 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="h-5 w-5 rounded-md bg-white/10 text-white flex items-center justify-center font-bold text-[10px]">
-              AI
-            </div>
-            <span className="text-sm font-semibold text-white/60">AI Gateway</span>
+      <footer className="border-t border-slate-900/10 bg-white/70">
+        <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 py-9 text-sm text-slate-600 md:flex-row md:px-6 lg:px-8">
+          <p>© {new Date().getFullYear()} AI Gateway</p>
+          <div className="flex items-center gap-5">
+            <Link href="/terms" className="transition-colors hover:text-slate-950">
+              Terms
+            </Link>
+            <Link href="/privacy" className="transition-colors hover:text-slate-950">
+              Privacy
+            </Link>
+            <a
+              href={`${process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009"}/docs`}
+              className="transition-colors hover:text-slate-950"
+            >
+              Docs
+            </a>
           </div>
-          <div className="flex gap-6 text-sm text-white/40">
-            <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
-            <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
-          </div>
-          <p className="text-sm text-white/40">
-            © {new Date().getFullYear()} AI Gateway. All rights reserved.
-          </p>
         </div>
       </footer>
     </div>

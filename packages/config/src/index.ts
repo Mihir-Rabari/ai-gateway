@@ -1,8 +1,10 @@
 import { z } from 'zod';
 import { config as loadDotenv } from 'dotenv';
 
-// Load .env file
-loadDotenv();
+import path from 'path';
+
+// Load .env file from the monorepo root
+loadDotenv({ path: path.resolve(process.cwd(), '../../.env') });
 
 // ─────────────────────────────────────────
 // Base Config Schema (shared across all services)
@@ -15,6 +17,13 @@ const baseSchema = z.object({
   KAFKA_BROKERS: z.string(),
   KAFKA_CLIENT_ID: z.string().default('ai-gateway'),
   KAFKA_GROUP_ID: z.string().default('ai-gateway-group'),
+  // Kafka topic names — override these to use custom topic names without code changes
+  KAFKA_TOPIC_AUTH: z.string().default('auth.events'),
+  KAFKA_TOPIC_CREDIT: z.string().default('credit.events'),
+  KAFKA_TOPIC_BILLING: z.string().default('billing.events'),
+  KAFKA_TOPIC_USAGE: z.string().default('usage.events'),
+  KAFKA_TOPIC_ROUTING: z.string().default('routing.events'),
+  KAFKA_TOPIC_ANALYTICS: z.string().default('analytics.events'),
 });
 
 // ─────────────────────────────────────────
@@ -27,6 +36,7 @@ const authSchema = baseSchema.extend({
   JWT_REFRESH_SECRET: z.string().min(32),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+  AUTH_EVENTS_CONSUMER_ENABLED: z.coerce.boolean().default(false),
   RATE_LIMIT_MAX: z.coerce.number().default(100),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60000),
 });
@@ -65,6 +75,8 @@ const billingSchema = baseSchema.extend({
   RAZORPAY_KEY_ID: z.string(),
   RAZORPAY_KEY_SECRET: z.string(),
   RAZORPAY_WEBHOOK_SECRET: z.string(),
+  RAZORPAY_PLAN_ID_PRO: z.string(),
+  RAZORPAY_PLAN_ID_MAX: z.string(),
   CREDIT_SERVICE_URL: z.string().url(),
   FREE_PLAN_CREDITS: z.coerce.number().default(100),
   PRO_PLAN_CREDITS: z.coerce.number().default(1000),
@@ -80,6 +92,13 @@ const routingSchema = baseSchema.extend({
   OPENAI_API_KEY: z.string(),
   ANTHROPIC_API_KEY: z.string().optional(),
   GOOGLE_AI_API_KEY: z.string().optional(),
+  // Optional JSON overrides for model routing tables.
+  // MODEL_PROVIDER_JSON: JSON object mapping model name → provider name
+  //   e.g. '{"gpt-4o":"openai","claude-3-5-sonnet-20241022":"anthropic"}'
+  // MODEL_FALLBACK_JSON: JSON object mapping model name → fallback model name
+  //   e.g. '{"gpt-4o":"gpt-3.5-turbo","gemini-2.5-pro":"gemini-2.5-flash"}'
+  MODEL_PROVIDER_JSON: z.string().optional(),
+  MODEL_FALLBACK_JSON: z.string().optional(),
 });
 
 // ─────────────────────────────────────────
@@ -126,10 +145,38 @@ export const PLANS = {
 } as const;
 
 export const KAFKA_TOPICS = {
-  AUTH: 'auth.events',
-  CREDIT: 'credit.events',
-  BILLING: 'billing.events',
-  USAGE: 'usage.events',
-  ROUTING: 'routing.events',
-  ANALYTICS: 'analytics.events',
+  AUTH: process.env['KAFKA_TOPIC_AUTH'] ?? 'auth.events',
+  CREDIT: process.env['KAFKA_TOPIC_CREDIT'] ?? 'credit.events',
+  BILLING: process.env['KAFKA_TOPIC_BILLING'] ?? 'billing.events',
+  USAGE: process.env['KAFKA_TOPIC_USAGE'] ?? 'usage.events',
+  ROUTING: process.env['KAFKA_TOPIC_ROUTING'] ?? 'routing.events',
+  ANALYTICS: process.env['KAFKA_TOPIC_ANALYTICS'] ?? 'analytics.events',
+};
+
+// ─────────────────────────────────────────
+// First-party App IDs
+// Requests originating from these IDs are not routed through a developer
+// app and therefore do not earn developer wallet commission.
+// ─────────────────────────────────────────
+
+export const FIRST_PARTY_APP_IDS = new Set([
+  'unknown',
+  'api-direct',
+  'web-direct',
+  'web-dashboard',
+]);
+
+// ─────────────────────────────────────────
+// App Cache Key Helpers
+// Used by the gateway service (reads) and the API service (invalidation).
+// Both services MUST use these helpers so key patterns stay in sync.
+// ─────────────────────────────────────────
+
+export const APP_CACHE_KEYS = {
+  /** '1' = active/allowed, '0' = inactive/forbidden */
+  activeStatus: (appId: string) => `app:active:${appId}`,
+  /** JSON array of bcrypt key hashes for legacy API-key auth */
+  apiKeyHashes: (appId: string) => `app:apikeys:${appId}`,
+  /** Encrypted client secret used for JWT-based app auth */
+  clientSecret: (clientId: string) => `app:clientid:${clientId}:secret_enc`,
 } as const;

@@ -1,14 +1,28 @@
 'use client';
 
 import { useState } from 'react';
-// import { login } from '../../../lib/api'; // Mock this for now
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { api, setAuthToken, setRefreshToken } from "@/lib/api";
 
-const login = async (email: string, password: string) => ({
-  success: true,
-  data: { accessToken: "mock_token", user: { id: "123", email } }
-});
+/**
+ * Whitelist of origins allowed to receive the authentication postMessage.
+ * Includes the main app and the dashboard console, plus any origins
+ * specified in the environment.
+ */
+const GET_ALLOWED_ORIGINS = () => {
+  const envOrigins = process.env.NEXT_PUBLIC_ALLOWED_ORIGINS?.split(',') ?? [];
+  const consoleUrl = process.env.NEXT_PUBLIC_CONSOLE_URL;
+  const defaultOrigins = ['http://localhost:3000', 'http://localhost:3009'];
+
+  const origins = new Set([...defaultOrigins, ...envOrigins]);
+  if (consoleUrl) {
+    try {
+      origins.add(new URL(consoleUrl).origin);
+    } catch { /* ignore invalid URL */ }
+  }
+  return Array.from(origins);
+};
 
 export default function AuthPopupPage() {
   const [email, setEmail] = useState('');
@@ -22,20 +36,28 @@ export default function AuthPopupPage() {
     setError('');
 
     try {
-      const res = await login(email, password);
-      if (res.success && res.data) {
-        if (typeof window !== 'undefined' && window.opener) {
+      const res = await api.auth.login(email, password);
+      setAuthToken(res.accessToken);
+      setRefreshToken(res.refreshToken);
+      if (typeof window !== 'undefined' && window.opener) {
+        // Use the origin passed by the SDK so the postMessage is restricted to
+        // the correct opener origin instead of the insecure wildcard '*'.
+        const params = new URLSearchParams(window.location.search);
+        const callbackOrigin = params.get('origin');
+        const allowedOrigins = GET_ALLOWED_ORIGINS();
+
+        if (callbackOrigin && allowedOrigins.includes(callbackOrigin)) {
           window.opener.postMessage(
-            { type: 'AI_GATEWAY_AUTH', accessToken: res.data.accessToken, user: res.data.user },
-            '*'
+            { type: 'AI_GATEWAY_AUTH', accessToken: res.accessToken, user: res.user },
+            callbackOrigin
           );
           window.close();
         } else {
-          setError("This window was not opened as a popup.");
+          console.error('Unauthorized or missing origin for auth popup:', callbackOrigin);
+          setError("Unauthorized callback origin.");
         }
       } else {
-        // setError(res.error?.message ?? 'Login failed');
-        setError('Login failed');
+        setError("This window was not opened as a popup.");
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An error occurred');

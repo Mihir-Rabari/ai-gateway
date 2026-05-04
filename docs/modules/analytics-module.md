@@ -93,3 +93,8 @@ ORDER BY count DESC
 | Topic | What's ingested |
 |-------|----------------|
 | `usage.events` | All request completions → `request_logs` |
+## Current Runtime Notes
+
+- App-level analytics currently use `GET /analytics/usage/app?appId=...`
+- Dashboard summary currently uses `GET /analytics/dashboard?userId=...`
+- The service is user-dashboard focused right now, not a full admin analytics surface

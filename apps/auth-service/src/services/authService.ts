@@ -121,7 +121,11 @@ export class AuthService {
 
   async getMe(token: string) {
     const payload = await this.validateToken(token);
-    const user = await this.userRepo.findById(payload.userId);
+    return this.getUserById(payload.userId);
+  }
+
+  async getUserById(userId: string) {
+    const user = await this.userRepo.findById(userId);
     if (!user) throw Errors.USER_NOT_FOUND();
     return {
       id: user.id,
@@ -137,9 +141,20 @@ export class AuthService {
   // ─────────────────────────────────────────
 
   async logout(userId: string): Promise<void> {
-    const keys = await this.redis.keys(`refresh:${userId}:*`);
-    if (keys.length > 0) {
-      await this.redis.del(...keys);
+    const match = `refresh:${userId}:*`;
+    let cursor = '0';
+    const keysToDelete: string[] = [];
+
+    do {
+      const [nextCursor, keys] = await this.redis.scan(cursor, 'MATCH', match, 'COUNT', 100);
+      cursor = nextCursor;
+      if (keys.length > 0) {
+        keysToDelete.push(...keys);
+      }
+    } while (cursor !== '0');
+
+    if (keysToDelete.length > 0) {
+      await this.redis.del(...keysToDelete);
     }
   }
 
@@ -162,6 +177,16 @@ export class AuthService {
       if (name === 'TokenExpiredError') throw Errors.TOKEN_EXPIRED();
       throw Errors.INVALID_TOKEN();
     }
+  }
+
+  // ─────────────────────────────────────────
+  // Issue Tokens for User ID (used by OAuth)
+  // ─────────────────────────────────────────
+
+  async issueTokensForUser(userId: string): Promise<{ accessToken: string; refreshToken: string }> {
+    const user = await this.userRepo.findById(userId);
+    if (!user) throw Errors.USER_NOT_FOUND();
+    return this.issueTokens(user.id, user.email, user.planId);
   }
 
   // ─────────────────────────────────────────
