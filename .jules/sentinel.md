@@ -10,6 +10,10 @@
 **Vulnerability:** Fastify route catch-all handlers were logging full error details globally using `console.log`/`console.error` and sending raw `err.message` in 5xx JSON responses.
 **Learning:** Returning unhandled error properties (like `err.message` or stack traces) directly to the client exposes internal architectural and state information, creating an information leakage vulnerability. Additionally, global `console` logs do not easily tie errors back to a specific HTTP request, complicating auditing.
 **Prevention:** Always sanitize 5xx error responses with generic messages (e.g., 'Unexpected server error') before sending to the client. Use request-scoped structured logging (`req.log.info`, `req.log.error`) to log the detailed, raw error object internally, ensuring that logs are tied to request contexts securely.
+## 2024-08-01 - [Remove overly permissive CORS header]
+**Vulnerability:** The /chat endpoint in the API service was explicitly setting an `Access-Control-Allow-Origin: *` header, effectively bypassing the global CORS policy and allowing any origin to read stream responses.
+**Learning:** Hardcoding wildcard CORS headers on individual routes defeats the purpose of centralized CORS middleware and creates a critical vulnerability where malicious sites can make authenticated requests and read sensitive data.
+**Prevention:** Rely entirely on the globally configured CORS plugin (`@fastify/cors`) to handle `Access-Control-Allow-Origin` headers securely based on an allowed list of origins. Never override CORS headers manually in route handlers.
 ## 2024-06-25 - [Remove Hardcoded Wildcard CORS Header]
 **Vulnerability:** A hardcoded `Access-Control-Allow-Origin: *` header was found in the `chat.ts` route handler for streaming responses. This creates an overly permissive CORS configuration, allowing any origin to make cross-origin requests to this endpoint, which could lead to unauthorized access or data exposure.
 **Learning:** Hardcoding CORS headers inside individual route handlers bypasses centralized security policies and often results in overly permissive settings like `*`.
