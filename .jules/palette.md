@@ -1,7 +1,19 @@
+<<<<<<< HEAD
 
 ## 2026-04-22 - Invalid Button nesting inside Next.js Links
 **Learning:** Wrapping a custom `<Button>` component inside a Next.js `<Link>` or standard `<a>` tag creates invalid HTML5 (a button cannot be a child of an anchor) and causes significant screen reader accessibility issues. In `apps/console`, this pattern was previously used to create link buttons.
 **Action:** Replace the invalid nesting pattern by applying the custom Button's exact Tailwind utility classes directly to the `<Link>` or `<a>` component, eliminating the nested `<Button>` entirely.
-## 2026-04-23 - External link attributes
-**Learning:** External links (e.g., `<a>` tags pointing to URLs outside the app) must include `target="_blank"` and `rel="noopener noreferrer"` for standard UX and security best practices, along with appropriate `focus-visible` accessibility styles.
-**Action:** Always add `target="_blank"`, `rel="noopener noreferrer"`, and `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50` when creating or modifying external links.
+=======
+## 2026-04-12 - Missing ARIA Labels on Ad-Hoc Icon Buttons
+**Learning:** In the developer console UI (`apps/console`), there is a pattern of using inline, ad-hoc `<button>` elements rather than standard design system components for small actions like the password visibility toggle (`Eye`/`EyeOff`). These ad-hoc buttons often lack critical accessibility attributes such as `aria-label` or `title`, and sometimes miss focus-visible states for keyboard users.
+**Action:** Always verify small interactive elements (especially icon-only buttons) for proper aria-labels and keyboard focus indicators, and consider standardizing them into a reusable `<IconButton />` component in the future to prevent regressions.
+## 2026-04-22 - Reusable IconButton component
+**Learning:** We refactored ad-hoc icon-only buttons to use a standard reusable `<IconButton>` component. By making `aria-label` a required prop in the TypeScript definition of `<IconButton>`, we statically enforce accessibility for all future icon buttons added to the console UI. The component also gracefully falls back to using the `aria-label` as the `title` tooltip if no explicit `title` is provided, further improving UX.
+**Action:** Use the `<IconButton>` component from `system.tsx` for any new icon-only buttons to ensure they are accessible by default.
+>>>>>>> origin/main
+## 2026-04-22 - Reusable IconButton component
+**Learning:** We refactored ad-hoc icon-only buttons to use a standard reusable <IconButton> component. By making aria-label a required prop in the TypeScript definition of <IconButton>, we statically enforce accessibility for all future icon buttons added to the console UI. The component also gracefully falls back to using the aria-label as the title tooltip if no explicit title is provided, further improving UX.
+**Action:** Use the <IconButton> component from system.tsx for any new icon-only buttons to ensure they are accessible by default.
+## 2024-05-03 - [UI improvement] Add Radix UI asChild to Button
+**Learning:** Nesting buttons inside links is invalid HTML. Duplicating tailwind classes on links to make them look like buttons is a maintenance nightmare.
+**Action:** Implemented the asChild pattern using Radix Slot. This allows Link components to render as semantic <a> tags while inheriting all the Button component's visual styling and behavior.
