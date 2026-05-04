@@ -18,3 +18,20 @@
 **Vulnerability:** The `logout` method in `authService.ts` used the blocking O(N) `redis.keys()` operation to find matching session keys. In a production environment with many keys, this command can block the entire Redis server, leading to a Denial of Service (DoS) for all connected applications.
 **Learning:** `redis.keys()` is extremely dangerous in production and should never be used, even in non-critical paths, as it blocks the single-threaded Redis event loop.
 **Prevention:** Always use the non-blocking cursor-based `redis.scan` or `scanStream` implementations for matching and retrieving a large number of keys.
+## 2024-05-24 - [Fix overly permissive CORS in chat SSE endpoint]
+**Vulnerability:** The `/chat` endpoint manually set `Access-Control-Allow-Origin: *` for Server-Sent Events (SSE) responses, bypassing the application's strict CORS policy.
+**Learning:** Even when hijacking the Fastify response for SSE (`reply.hijack()`), Fastify's global CORS plugin still correctly handles the CORS headers on the raw response. Manually overriding it with a wildcard introduces a significant security risk.
+**Prevention:** Never manually set `Access-Control-Allow-Origin` or other CORS headers in individual route handlers. Always rely on the globally registered `@fastify/cors` plugin to enforce the centralized `ALLOWED_ORIGINS` policy.
+## 2024-05-18 - [Remove Wildcard CORS Header in SSE Streams]
+**Vulnerability:** A route handler for chat streams manually set `Access-Control-Allow-Origin: *` before hijacking the response for Server-Sent Events (SSE). This created an overly permissive CORS configuration that bypassed the globally registered, centralized CORS policy.
+**Learning:** Manual CORS headers should never be applied in individual route handlers, even when bypassing standard Fastify hooks using `reply.hijack()`. Doing so overrides the centralized security policy (like `ALLOWED_ORIGINS`) and can expose sensitive endpoints to cross-origin requests from malicious domains.
+**Prevention:** Always rely on the globally registered `@fastify/cors` plugin to enforce the centralized CORS policy. Do not use `reply.raw.setHeader` for CORS headers under any circumstances.
+## 2024-05-03 - Remove insecure CORS wildcard in SSE streaming
+**Vulnerability:** The `/chat` endpoint manually set `Access-Control-Allow-Origin: *` during Fastify reply hijacking for SSE streaming.
+**Learning:** Even when using `reply.hijack()` for Server-Sent Events, Fastify's globally registered `@fastify/cors` plugin handles CORS headers correctly. Manually setting headers can unintentionally override global security policies and introduce overly permissive CORS access.
+**Prevention:** Never manually set `Access-Control-Allow-Origin` in individual route handlers. Rely on centralized CORS plugins configured with strict whitelists.
+## 2024-06-25 - [Fix overly permissive CORS configuration in API gateway SSE stream]
+**Vulnerability:** Fastify route catch-all handlers were manually setting `reply.raw.setHeader('Access-Control-Allow-Origin', '*');` for Server-Sent Events (SSE) streams, allowing cross-origin requests from any domain.
+**Learning:** Bypassing global CORS plugins with raw header modifications (`reply.raw.setHeader`) inside specific route handlers breaks centralized security policies. Setting the wildcard origin (`*`) introduces serious risks, potentially exposing sensitive data streams to unauthorized domains.
+**Prevention:** Never manually set CORS headers (`Access-Control-Allow-Origin`) in individual Fastify route handlers. Always rely on the globally registered `@fastify/cors` plugin to enforce the centralized `ALLOWED_ORIGINS` policy uniformly across all routes.
+
