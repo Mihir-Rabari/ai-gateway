@@ -1,4 +1,5 @@
 import { fetch } from 'undici';
+import bcrypt from 'bcrypt';
 import { createHash } from 'crypto';
 import {
   generateId, Errors, calculateCredits, createLogger, GatewayError, withRetry,
@@ -16,6 +17,7 @@ interface ServiceClients {
   routingServiceUrl: string;
   kafkaPublish: (topic: string, msg: object) => Promise<void>;
   redis: Redis;
+  pgPool: any; // Add pgPool to ServiceClients for API key validation
   /** TTL in seconds for the validated-token Redis cache. Default: 60. */
   tokenCacheTtlSeconds?: number;
 }
@@ -75,8 +77,8 @@ export class GatewayService {
     const requestId = generateId();
     const startTime = Date.now();
 
-    // Step 1: Validate user token
-    const user = await this.validateToken(input.token);
+    // Step 1: Validate user token or API key
+    const user = await this.validateToken(input.token, input.appId);
     logger.info({ requestId, userId: user.userId, model: input.model }, 'Processing request');
 
     // Step 2: Rate Limiting
@@ -325,16 +327,59 @@ export class GatewayService {
     return json.data?.result ?? 'forbidden';
   }
 
-  private async validateToken(token: string): Promise<ValidatedUser> {
-    // Check Redis cache before calling the auth service.
-    // The token is hashed (SHA-256) so the raw bearer token is never stored as a Redis key.
+  private async validateToken(token: string, appId?: string): Promise<ValidatedUser> {
+    // 1. Check for API key (agk_ prefix)
+    if (token.startsWith('agk_')) {
+      if (!appId || appId === 'unknown') {
+        throw Errors.INVALID_TOKEN();
+      }
+
+      // Check cache for API key
+      const cacheKey = `auth:apikey:${createHash('sha256').update(token).digest('hex')}`;
+      const cached = await this.clients.redis.get(cacheKey);
+      if (cached) {
+        try {
+          return JSON.parse(cached) as ValidatedUser;
+        } catch {
+          await this.clients.redis.del(cacheKey);
+        }
+      }
+
+      // Fetch active API keys for this app and verify
+      const result = await this.clients.pgPool.query(
+        `SELECT k.key_hash, a.developer_id, u.plan_id, u.email
+         FROM api_keys k
+         JOIN registered_apps a ON k.app_id = a.id
+         JOIN users u ON a.developer_id = u.id
+         WHERE k.app_id = $1 AND k.revoked_at IS NULL AND a.is_active = true AND u.is_active = true`,
+        [appId]
+      );
+
+      for (const row of result.rows) {
+        const isValid = await bcrypt.compare(token, row.key_hash);
+        if (isValid) {
+          const user: ValidatedUser = {
+            userId: row.developer_id,
+            planId: row.plan_id,
+            email: row.email,
+          };
+          // Cache the result
+          const ttl = this.clients.tokenCacheTtlSeconds ?? 60;
+          await this.clients.redis.set(cacheKey, JSON.stringify(user), 'EX', ttl);
+          return user;
+        }
+      }
+
+      throw Errors.INVALID_TOKEN();
+    }
+
+    // 2. Regular token validation (via auth service)
     const cacheKey = `auth:token:${createHash('sha256').update(token).digest('hex')}`;
     const cached = await this.clients.redis.get(cacheKey);
     if (cached) {
       try {
         return JSON.parse(cached) as ValidatedUser;
       } catch {
-        // Malformed cache entry: remove it and fall through to the auth service.
         await this.clients.redis.del(cacheKey);
       }
     }
@@ -354,7 +399,7 @@ export class GatewayService {
       return json.data;
     });
 
-    // Cache the validated user data so subsequent requests skip the auth service call.
+    // Cache the validated user data
     const ttl = this.clients.tokenCacheTtlSeconds ?? 60;
     await this.clients.redis.set(cacheKey, JSON.stringify(user), 'EX', ttl);
 
