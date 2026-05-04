@@ -17,3 +17,7 @@
 ## 2025-04-28 - Atomic Redis Increment and Expiration
 **Learning:** In hot paths like rate limiting, executing redis.incr followed conditionally by redis.expire can lead to race conditions where a crash leaves a Redis key permanently un-expiring.
 **Action:** Replace sequential incr and expire logic with a single atomic Lua script executed via redis.eval(). Ensure the test mock createRedisMockWithStore supports redis.eval.
+## 2024-06-25 - [performance improvement] Atomic rate limiting with Redis Eval
+**Learning:** Sequential redis.incr and redis.expire commands are not atomic, which can lead to race conditions where a key is incremented but never expires if the process crashes in between.
+**Action:** Implemented atomic rate limiting using Redis eval (Lua script) to ensure both operations happen in a single step.
+**Prevention:** Always use atomic Redis operations (eval, multi/exec) for multi-step logic that must maintain consistency.
