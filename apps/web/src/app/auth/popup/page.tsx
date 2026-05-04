@@ -40,8 +40,7 @@ export default function AuthPopupPage() {
       setAuthToken(res.accessToken);
       setRefreshToken(res.refreshToken);
       if (typeof window !== 'undefined' && window.opener) {
-        // Use the origin passed by the SDK so the postMessage is restricted to
-        // the correct opener origin instead of the insecure wildcard '*'.
+        // Validate the origin passed by the SDK against allowed origins.
         const params = new URLSearchParams(window.location.search);
         const callbackOrigin = params.get('origin');
         const allowedOrigins = GET_ALLOWED_ORIGINS();
@@ -56,8 +55,11 @@ export default function AuthPopupPage() {
           console.error('Unauthorized or missing origin for auth popup:', callbackOrigin);
           setError("Unauthorized callback origin.");
 <<<<<<< HEAD
+=======
+<<<<<<< HEAD
           setLoading(false);
 =======
+>>>>>>> origin/main
 >>>>>>> origin/main
         }
       } else {
