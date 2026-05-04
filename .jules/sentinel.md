@@ -18,3 +18,32 @@
 **Vulnerability:** The API chat route explicitly set `Access-Control-Allow-Origin: *` for streaming responses, bypassing the globally configured `@fastify/cors` policy.
 **Learning:** Hardcoding wildcard CORS headers in specific routes overrides centralized security configurations, potentially allowing any malicious origin to read sensitive AI chat stream data via cross-origin requests.
 **Prevention:** Rely on centralized CORS plugins (e.g., `@fastify/cors`) configured with a strict whitelist of allowed origins (e.g., `ALLOWED_ORIGINS`) and avoid manual overrides in individual route handlers.
+## 2024-06-25 - [Fix Overly Permissive CORS Configuration in API Route]
+**Vulnerability:** A route handler in `apps/api/src/routes/v1/chat.ts` manually set `reply.raw.setHeader('Access-Control-Allow-Origin', '*');` when handling Server-Sent Events (SSE). This overrode the globally configured `@fastify/cors` plugin with a wildcard, creating an overly permissive CORS configuration that allowed any origin to read the SSE stream.
+**Learning:** Manual header overrides within route handlers, especially when bypassing standard response mechanisms (like `reply.hijack()`), can easily bypass centralized security configurations like CORS. Fastify's CORS plugin is designed to handle preflight and origin validation comprehensively; manually setting `Access-Control-Allow-Origin: *` negates this protection for specific endpoints.
+**Prevention:** Never manually set CORS headers (`Access-Control-Allow-Origin`, etc.) in individual route handlers. Rely on globally registered CORS plugins (e.g., `@fastify/cors`) configured with a strict whitelist (`ALLOWED_ORIGINS`). Even when hijacking responses for SSE, the global CORS logic should handle the initial headers securely.
+## 2025-05-01 - Prevent Error Message Information Leakage
+**Vulnerability:** The global fastify error handler leaked sensitive raw error messages and internal details for 5xx errors to the client responses.
+**Learning:** Even though a global error handler was registered, it defaulted to sending `appError.message` which exposes database or service failures. Also, the logging wasn't using request-scoped structured logging (`req.log.error`).
+**Prevention:** Always mask 5xx error messages with a generic "Internal server error" string and ensure error logging uses request context (`req.log.error`) for proper tracing and security.
+## 2024-06-25 - [Fix DoS vulnerability in Redis keys lookup]
+**Vulnerability:** The `logout` method in `authService.ts` used the blocking O(N) `redis.keys()` operation to find matching session keys. In a production environment with many keys, this command can block the entire Redis server, leading to a Denial of Service (DoS) for all connected applications.
+**Learning:** `redis.keys()` is extremely dangerous in production and should never be used, even in non-critical paths, as it blocks the single-threaded Redis event loop.
+**Prevention:** Always use the non-blocking cursor-based `redis.scan` or `scanStream` implementations for matching and retrieving a large number of keys.
+## 2024-05-24 - [Fix overly permissive CORS in chat SSE endpoint]
+**Vulnerability:** The `/chat` endpoint manually set `Access-Control-Allow-Origin: *` for Server-Sent Events (SSE) responses, bypassing the application's strict CORS policy.
+**Learning:** Even when hijacking the Fastify response for SSE (`reply.hijack()`), Fastify's global CORS plugin still correctly handles the CORS headers on the raw response. Manually overriding it with a wildcard introduces a significant security risk.
+**Prevention:** Never manually set `Access-Control-Allow-Origin` or other CORS headers in individual route handlers. Always rely on the globally registered `@fastify/cors` plugin to enforce the centralized `ALLOWED_ORIGINS` policy.
+## 2024-05-18 - [Remove Wildcard CORS Header in SSE Streams]
+**Vulnerability:** A route handler for chat streams manually set `Access-Control-Allow-Origin: *` before hijacking the response for Server-Sent Events (SSE). This created an overly permissive CORS configuration that bypassed the globally registered, centralized CORS policy.
+**Learning:** Manual CORS headers should never be applied in individual route handlers, even when bypassing standard Fastify hooks using `reply.hijack()`. Doing so overrides the centralized security policy (like `ALLOWED_ORIGINS`) and can expose sensitive endpoints to cross-origin requests from malicious domains.
+**Prevention:** Always rely on the globally registered `@fastify/cors` plugin to enforce the centralized CORS policy. Do not use `reply.raw.setHeader` for CORS headers under any circumstances.
+## 2024-05-03 - Remove insecure CORS wildcard in SSE streaming
+**Vulnerability:** The `/chat` endpoint manually set `Access-Control-Allow-Origin: *` during Fastify reply hijacking for SSE streaming.
+**Learning:** Even when using `reply.hijack()` for Server-Sent Events, Fastify's globally registered `@fastify/cors` plugin handles CORS headers correctly. Manually setting headers can unintentionally override global security policies and introduce overly permissive CORS access.
+**Prevention:** Never manually set `Access-Control-Allow-Origin` in individual route handlers. Rely on centralized CORS plugins configured with strict whitelists.
+## 2024-06-25 - [Fix overly permissive CORS configuration in API gateway SSE stream]
+**Vulnerability:** Fastify route catch-all handlers were manually setting `reply.raw.setHeader('Access-Control-Allow-Origin', '*');` for Server-Sent Events (SSE) streams, allowing cross-origin requests from any domain.
+**Learning:** Bypassing global CORS plugins with raw header modifications (`reply.raw.setHeader`) inside specific route handlers breaks centralized security policies. Setting the wildcard origin (`*`) introduces serious risks, potentially exposing sensitive data streams to unauthorized domains.
+**Prevention:** Never manually set CORS headers (`Access-Control-Allow-Origin`) in individual Fastify route handlers. Always rely on the globally registered `@fastify/cors` plugin to enforce the centralized `ALLOWED_ORIGINS` policy uniformly across all routes.
+
