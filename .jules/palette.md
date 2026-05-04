@@ -14,3 +14,6 @@
 ## 2026-04-22 - Reusable IconButton component
 **Learning:** We refactored ad-hoc icon-only buttons to use a standard reusable <IconButton> component. By making aria-label a required prop in the TypeScript definition of <IconButton>, we statically enforce accessibility for all future icon buttons added to the console UI. The component also gracefully falls back to using the aria-label as the title tooltip if no explicit title is provided, further improving UX.
 **Action:** Use the <IconButton> component from system.tsx for any new icon-only buttons to ensure they are accessible by default.
+## 2024-05-03 - [UI improvement] Add Radix UI asChild to Button
+**Learning:** Nesting buttons inside links is invalid HTML. Duplicating tailwind classes on links to make them look like buttons is a maintenance nightmare.
+**Action:** Implemented the asChild pattern using Radix Slot. This allows Link components to render as semantic <a> tags while inheriting all the Button component's visual styling and behavior.
