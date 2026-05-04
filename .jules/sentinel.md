@@ -93,3 +93,7 @@
 **Vulnerability:** Fastify route catch blocks in the API service (apps.ts, developers.ts) were logging raw error objects (including err.stack) globally using console.error and fastify.log.error instead of using the secure, request-scoped logger.
 **Learning:** Replaced all instances of fastify.log and console.error with the secure, request-scoped req.log.error and req.log.info. Removed manual, unsafe errObj construction.
 **Prevention:** Always use request-scoped structured logging (req.log.error) instead of global loggers or console.error in route handlers to ensure proper traceability and prevent sensitive information from bypassing log redaction.
+## 2024-04-15 - [HIGH] Add strict security headers
+**Vulnerability:** Missing Content Security Policy and X-XSS-Protection headers on auth-service, exposing HTML responses to potential Cross-Site Scripting (XSS) via reflected error messages.
+**Learning:** Extracted hardcoded security headers into a unified @ai-gateway/utils plugin and registered it on auth-service, implementing default-src 'none'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:;.
+**Prevention:** Standardize security headers across all services using a shared plugin or middleware to ensure consistent defense-in-depth.
