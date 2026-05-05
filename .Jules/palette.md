@@ -8,3 +8,7 @@
 ## 2026-05-03 - Button asChild and Accessible Links
 **Learning:** Wrapping a `<Button>` (that renders a `<button>`) inside an `<a>` or Next.js `<Link>` tag creates invalid HTML5 and screen reader accessibility issues. However, manually duplicating Tailwind button classes onto Links makes the code hard to maintain.
 **Action:** Implemented Radix UI's `Slot` utility via an `asChild` prop on the `Button` component, combining it with `<Slottable>` to correctly preserve loading indicators while making it easy to render semantic links natively like `<Button asChild><Link href="...">...</Link></Button>`.
+
+## 2026-05-05 - Accessible External Links and Button Semantics
+**Learning:** External links on landing and login pages were missing target="_blank", rel="noopener noreferrer", and keyboard focus-visible states. Additionally, <Link><Button>...</Button></Link> patterns were still present, creating invalid HTML5.
+**Action:** Updated landing page and login page to use <Button asChild><Link>/<Button asChild><a>, and added proper focus indicators and secure external link attributes.

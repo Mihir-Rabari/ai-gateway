@@ -41,12 +41,17 @@ export default function ConsolePage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <a href={webUrl} className="hidden text-sm text-white/54 transition hover:text-white md:block">
+            <a
+              href={webUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden rounded-md px-2 py-1 text-sm text-white/54 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 md:block"
+            >
               Main website
             </a>
-            <Link href="/login">
-              <Button>Enter Console</Button>
-            </Link>
+            <Button asChild>
+              <Link href="/login">Enter Console</Link>
+            </Button>
           </div>
         </Surface>
 
@@ -63,17 +68,17 @@ export default function ConsolePage() {
                 usage, and earnings. Every route still speaks directly to the existing backend client.
               </p>
               <div className="mt-10 flex flex-wrap gap-3">
-                <Link href="/login">
-                  <Button className="h-12 px-6">
+                <Button asChild className="h-12 px-6">
+                  <Link href="/login">
                     Open dashboard
                     <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <a href={`${webUrl}/signup`}>
-                  <Button variant="secondary" className="h-12 px-6">
+                  </Link>
+                </Button>
+                <Button asChild variant="secondary" className="h-12 px-6">
+                  <a href={`${webUrl}/signup`} target="_blank" rel="noopener noreferrer">
                     Create account
-                  </Button>
-                </a>
+                  </a>
+                </Button>
               </div>
             </div>
           </Surface>
