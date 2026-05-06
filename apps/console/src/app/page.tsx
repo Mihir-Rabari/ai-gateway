@@ -41,7 +41,12 @@ export default function ConsolePage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <a href={webUrl} className="hidden text-sm text-white/54 transition hover:text-white md:block">
+            <a
+              href={webUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden rounded-md px-2 py-1 text-sm text-white/54 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 md:block"
+            >
               Main website
             </a>
             <Button asChild>
@@ -70,7 +75,7 @@ export default function ConsolePage() {
                   </Link>
                 </Button>
                 <Button asChild variant="secondary" className="h-12 px-6">
-                  <a href={`${webUrl}/signup`}>
+                  <a href={`${webUrl}/signup`} target="_blank" rel="noopener noreferrer">
                     Create account
                   </a>
                 </Button>

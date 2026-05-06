@@ -1,3 +1,7 @@
+## 2024-06-25 - [Fix improper logging and potential information leakage in API routes]
+**Vulnerability:** Fastify route catch blocks in the API service (`apps.ts`) were logging raw error objects (including `err.stack`) globally using `console.error` and manually constructing an `errObj` which included the stack trace.
+**Learning:** Replaced unsafe `errObj` logging and `console.error` with the secure, request-scoped `req.log.error`.
+**Prevention:** Always use request-scoped structured logging (`req.log.error`) instead of global loggers or `console.error` in route handlers to ensure proper traceability and prevent sensitive information from bypassing log redaction.
 ## 2024-03-31 - Webhook Signature Validation Enhancements
 **Vulnerability:** The Razorpay webhook signature verification in `billing-service` was vulnerable to two issues:
 1. It used `JSON.stringify(req.body)` to reconstruct the payload, which could lead to signature mismatches if formatting differences exist between the raw payload and reconstructed payload. It also opens up potential bypasses.
