@@ -12,3 +12,7 @@
 ## 2026-05-05 - Accessible External Links and Button Semantics
 **Learning:** External links on landing and login pages were missing target="_blank", rel="noopener noreferrer", and keyboard focus-visible states. Additionally, <Link><Button>...</Button></Link> patterns were still present, creating invalid HTML5.
 **Action:** Updated landing page and login page to use <Button asChild><Link>/<Button asChild><a>, and added proper focus indicators and secure external link attributes.
+
+## 2026-05-07 - Screen Reader Only Form Labels
+**Learning:** Relying solely on placeholders for form inputs reduces accessibility for screen reader users. The visual design of authentication forms often omits visible labels.
+**Action:** Always include explicitly associated `<label>` elements with `htmlFor` and matching `id` attributes on inputs. Use the `sr-only` utility class to maintain the visual layout while ensuring accessibility.
