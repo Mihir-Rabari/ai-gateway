@@ -12,3 +12,7 @@
 ## 2026-05-05 - Accessible External Links and Button Semantics
 **Learning:** External links on landing and login pages were missing target="_blank", rel="noopener noreferrer", and keyboard focus-visible states. Additionally, <Link><Button>...</Button></Link> patterns were still present, creating invalid HTML5.
 **Action:** Updated landing page and login page to use <Button asChild><Link>/<Button asChild><a>, and added proper focus indicators and secure external link attributes.
+
+## 2024-05-09 - Explicit Form Labels
+**Learning:** Form components leveraging the `<Field>` wrapper were implicitly associating labels by wrapping inputs in `<label>` tags. While technically valid HTML5, providing explicit `htmlFor` associations on labels matched with input `id` attributes ensures better support across a wider range of screen readers and assistive technologies.
+**Action:** Add `htmlFor` props to wrapper components and ensure all corresponding inner `<input>` or `<textarea>` elements receive matching `id` attributes.

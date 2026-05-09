@@ -162,14 +162,16 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
 export function Field({
   label,
   hint,
+  htmlFor,
   children,
 }: {
   label: string;
   hint?: string;
+  htmlFor?: string;
   children: React.ReactNode;
 }) {
   return (
-    <label className="block space-y-2">
+    <label htmlFor={htmlFor} className="block space-y-2">
       <div className="flex items-center justify-between gap-4">
         <span className="text-sm font-medium text-white/82">{label}</span>
         {hint ? <span className="text-xs text-white/38">{hint}</span> : null}
