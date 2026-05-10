@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,7 +54,9 @@ export default function SignupPage() {
               </div>
             )}
             <div className="space-y-2">
+              <label htmlFor="name" className="sr-only">Full Name</label>
               <Input
+                id="name"
                 type="text"
                 placeholder="Full Name"
                 value={name}
@@ -63,7 +66,9 @@ export default function SignupPage() {
               />
             </div>
             <div className="space-y-2">
+              <label htmlFor="email" className="sr-only">Email address</label>
               <Input
+                id="email"
                 type="email"
                 placeholder="Email address"
                 value={email}
@@ -73,7 +78,9 @@ export default function SignupPage() {
               />
             </div>
             <div className="space-y-2">
+              <label htmlFor="password" className="sr-only">Password</label>
               <Input
+                id="password"
                 type="password"
                 placeholder="Password"
                 value={password}
@@ -88,6 +95,7 @@ export default function SignupPage() {
               className="w-full bg-white text-black hover:bg-white/90 font-medium h-10"
               disabled={loading}
             >
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {loading ? "Creating account..." : "Sign up"}
             </Button>
           </form>
