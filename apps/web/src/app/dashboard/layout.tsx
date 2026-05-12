@@ -210,9 +210,11 @@ export default function DashboardLayout({
           </button>
           <h1 className="text-sm font-medium text-white/70">Control Center</h1>
           {isDeveloper && (
-            <a href={`${CONSOLE_URL}?token=${encodeURIComponent(getAuthToken() ?? "")}&rt=${encodeURIComponent(getRefreshToken() ?? "")}`}>
-              <Button className="bg-white text-black hover:bg-white/90">Dev Console</Button>
-            </a>
+            <Button className="bg-white text-black hover:bg-white/90" asChild>
+              <a href={`${CONSOLE_URL}?token=${encodeURIComponent(getAuthToken() ?? "")}&rt=${encodeURIComponent(getRefreshToken() ?? "")}`} target="_blank" rel="noopener noreferrer">
+                Dev Console
+              </a>
+            </Button>
           )}
         </header>
 
