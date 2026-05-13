@@ -11,7 +11,7 @@ const app = Fastify({ logger: getFastifyLoggerOptions() });
 async function bootstrap() {
   await app.register(securityHeadersPlugin);
   await app.register(cors, {
-    origin: config.ALLOWED_ORIGINS.split(','),
+    origin: config.ALLOWED_ORIGINS!.split(','),
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
