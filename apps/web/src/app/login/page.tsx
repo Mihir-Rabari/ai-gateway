@@ -52,7 +52,9 @@ export default function LoginPage() {
               </div>
             )}
             <div className="space-y-2">
+              <label htmlFor="login-email" className="sr-only">Email address</label>
               <Input
+                id="login-email"
                 type="email"
                 placeholder="Email address"
                 value={email}
@@ -62,7 +64,9 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
+              <label htmlFor="login-password" className="sr-only">Password</label>
               <Input
+                id="login-password"
                 type="password"
                 placeholder="Password"
                 value={password}

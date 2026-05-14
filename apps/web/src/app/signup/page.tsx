@@ -53,7 +53,9 @@ export default function SignupPage() {
               </div>
             )}
             <div className="space-y-2">
+              <label htmlFor="signup-name" className="sr-only">Full Name</label>
               <Input
+                id="signup-name"
                 type="text"
                 placeholder="Full Name"
                 value={name}
@@ -63,7 +65,9 @@ export default function SignupPage() {
               />
             </div>
             <div className="space-y-2">
+              <label htmlFor="signup-email" className="sr-only">Email address</label>
               <Input
+                id="signup-email"
                 type="email"
                 placeholder="Email address"
                 value={email}
@@ -73,7 +77,9 @@ export default function SignupPage() {
               />
             </div>
             <div className="space-y-2">
+              <label htmlFor="signup-password" className="sr-only">Password</label>
               <Input
+                id="signup-password"
                 type="password"
                 placeholder="Password"
                 value={password}
