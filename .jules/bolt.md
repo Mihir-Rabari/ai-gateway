@@ -26,3 +26,7 @@
 ## 2024-05-02 - Remove redundant credit balance API calls
 **Learning:** The /me endpoint already returns the user's creditBalance. Fetching it separately on initial load is unnecessary and increases server load.
 **Action:** Removed redundant api.credits.getBalance() calls from the console shell and dashboard layout, relying on the user object from api.auth.me().
+
+## 2024-06-25 - [performance improvement] Single pass array reduce
+**Learning:** Using `.filter().reduce()` multiple times over the same transactions array creates intermediate arrays and increases time complexity to O(2N) or O(3N).
+**Action:** Combine `.filter().reduce()` operations into a single `.reduce()` pass to prevent intermediate array creation and reduce time complexity to O(N).
