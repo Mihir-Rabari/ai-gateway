@@ -33,7 +33,8 @@ export default function DashboardPage() {
     void load();
   }, []);
 
-  const earnedCredits = transactions.filter((tx) => tx.type === "debit").reduce((sum, tx) => sum + tx.amount, 0);
+  // ⚡ Bolt: Single-pass array reduction to avoid intermediate array creation
+  const earnedCredits = transactions.reduce((sum, tx) => (tx.type === "debit" ? sum + tx.amount : sum), 0);
   const estimatedInr = earnedCredits * 0.2;
   const requests = usage?.thisMonth.totalRequests ?? 0;
   const credits = usage?.thisMonth.totalCredits ?? 0;
