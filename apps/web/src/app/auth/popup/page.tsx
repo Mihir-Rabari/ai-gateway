@@ -54,13 +54,7 @@ export default function AuthPopupPage() {
         } else {
           console.error('Unauthorized or missing origin for auth popup:', callbackOrigin);
           setError("Unauthorized callback origin.");
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
           setLoading(false);
-=======
->>>>>>> origin/main
->>>>>>> origin/main
         }
       } else {
         setError("This window was not opened as a popup.");
@@ -83,22 +77,30 @@ export default function AuthPopupPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <p className="text-sm text-red-400 text-center">{error}</p>}
-          <Input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="bg-[#0a0a0a] border-white/10 text-white placeholder:text-white/30 focus-visible:ring-white/20"
-          />
-          <Input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="bg-[#0a0a0a] border-white/10 text-white placeholder:text-white/30 focus-visible:ring-white/20"
-          />
+          <div className="space-y-2">
+            <label htmlFor="email" className="sr-only">Email address</label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="bg-[#0a0a0a] border-white/10 text-white placeholder:text-white/30 focus-visible:ring-white/20"
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="password" className="sr-only">Password</label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="bg-[#0a0a0a] border-white/10 text-white placeholder:text-white/30 focus-visible:ring-white/20"
+            />
+          </div>
           <Button
             type="submit"
             className="w-full bg-white text-black hover:bg-white/90 font-medium"
