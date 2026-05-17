@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import { createClient } from '@clickhouse/client';
 import { Kafka } from 'kafkajs';
 import { getAnalyticsConfig } from '@ai-gateway/config';
@@ -12,6 +13,12 @@ const config = getAnalyticsConfig();
 
 const app = Fastify({ logger: getFastifyLoggerOptions() });
 app.register(securityHeadersPlugin);
+app.register(cors, {
+  origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000', 'http://localhost:3009'],
+  credentials: true,
+  methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+});
 
 // ─── ClickHouse ───────────────────────────────
 const clickhouse = createClient({
