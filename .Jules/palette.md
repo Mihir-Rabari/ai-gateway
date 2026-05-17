@@ -12,3 +12,7 @@
 ## 2026-05-05 - Accessible External Links and Button Semantics
 **Learning:** External links on landing and login pages were missing target="_blank", rel="noopener noreferrer", and keyboard focus-visible states. Additionally, <Link><Button>...</Button></Link> patterns were still present, creating invalid HTML5.
 **Action:** Updated landing page and login page to use <Button asChild><Link>/<Button asChild><a>, and added proper focus indicators and secure external link attributes.
+
+## 2024-05-17 - Missing loading states for async actions
+**Learning:** Long-running async actions (like rotating API keys or deleting apps) lacked inline loading indicators (`busy` state) in the Console UI, which could lead to double-clicks and confusion during network latency.
+**Action:** Always wrap async actions with `busy` state indicators on their respective `<Button>` elements to provide immediate visual feedback and prevent redundant submissions.
