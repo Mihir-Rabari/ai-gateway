@@ -30,8 +30,16 @@ export default function EarningsPage() {
   }, []);
 
   const { debits, credits, estimatedEarnings, pending } = useMemo(() => {
-    const debitSum = transactions.filter((tx) => tx.type === "debit").reduce((sum, tx) => sum + tx.amount, 0);
-    const creditSum = transactions.filter((tx) => tx.type === "credit").reduce((sum, tx) => sum + tx.amount, 0);
+    // ⚡ Bolt: Consolidated reduce pass to prevent intermediate array creation
+    // Reduces time complexity from O(4N) to O(N) by replacing multiple .filter().reduce() passes
+    const { debitSum, creditSum } = transactions.reduce(
+      (acc, tx) => {
+        if (tx.type === "debit") acc.debitSum += tx.amount;
+        else if (tx.type === "credit") acc.creditSum += tx.amount;
+        return acc;
+      },
+      { debitSum: 0, creditSum: 0 }
+    );
     const earned = debitSum * INCOME_SHARE;
     const paidOut = creditSum * INCOME_SHARE;
     return { debits: debitSum, credits: creditSum, estimatedEarnings: earned, pending: Math.max(earned - paidOut, 0) };
