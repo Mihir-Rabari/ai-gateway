@@ -123,17 +123,17 @@ export default function LandingPage() {
                 credits, and reliability controls.
               </p>
               <div className="animate-slide-up-delay-2 mt-8 flex flex-wrap items-center gap-3">
-                <Link href="/signup">
-                  <Button size="lg" className="group rounded-full bg-slate-950 px-7 text-white hover:bg-slate-800">
+                <Button asChild size="lg" className="group rounded-full bg-slate-950 px-7 text-white hover:bg-slate-800">
+                  <Link href="/signup">
                     Build with AI Gateway
                     <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </Button>
-                </Link>
-                <a href={`${process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009"}/docs`}>
-                  <Button size="lg" variant="outline" className="rounded-full border-slate-900/20 bg-white/80 px-7">
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="rounded-full border-slate-900/20 bg-white/80 px-7">
+                  <a href={`${process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009"}/docs`} target="_blank" rel="noopener noreferrer">
                     Read docs
-                  </Button>
-                </a>
+                  </a>
+                </Button>
               </div>
               <div className="mt-7 flex flex-wrap gap-6 text-sm text-slate-600">
                 <span className="inline-flex items-center gap-2">
@@ -290,11 +290,11 @@ export default function LandingPage() {
                   </CardContent>
                 </div>
                 <CardFooter>
-                  <Link href="/signup" className="w-full">
-                    <Button className={`w-full rounded-full ${plan.featured ? "bg-slate-950 text-white hover:bg-slate-800" : ""}`} variant={plan.featured ? "default" : "outline"}>
+                  <Button asChild className={`w-full rounded-full ${plan.featured ? "bg-slate-950 text-white hover:bg-slate-800" : ""}`} variant={plan.featured ? "default" : "outline"}>
+                    <Link href="/signup" className="w-full">
                       {plan.cta}
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 </CardFooter>
               </Card>
             ))}
@@ -312,16 +312,16 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
-                <Link href="/signup">
-                  <Button size="lg" className="rounded-full bg-white text-slate-950 hover:bg-white/90">
+                <Button asChild size="lg" className="rounded-full bg-white text-slate-950 hover:bg-white/90">
+                  <Link href="/signup">
                     Create account
-                  </Button>
-                </Link>
-                <a href={process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009"}>
-                  <Button size="lg" variant="outline" className="rounded-full border-white/60 bg-transparent text-white hover:bg-white/10">
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="rounded-full border-white/60 bg-transparent text-white hover:bg-white/10">
+                  <a href={process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009"} target="_blank" rel="noopener noreferrer">
                     Open developer console
-                  </Button>
-                </a>
+                  </a>
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -340,7 +340,9 @@ export default function LandingPage() {
             </Link>
             <a
               href={`${process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009"}/docs`}
-              className="transition-colors hover:text-slate-950"
+              className="transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               Docs
             </a>
