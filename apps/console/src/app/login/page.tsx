@@ -61,8 +61,8 @@ export default function LoginPage() {
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
               {error ? <InlineMessage tone="danger">{error}</InlineMessage> : null}
-              <Field label="Email"><TextInput type="email" placeholder="you@company.com" value={email} onChange={(event) => setEmail(event.target.value)} required /></Field>
-              <Field label="Password"><TextInput type="password" placeholder="Enter your password" value={password} onChange={(event) => setPassword(event.target.value)} required /></Field>
+              <Field label="Email" htmlFor="email"><TextInput id="email" type="email" placeholder="you@company.com" value={email} onChange={(event) => setEmail(event.target.value)} required /></Field>
+              <Field label="Password" htmlFor="password"><TextInput id="password" type="password" placeholder="Enter your password" value={password} onChange={(event) => setPassword(event.target.value)} required /></Field>
               <Button type="submit" busy={loading} className="w-full justify-center">{loading ? "Signing in" : "Continue to console"}{!loading ? <ArrowRight className="h-4 w-4" /> : null}</Button>
             </form>
 

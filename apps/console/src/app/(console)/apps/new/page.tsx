@@ -60,9 +60,9 @@ export default function RegisterAppPage() {
       <ShellSection eyebrow="Create" title="Register a new app" description="Issue fresh developer credentials and define the first redirect URIs for your OAuth flow." />
       <Surface className="p-6 md:p-7">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Field label="App name" hint="Required"><TextInput value={name} onChange={(event) => setName(event.target.value)} placeholder="My AI product" required /></Field>
-          <Field label="Description" hint="Optional"><TextInput value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Short summary of what the app does" /></Field>
-          <Field label="Redirect URIs" hint="One per line"><TextArea value={redirectUrisRaw} onChange={(event) => setRedirectUrisRaw(event.target.value)} placeholder={"http://localhost:3000/callback\nhttps://myapp.com/callback"} /></Field>
+          <Field label="App name" hint="Required" htmlFor="app-name"><TextInput id="app-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="My AI product" required /></Field>
+          <Field label="Description" hint="Optional" htmlFor="app-description"><TextInput id="app-description" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Short summary of what the app does" /></Field>
+          <Field label="Redirect URIs" hint="One per line" htmlFor="app-redirect-uris"><TextArea id="app-redirect-uris" value={redirectUrisRaw} onChange={(event) => setRedirectUrisRaw(event.target.value)} placeholder={"http://localhost:3000/callback\nhttps://myapp.com/callback"} /></Field>
           <div className="flex flex-wrap gap-3"><Button type="submit" busy={loading}>{loading ? "Registering" : "Register app"}</Button><Button asChild variant="secondary"><Link href="/apps">Cancel</Link></Button></div>
         </form>
       </Surface>

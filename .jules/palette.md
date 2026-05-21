@@ -20,3 +20,7 @@
 ## 2024-05-04 - Fix invalid HTML button nesting and enhance link accessibility
 **Learning:** React/Next.js applications frequently suffer from invalid HTML nesting and lack of keyboard accessibility on non-button links. Specifically, nesting a custom `<Button>` inside an `<a>` or Next.js `<Link>` element causes invalid DOM hierarchy and screen reader issues. Additionally, manually styled links often omit standard `:focus-visible` styling (like `focus-visible:ring-2`), creating an inconsistent keyboard navigation experience.
 **Action:** Always employ Radix UI's `Slot` (`asChild` pattern) when rendering link behaviors onto `<Button>` components (`<Button asChild><Link href="...">Text</Link></Button>`). Additionally, ensure all interactive elements styled like text or secondary links (e.g., "Create account" or "Back to landing") include explicit `focus-visible` states to preserve proper keyboard navigation, and add `target="_blank"` and `rel="noopener noreferrer"` to external links.
+
+## 2024-05-21 - [Accessibility improvement] Use explicit labels
+**Learning:** Implicit label wrapping (nesting input inside label) can cause issues with some screen readers or complex nested components. Explicit `htmlFor` associations are more robust.
+**Action:** Always use explicit `<label htmlFor="id">` associations with matching `<input id="id">` instead of implicit wrapping.
