@@ -82,8 +82,16 @@ export default function AppDetailsPage() {
   };
 
   const usageRows = usage?.rows ?? [];
-  const totalCredits = usageRows.reduce((sum, row) => sum + Number(row.total_credits || 0), 0);
-  const totalRequests = usageRows.reduce((sum, row) => sum + Number(row.total_requests || 0), 0);
+  // ⚡ Bolt: Combined sequential .reduce() passes into a single O(N) traversal
+  // to reduce iteration overhead over usage data.
+  const { totalCredits, totalRequests } = usageRows.reduce(
+    (acc, row) => {
+      acc.totalCredits += Number(row.total_credits || 0);
+      acc.totalRequests += Number(row.total_requests || 0);
+      return acc;
+    },
+    { totalCredits: 0, totalRequests: 0 }
+  );
 
   return (
     <div className="space-y-6">
