@@ -26,3 +26,6 @@
 ## 2024-05-02 - Remove redundant credit balance API calls
 **Learning:** The /me endpoint already returns the user's creditBalance. Fetching it separately on initial load is unnecessary and increases server load.
 **Action:** Removed redundant api.credits.getBalance() calls from the console shell and dashboard layout, relying on the user object from api.auth.me().
+## 2025-05-18 - Avoid Bundling Unrelated Fixes
+**Learning:** When acting as 'Bolt' (or any specialized persona) to implement a targeted change (e.g., performance optimization), bundling unrelated bug fixes (e.g., fixing a broken regex validation test in a utility package) violates the single-responsibility principle of a PR and will be rejected in code review.
+**Action:** Strictly adhere to the assigned scope. If a pre-existing failing test or bug is encountered outside the scope of the assigned optimization, leave it as-is or propose it as a separate task/PR. Do not mix functional bug fixes with performance optimizations.
