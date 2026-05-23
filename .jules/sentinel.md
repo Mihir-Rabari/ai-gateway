@@ -105,3 +105,7 @@
 **Vulnerability:** Missing Content Security Policy and X-XSS-Protection headers on auth-service, exposing HTML responses to potential Cross-Site Scripting (XSS) via reflected error messages.
 **Learning:** Extracted hardcoded security headers into a unified @ai-gateway/utils plugin and registered it on auth-service, implementing default-src 'none'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:;.
 **Prevention:** Standardize security headers across all services using a shared plugin or middleware to ensure consistent defense-in-depth.
+## 2025-05-22 - [Fix email validation to prevent injection]
+**Vulnerability:** The email validation logic `isValidEmail` failed to reject emails with invalid dot placements in the local part, such as consecutive dots or leading/trailing dots.
+**Learning:** Basic regex matching for emails might miss edge cases involving dots in the local part unless explicitly checked or handled with a more complex regex.
+**Prevention:** Always ensure email validation logic explicitly rejects leading dots, trailing dots, and consecutive dots in the local part.
