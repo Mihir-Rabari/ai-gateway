@@ -53,7 +53,9 @@ export default function SignupPage() {
               </div>
             )}
             <div className="space-y-2">
+              <label htmlFor="name" className="sr-only">Full Name</label>
               <Input
+                id="name"
                 type="text"
                 placeholder="Full Name"
                 value={name}
@@ -63,7 +65,9 @@ export default function SignupPage() {
               />
             </div>
             <div className="space-y-2">
+              <label htmlFor="email" className="sr-only">Email address</label>
               <Input
+                id="email"
                 type="email"
                 placeholder="Email address"
                 value={email}
@@ -73,7 +77,9 @@ export default function SignupPage() {
               />
             </div>
             <div className="space-y-2">
+              <label htmlFor="password" className="sr-only">Password</label>
               <Input
+                id="password"
                 type="password"
                 placeholder="Password"
                 value={password}
@@ -95,11 +101,11 @@ export default function SignupPage() {
         <CardFooter className="flex flex-col space-y-4 border-t border-white/5 mx-6 pt-6 px-0 pb-6">
           <div className="text-sm text-center text-white/60">
             Already have an account?{" "}
-            <Link href="/login" className="text-white hover:underline font-medium">
+            <Link href="/login" className="text-white hover:underline font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
               Sign in
             </Link>
           </div>
-          <Link href="/" className="text-xs text-center text-white/40 hover:text-white/80 transition-colors flex items-center justify-center">
+          <Link href="/" className="text-xs text-center text-white/40 hover:text-white/80 transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
             ← Back to home
           </Link>
         </CardFooter>
