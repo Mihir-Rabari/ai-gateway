@@ -340,17 +340,22 @@ export class RoutingService {
   ): Promise<RouteResult | AsyncIterable<string>> {
     const geminiModel = this.genAI.getGenerativeModel({ model });
 
-    const contents = messages
-      .filter((m) => m.role !== 'system')
-      .map((m) => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }],
-      }));
-
-    const systemInstruction = messages
-      .filter((m) => m.role === 'system')
-      .map((m) => m.content)
-      .join('\n');
+    // ⚡ Bolt: Combine `.filter().map()` and `.filter().map().join()` into a single O(N) pass
+    // to avoid multiple intermediate array allocations when processing large conversation histories.
+    const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
+    const systemInstructionsArray: string[] = [];
+    for (let i = 0; i < messages.length; i++) {
+      const m = messages[i];
+      if (m.role === 'system') {
+        systemInstructionsArray.push(m.content);
+      } else {
+        contents.push({
+          role: m.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: m.content }],
+        });
+      }
+    }
+    const systemInstruction = systemInstructionsArray.join('\n');
 
     if (stream) {
       const resultStream = await geminiModel.generateContentStream({
@@ -456,14 +461,19 @@ export class RoutingService {
     temperature: number,
     stream: boolean,
   ): Promise<RouteResult | AsyncIterable<string>> {
-    const systemMessages = messages
-      .filter((m) => m.role === 'system')
-      .map((m) => m.content)
-      .join('\n');
-
-    const conversationMessages = messages
-      .filter((m) => m.role !== 'system')
-      .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+    // ⚡ Bolt: Combine `.filter().map()` and `.filter().map().join()` into a single O(N) pass
+    // to avoid multiple intermediate array allocations when processing large conversation histories.
+    const conversationMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+    const systemMessagesArray: string[] = [];
+    for (let i = 0; i < messages.length; i++) {
+      const m = messages[i];
+      if (m.role === 'system') {
+        systemMessagesArray.push(m.content);
+      } else {
+        conversationMessages.push({ role: m.role as 'user' | 'assistant', content: m.content });
+      }
+    }
+    const systemMessages = systemMessagesArray.join('\n');
 
     if (stream) {
       const responseStream = await this.anthropic.messages.create({
