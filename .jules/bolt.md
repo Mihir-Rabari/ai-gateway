@@ -26,3 +26,6 @@
 ## 2024-05-02 - Remove redundant credit balance API calls
 **Learning:** The /me endpoint already returns the user's creditBalance. Fetching it separately on initial load is unnecessary and increases server load.
 **Action:** Removed redundant api.credits.getBalance() calls from the console shell and dashboard layout, relying on the user object from api.auth.me().
+## 2026-05-25 - [performance improvement] Single loop array processing
+**Learning:** For backend performance optimization on large datasets or critical paths (e.g., AI message arrays), chaining array methods like `.filter().map().join()` allocates intermediate arrays and causes O(N) overhead.
+**Action:** Replaced chained array methods with a single loop operation in `routingService.ts` for processing `messages` to reduce allocations and execution time.
