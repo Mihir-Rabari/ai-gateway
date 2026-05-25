@@ -178,6 +178,11 @@ export const isValidEmail = (email: string): boolean => {
   if (!email || email.length > 254) return false;
   if (!emailRegex.test(email)) return false;
   const parts = email.split('@');
+  if (email.includes('..')) return false;
+  if (parts[0]) {
+    if (parts[0].startsWith('.')) return false;
+    if (parts[0].endsWith('.')) return false;
+  }
   if (parts[1] && !parts[1].includes('.')) return false; // Ensure TLD presence
   return true;
 };
