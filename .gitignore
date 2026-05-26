@@ -35,3 +35,7 @@ infra/data/
 
 # Test
 coverage/
+
+# Agent logs
+.jules/
+.Jules/
