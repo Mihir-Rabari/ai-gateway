@@ -172,4 +172,78 @@ export async function billingRoutes(fastify: FastifyInstance) {
       }
     },
   );
+
+  // POST /billing/topup/order
+  fastify.post(
+    '/topup/order',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['userId', 'amount'],
+          properties: {
+            userId: { type: 'string' },
+            amount: { type: 'number' },
+          },
+        },
+      },
+    },
+    async (req: FastifyRequest<{ Body: { userId: string; amount: number } }>, reply: FastifyReply) => {
+      try {
+        const isValid = await validateUserToken(req, req.body.userId);
+        if (!isValid) {
+          return reply.status(401).send(fail(Errors.INVALID_TOKEN()));
+        }
+
+        const result = await service.createPrepaidOrder(req.body.userId, req.body.amount);
+        return reply.send(ok(result));
+      } catch (err) {
+        logger.error(err, 'Prepaid order creation failed');
+        return reply.status(500).send(fail(Errors.INTERNAL()));
+      }
+    },
+  );
+
+  // POST /billing/topup/verify
+  fastify.post(
+    '/topup/verify',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['razorpayPaymentId', 'razorpayOrderId', 'razorpaySignature', 'userId'],
+          properties: {
+            razorpayPaymentId: { type: 'string' },
+            razorpayOrderId: { type: 'string' },
+            razorpaySignature: { type: 'string' },
+            userId: { type: 'string' },
+          },
+        },
+      },
+    },
+    async (
+      req: FastifyRequest<{
+        Body: {
+          razorpayPaymentId: string;
+          razorpayOrderId: string;
+          razorpaySignature: string;
+          userId: string;
+        };
+      }>,
+      reply: FastifyReply,
+    ) => {
+      try {
+        const isValid = await validateUserToken(req, req.body.userId);
+        if (!isValid) {
+          return reply.status(401).send(fail(Errors.INVALID_TOKEN()));
+        }
+
+        const result = await service.verifyTopupPayment(req.body);
+        return reply.send(ok(result));
+      } catch (err) {
+        logger.error(err, 'Prepaid top-up verification failed');
+        return reply.status(500).send(fail(Errors.INTERNAL()));
+      }
+    },
+  );
 }

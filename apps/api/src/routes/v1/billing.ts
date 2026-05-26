@@ -86,4 +86,75 @@ export const billingRoutes: FastifyPluginAsync = async (fastify) => {
     const data = await res.json();
     return reply.status(res.status).send(data);
   });
+
+  fastify.post('/billing/topup/order', {
+    preHandler: [requireAuth],
+    schema: {
+      tags: ['Billing'],
+      description: 'Create a Razorpay prepaid order for wallet top-up',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['amount'],
+        properties: {
+          amount: { type: 'number' },
+        },
+      },
+    },
+  }, async (req, reply) => {
+    const authHeader = req.headers['authorization'] as string;
+    const { amount } = req.body as { amount: number };
+    const res = await fetch(`${billingServiceUrl}/billing/topup/order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({ userId: req.userId, amount }),
+    });
+
+    const data = await res.json();
+    return reply.status(res.status).send(data);
+  });
+
+  fastify.post('/billing/topup/verify', {
+    preHandler: [requireAuth],
+    schema: {
+      tags: ['Billing'],
+      description: 'Verify Razorpay prepaid wallet top-up payment',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['razorpayPaymentId', 'razorpayOrderId', 'razorpaySignature'],
+        properties: {
+          razorpayPaymentId: { type: 'string' },
+          razorpayOrderId: { type: 'string' },
+          razorpaySignature: { type: 'string' },
+        },
+      },
+    },
+  }, async (req, reply) => {
+    const authHeader = req.headers['authorization'] as string;
+    const { razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body as {
+      razorpayPaymentId: string;
+      razorpayOrderId: string;
+      razorpaySignature: string;
+    };
+    const res = await fetch(`${billingServiceUrl}/billing/topup/verify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({
+        razorpayPaymentId,
+        razorpayOrderId,
+        razorpaySignature,
+        userId: req.userId,
+      }),
+    });
+
+    const data = await res.json();
+    return reply.status(res.status).send(data);
+  });
 };
