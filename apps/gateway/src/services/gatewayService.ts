@@ -183,7 +183,7 @@ export class GatewayService {
     const requestId = generateId();
     const startTime = Date.now();
 
-    const user = await this.validateToken(input.token);
+    const user = await this.validateToken(input.token, input.appId);
     logger.info({ requestId, userId: user.userId, model: input.model }, 'Processing stream request');
 
     const limit = this.getRateLimit(user.planId);
@@ -371,33 +371,61 @@ export class GatewayService {
 
     // 2. Regular token validation (via auth service)
     const cacheKey = `auth:token:${createHash('sha256').update(token).digest('hex')}`;
+    let user: ValidatedUser | undefined;
     const cached = await this.clients.redis.get(cacheKey);
     if (cached) {
       try {
-        return JSON.parse(cached) as ValidatedUser;
+        user = JSON.parse(cached) as ValidatedUser;
       } catch {
         await this.clients.redis.del(cacheKey);
       }
     }
 
-    const user = await this.authBreaker.execute(async () => {
-      const res = await this.httpFetch(`${this.clients.authServiceUrl}/internal/auth/validate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
+    if (!user) {
+      user = await this.authBreaker.execute(async () => {
+        const res = await this.httpFetch(`${this.clients.authServiceUrl}/internal/auth/validate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        });
+        const json = await res.json() as {
+          success: boolean;
+          data?: ValidatedUser;
+          error?: { code: string; message: string };
+        };
+        if (!res.ok || !json.success || !json.data) throw Errors.INVALID_TOKEN();
+        return json.data;
       });
-      const json = await res.json() as {
-        success: boolean;
-        data?: ValidatedUser;
-        error?: { code: string; message: string };
-      };
-      if (!res.ok || !json.success || !json.data) throw Errors.INVALID_TOKEN();
-      return json.data;
-    });
 
-    // Cache the validated user data
-    const ttl = this.clients.tokenCacheTtlSeconds ?? 60;
-    await this.clients.redis.set(cacheKey, JSON.stringify(user), 'EX', ttl);
+      // Cache the validated user data
+      const ttl = this.clients.tokenCacheTtlSeconds ?? 60;
+      await this.clients.redis.set(cacheKey, JSON.stringify(user), 'EX', ttl);
+    }
+
+    // Check if the validated token payload contains a clientId.
+    // If a clientId is present and the requested app is not a first-party app,
+    // verify that the token's clientId matches the incoming request's appId.
+    const parts = token.split('.');
+    if (parts.length === 3) {
+      try {
+        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(Buffer.from(base64, 'base64').toString('utf8'));
+        if (payload && typeof payload === 'object' && 'clientId' in payload) {
+          const tokenClientId = payload.clientId;
+          if (tokenClientId) {
+            if (!appId || !FIRST_PARTY_APP_IDS.has(appId)) {
+              if (tokenClientId !== appId) {
+                throw Errors.INVALID_TOKEN();
+              }
+            }
+          }
+        }
+      } catch (err) {
+        if (err && (err as any).statusCode === 401) {
+          throw err;
+        }
+      }
+    }
 
     return user;
   }

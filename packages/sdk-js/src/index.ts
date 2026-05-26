@@ -274,7 +274,7 @@ export class AIGateway {
    * @returns User and tokens after successful exchange
    * @throws {Error} On state mismatch, missing code, or token exchange failure
    */
-  async handleCallback(clientSecret: string, url?: string): Promise<SignInResult> {
+  async handleCallback(clientSecret?: string, url?: string): Promise<SignInResult> {
     const href = url ?? (typeof window !== 'undefined' ? window.location.href : '');
     const params = new URL(href).searchParams;
 
@@ -713,7 +713,7 @@ export class AIGateway {
    * Exchange an authorization code for tokens (server-side step).
    * In a production app, call this from your backend to keep clientSecret safe.
    */
-  private async exchangeCode(code: string, clientSecret: string): Promise<SignInResult> {
+  private async exchangeCode(code: string, clientSecret?: string): Promise<SignInResult> {
     const res = await fetch(`${this.getOAuthBaseUrl()}/oauth/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

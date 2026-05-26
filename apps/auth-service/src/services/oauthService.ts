@@ -163,7 +163,7 @@ export class OAuthService {
     const user = await this.authService.getUserById(codeData.userId);
     if (!user) throw Errors.USER_NOT_FOUND();
 
-    const tokens = await this.authService.issueTokensForUser(user.id);
+    const tokens = await this.authService.issueTokensForUser(user.id, codeData.clientId);
 
     return {
       accessToken: tokens.accessToken,

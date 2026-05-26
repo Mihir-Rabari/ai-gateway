@@ -183,10 +183,10 @@ export class AuthService {
   // Issue Tokens for User ID (used by OAuth)
   // ─────────────────────────────────────────
 
-  async issueTokensForUser(userId: string): Promise<{ accessToken: string; refreshToken: string }> {
+  async issueTokensForUser(userId: string, clientId?: string): Promise<{ accessToken: string; refreshToken: string }> {
     const user = await this.userRepo.findById(userId);
     if (!user) throw Errors.USER_NOT_FOUND();
-    return this.issueTokens(user.id, user.email, user.planId);
+    return this.issueTokens(user.id, user.email, user.planId, clientId);
   }
 
   // ─────────────────────────────────────────
@@ -197,15 +197,20 @@ export class AuthService {
     userId: string,
     email: string,
     planId: string,
+    clientId?: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
     const jti = randomUUID();
 
-    const accessPayload: TokenPayload = {
+    const accessPayload: TokenPayload & { clientId?: string } = {
       userId,
       email,
       planId: planId as TokenPayload['planId'],
       type: 'access',
     };
+
+    if (clientId) {
+      accessPayload.clientId = clientId;
+    }
 
     const refreshPayload: TokenPayload & { jti: string } = {
       userId,
