@@ -6,6 +6,18 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ──────────────────────────────────────────────
+-- Helper: auto-update updated_at on row change
+-- (must be defined before any trigger that uses it)
+-- ──────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ──────────────────────────────────────────────
 -- Users
 -- ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS users (
@@ -194,16 +206,7 @@ CREATE TABLE IF NOT EXISTS user_events (
 CREATE INDEX IF NOT EXISTS idx_user_events_user_id ON user_events (user_id);
 CREATE INDEX IF NOT EXISTS idx_user_events_created_at ON user_events (created_at DESC);
 
--- ──────────────────────────────────────────────
--- Trigger: Update updated_at automatically
--- ──────────────────────────────────────────────
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+-- (update_updated_at_column function is defined at the top of this file)
 
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
