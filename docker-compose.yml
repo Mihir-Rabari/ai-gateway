@@ -176,9 +176,9 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-gateway_user}:${POSTGRES_PASSWORD:-gateway_pass}@postgres:5432/${POSTGRES_DB:-ai_gateway}
       REDIS_URL: redis://redis:6379
       KAFKA_BROKERS: kafka:29092
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-your-super-secret-access-key-change-in-production}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-super-secret-refresh-key-change-in-production}
-      CLIENT_SECRET_ENCRYPTION_KEY: ${CLIENT_SECRET_ENCRYPTION_KEY:-your-64-char-hex-key-change-in-production}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      CLIENT_SECRET_ENCRYPTION_KEY: ${CLIENT_SECRET_ENCRYPTION_KEY}
       AUTH_EVENTS_CONSUMER_ENABLED: 'false'
     networks:
       - gateway-network
@@ -258,9 +258,9 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-gateway_user}:${POSTGRES_PASSWORD:-gateway_pass}@postgres:5432/${POSTGRES_DB:-ai_gateway}
       REDIS_URL: redis://redis:6379
       KAFKA_BROKERS: kafka:29092
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-xxxxxxxxxxxxxxxxxxxx}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-sk-ant-xxxxxxxxxxxx}
-      GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY:-xxxxxxxxxxxxxxxxxxxx}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY}
     networks:
       - gateway-network
 
@@ -286,11 +286,11 @@ services:
       REDIS_URL: redis://redis:6379
       KAFKA_BROKERS: kafka:29092
       CREDIT_SERVICE_URL: http://credit-service:3005
-      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-rzp_test_xxxxxxxxxxxx}
-      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-xxxxxxxxxxxxxxxxxxxx}
-      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-your-webhook-secret}
-      RAZORPAY_PLAN_ID_PRO: ${RAZORPAY_PLAN_ID_PRO:-plan_test_pro_xxxxxxxxxxxx}
-      RAZORPAY_PLAN_ID_MAX: ${RAZORPAY_PLAN_ID_MAX:-plan_test_max_xxxxxxxxxxxx}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET}
+      RAZORPAY_PLAN_ID_PRO: ${RAZORPAY_PLAN_ID_PRO}
+      RAZORPAY_PLAN_ID_MAX: ${RAZORPAY_PLAN_ID_MAX}
     networks:
       - gateway-network
 
@@ -339,6 +339,7 @@ services:
       NODE_ENV: production
       PORT: 3008
       DATABASE_URL: postgresql://${POSTGRES_USER:-gateway_user}:${POSTGRES_PASSWORD:-gateway_pass}@postgres:5432/${POSTGRES_DB:-ai_gateway}
+      REDIS_URL: redis://redis:6379
       KAFKA_BROKERS: kafka:29092
     networks:
       - gateway-network
@@ -374,8 +375,8 @@ services:
       PORT: 3001
       DATABASE_URL: postgresql://${POSTGRES_USER:-gateway_user}:${POSTGRES_PASSWORD:-gateway_pass}@postgres:5432/${POSTGRES_DB:-ai_gateway}
       REDIS_URL: redis://redis:6379
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-your-super-secret-access-key-change-in-production}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-super-secret-refresh-key-change-in-production}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       AUTH_SERVICE_URL: http://auth-service:3003
       CREDIT_SERVICE_URL: http://credit-service:3005
       BILLING_SERVICE_URL: http://billing-service:3004
@@ -398,7 +399,7 @@ services:
       PORT: 3000
       NEXT_PUBLIC_API_URL: http://localhost/api
       NEXT_PUBLIC_GATEWAY_URL: http://localhost/gateway
-      NEXT_PUBLIC_CONSOLE_URL: http://console.localhost
+      NEXT_PUBLIC_CONSOLE_URL: http://localhost/console
       NEXT_PUBLIC_AUTH_URL: http://localhost/auth
     command: pnpm start
     networks:
@@ -418,7 +419,7 @@ services:
       PORT: 3009
       NEXT_PUBLIC_API_URL: http://localhost/api
       NEXT_PUBLIC_GATEWAY_URL: http://localhost/gateway
-      NEXT_PUBLIC_CONSOLE_URL: http://console.localhost
+      NEXT_PUBLIC_CONSOLE_URL: http://localhost/console
       NEXT_PUBLIC_AUTH_URL: http://localhost/auth
     command: pnpm start
     networks:
