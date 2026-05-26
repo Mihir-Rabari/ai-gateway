@@ -385,7 +385,10 @@ export class GatewayService {
       user = await this.authBreaker.execute(async () => {
         const res = await this.httpFetch(`${this.clients.authServiceUrl}/internal/auth/validate`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+          },
           body: JSON.stringify({ token }),
         });
         const json = await res.json() as {
@@ -434,7 +437,10 @@ export class GatewayService {
     await this.creditBreaker.execute(async () => {
       const res = await this.httpFetch(`${this.clients.creditServiceUrl}/credits/lock`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+        },
         body: JSON.stringify({ userId, requestId, amount }),
       });
       if (!res.ok) {
@@ -452,7 +458,10 @@ export class GatewayService {
     await this.creditBreaker.execute(async () => {
       const res = await this.httpFetch(`${this.clients.creditServiceUrl}/credits/confirm`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+        },
         body: JSON.stringify({ userId, requestId }),
       });
       if (!res.ok) {
@@ -469,7 +478,10 @@ export class GatewayService {
     await this.creditBreaker.execute(async () => {
       const res = await this.httpFetch(`${this.clients.creditServiceUrl}/credits/release`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+        },
         body: JSON.stringify({ userId, requestId }),
       });
       if (!res.ok) {

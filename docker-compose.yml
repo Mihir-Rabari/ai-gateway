@@ -204,6 +204,7 @@ services:
       REDIS_URL: redis://redis:6379
       KAFKA_BROKERS: kafka:29092
       CREDIT_LOCK_TTL_SECONDS: 30
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-some-secure-s2s-fallback}
     networks:
       - gateway-network
 
@@ -235,6 +236,7 @@ services:
       AUTH_SERVICE_URL: http://auth-service:3003
       CREDIT_SERVICE_URL: http://credit-service:3005
       ROUTING_SERVICE_URL: http://routing-service:3006
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-some-secure-s2s-fallback}
     networks:
       - gateway-network
 
@@ -290,6 +292,7 @@ services:
       RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET}
       RAZORPAY_PLAN_ID_PRO: ${RAZORPAY_PLAN_ID_PRO}
       RAZORPAY_PLAN_ID_MAX: ${RAZORPAY_PLAN_ID_MAX}
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-some-secure-s2s-fallback}
     networks:
       - gateway-network
 
