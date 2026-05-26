@@ -159,9 +159,9 @@ services:
   # 1. Auth Service
   # ──────────────────────────────────────────────
   auth-service:
-    build:
-      context: .
-      dockerfile: ./infra/docker/Dockerfile.auth-service
+    image: ai-gateway-app:latest
+    working_dir: /app/apps/auth-service
+    command: pnpm start
     restart: unless-stopped
     depends_on:
       postgres:
@@ -187,9 +187,9 @@ services:
   # 2. Credit Service
   # ──────────────────────────────────────────────
   credit-service:
-    build:
-      context: ./apps/credit-service
-      dockerfile: ../../infra/docker/Dockerfile.credit-service
+    image: ai-gateway-app:latest
+    working_dir: /app/apps/credit-service
+    command: pnpm start
     restart: unless-stopped
     depends_on:
       postgres:
@@ -209,9 +209,9 @@ services:
   # 3. Gateway Service (AI Request Engine)
   # ──────────────────────────────────────────────
   gateway:
-    build:
-      context: ./apps/gateway
-      dockerfile: ../../infra/docker/Dockerfile.gateway
+    image: ai-gateway-app:latest
+    working_dir: /app/apps/gateway
+    command: pnpm start
     restart: unless-stopped
     depends_on:
       postgres:
@@ -240,9 +240,9 @@ services:
   # 4. Routing Service
   # ──────────────────────────────────────────────
   routing-service:
-    build:
-      context: ./apps/routing-service
-      dockerfile: ../../infra/docker/Dockerfile.gateway
+    image: ai-gateway-app:latest
+    working_dir: /app/apps/routing-service
+    command: pnpm start
     restart: unless-stopped
     depends_on:
       redis:
@@ -262,9 +262,9 @@ services:
   # 5. Billing Service
   # ──────────────────────────────────────────────
   billing-service:
-    build:
-      context: ./apps/billing-service
-      dockerfile: ../../infra/docker/Dockerfile.gateway
+    image: ai-gateway-app:latest
+    working_dir: /app/apps/billing-service
+    command: pnpm start
     restart: unless-stopped
     depends_on:
       postgres:
@@ -292,9 +292,9 @@ services:
   # 6. Analytics Service
   # ──────────────────────────────────────────────
   analytics-service:
-    build:
-      context: ./apps/analytics-service
-      dockerfile: ../../infra/docker/Dockerfile.gateway
+    image: ai-gateway-app:latest
+    working_dir: /app/apps/analytics-service
+    command: pnpm start
     restart: unless-stopped
     depends_on:
       clickhouse:
@@ -314,9 +314,9 @@ services:
   # 7. Worker Service
   # ──────────────────────────────────────────────
   worker:
-    build:
-      context: ./apps/worker
-      dockerfile: ../../infra/docker/Dockerfile.gateway
+    image: ai-gateway-app:latest
+    working_dir: /app/apps/worker
+    command: pnpm start
     restart: unless-stopped
     depends_on:
       postgres:
@@ -336,8 +336,11 @@ services:
   # ──────────────────────────────────────────────
   api:
     build:
-      context: ./apps/api
-      dockerfile: ../../infra/docker/Dockerfile.gateway
+      context: .
+      dockerfile: Dockerfile
+    image: ai-gateway-app:latest
+    working_dir: /app/apps/api
+    command: pnpm start
     restart: unless-stopped
     depends_on:
       postgres:
@@ -373,10 +376,8 @@ services:
   # 9. Next.js Public Web Frontend
   # ──────────────────────────────────────────────
   web:
-    image: node:20-alpine
+    image: ai-gateway-app:latest
     working_dir: /app/apps/web
-    volumes:
-      - .:/app
     restart: unless-stopped
     depends_on:
       - api
@@ -387,7 +388,7 @@ services:
       NEXT_PUBLIC_GATEWAY_URL: http://localhost/gateway
       NEXT_PUBLIC_CONSOLE_URL: http://console.localhost
       NEXT_PUBLIC_AUTH_URL: http://localhost/auth
-    command: sh -c "node_modules/.bin/next start --port 3000"
+    command: pnpm start
     networks:
       - gateway-network
 
@@ -395,10 +396,8 @@ services:
   # 10. Next.js Developer Console Frontend
   # ──────────────────────────────────────────────
   console:
-    image: node:20-alpine
+    image: ai-gateway-app:latest
     working_dir: /app/apps/console
-    volumes:
-      - .:/app
     restart: unless-stopped
     depends_on:
       - api
@@ -409,7 +408,7 @@ services:
       NEXT_PUBLIC_GATEWAY_URL: http://localhost/gateway
       NEXT_PUBLIC_CONSOLE_URL: http://console.localhost
       NEXT_PUBLIC_AUTH_URL: http://localhost/auth
-    command: sh -c "node_modules/.bin/next start --port 3009"
+    command: pnpm start
     networks:
       - gateway-network
 
