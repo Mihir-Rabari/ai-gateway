@@ -115,9 +115,12 @@ await ai.signIn();
 
 ---
 
-### `ai.handleCallback(clientSecret, url?)`
+### `ai.handleCallback(clientSecret?, url?)`
 
 Called on the redirect URI page. Exchanges the auth code for tokens and stores them.
+
+> [!WARNING]
+> **Security Warning:** `clientSecret` must never be exposed or used in pure frontend browser code. Only pass `clientSecret` to `handleCallback` if you are executing the SDK in a secure server environment (e.g. Node.js backend or SSR server route). For Single Page Applications (SPAs), perform the code exchange on your backend instead (see the React SPA example below).
 
 ```typescript
 const result = await ai.handleCallback('your_client_secret');
@@ -126,7 +129,7 @@ const result = await ai.handleCallback('your_client_secret');
 
 | Parameter | Description |
 |-----------|-------------|
-| `clientSecret` | Your app's secret (keep server-side in production) |
+| `clientSecret` | *(Optional)* Your app's secret (strictly server-side only) |
 | `url` | Callback URL to parse (defaults to `window.location.href`) |
 
 ---
@@ -226,10 +229,15 @@ const ai = new AIGateway({
 
 ---
 
-## Example App (React)
+## Example App (React SPA)
+
+### SPA Secure Flow (Recommended)
+
+To keep your `clientSecret` secure, perform the token exchange on your own backend. The backend receives the authorization code, performs the secure exchange with AI Gateway using the `clientSecret`, and returns the `accessToken` to the frontend.
 
 ```tsx
 // App.tsx
+import { useEffect } from 'react';
 import { AIGateway } from '@mihirrabari/ai-gateway';
 
 const ai = new AIGateway({
@@ -246,24 +254,39 @@ const ai = new AIGateway({
 <button onClick={() => ai.signIn()}>Sign in with AI Gateway</button>
 
 // Callback page (/callback route)
-// Option A: Call handleCallback() if you can safely pass clientSecret from env
-//   (suitable for server-rendered apps or backends)
+// Send the code to your own backend, receive the access token
 useEffect(() => {
-  ai.handleCallback(import.meta.env.VITE_CLIENT_SECRET)
-    .then(() => navigate('/dashboard'))
-    .catch(console.error);
+  const code = new URL(location.href).searchParams.get('code');
+  if (code) {
+    fetch('/api/auth/callback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, redirectUri: 'http://localhost:5173/callback' })
+    })
+      .then(r => r.json())
+      .then(({ accessToken }) => {
+        ai.setToken(accessToken); // manually set the token received securely from your backend
+        navigate('/dashboard');
+      })
+      .catch(console.error);
+  }
 }, []);
+```
 
-// Option B: Send the code to your own backend, receive the access token
-//   (recommended for SPAs — keeps clientSecret off the browser)
-useEffect(() => {
-  fetch('/api/auth/callback?url=' + encodeURIComponent(location.href))
-    .then(r => r.json())
-    .then(({ accessToken }) => {
-      ai.setToken(accessToken); // manually set the token received from backend
-      navigate('/dashboard');
-    });
-}, []);
+### SSR / Server-side / Node.js Flow
+
+If you are running in a secure server-side environment (like Next.js API routes, Remix, or Express), you can safely pass `clientSecret` directly:
+
+```typescript
+// On your backend / callback route handler:
+const ai = new AIGateway({
+  clientId: process.env.CLIENT_ID,
+  redirectUri: 'https://myapp.com/callback',
+});
+
+// Safe to call handleCallback with clientSecret on the server side:
+const result = await ai.handleCallback(process.env.CLIENT_SECRET, request.url);
+```
 
 // Chat
 const result = await ai.chat({
