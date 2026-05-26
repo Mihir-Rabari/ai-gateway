@@ -196,11 +196,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: 3005
       DATABASE_URL: postgresql://${POSTGRES_USER:-gateway_user}:${POSTGRES_PASSWORD:-gateway_pass}@postgres:5432/${POSTGRES_DB:-ai_gateway}
       REDIS_URL: redis://redis:6379
+      KAFKA_BROKERS: kafka:29092
       CREDIT_LOCK_TTL_SECONDS: 30
     networks:
       - gateway-network
@@ -245,11 +248,14 @@ services:
     command: pnpm start
     restart: unless-stopped
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: 3006
+      DATABASE_URL: postgresql://${POSTGRES_USER:-gateway_user}:${POSTGRES_PASSWORD:-gateway_pass}@postgres:5432/${POSTGRES_DB:-ai_gateway}
       REDIS_URL: redis://redis:6379
       KAFKA_BROKERS: kafka:29092
       OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-xxxxxxxxxxxxxxxxxxxx}
