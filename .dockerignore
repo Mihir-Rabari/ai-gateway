@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+.git
+.agents
+*.log
+.gemini
+.claude
+brain
