@@ -1,5 +1,6 @@
 import Razorpay from 'razorpay';
 import { fetch } from 'undici';
+import { createHmac } from 'crypto';
 import { generateId, createLogger } from '@ai-gateway/utils';
 import { PLANS, KAFKA_TOPICS } from '@ai-gateway/config';
 import type { BillingEvent, PlanType } from '@ai-gateway/types';
@@ -199,5 +200,50 @@ export class BillingService {
     await this.repo.updateSubscriptionStatus(razorpaySubscriptionId, 'cancelled');
 
     return { cancelled: true, effectiveAt: 'end-of-billing-cycle' };
+  }
+
+  async createPrepaidOrder(userId: string, amountPaise: number) {
+    const order = await (this.razorpayClient as any).orders.create({
+      amount: amountPaise,
+      currency: 'INR',
+      receipt: `topup_rcpt_${generateId()}`,
+    });
+    return { orderId: order.id, amount: order.amount };
+  }
+
+  async verifyTopupPayment(payload: {
+    razorpayPaymentId: string;
+    razorpayOrderId: string;
+    razorpaySignature: string;
+    userId: string;
+  }) {
+    const secret = process.env['RAZORPAY_KEY_SECRET'] ?? '';
+    const text = `${payload.razorpayOrderId}|${payload.razorpayPaymentId}`;
+    const expectedSig = createHmac('sha256', secret).update(text).digest('hex');
+    if (expectedSig !== payload.razorpaySignature) {
+      throw new Error('Invalid Razorpay signature');
+    }
+
+    const orderDetails = await (this.razorpayClient as any).orders.fetch(payload.razorpayOrderId);
+    const amountPaise = orderDetails.amount;
+    const credits = Math.floor(amountPaise / 100);
+
+    const res = await this.httpFetch(`${process.env['CREDIT_SERVICE_URL'] ?? 'http://localhost:3005'}/credits/add`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: payload.userId, amount: credits, reason: 'topup' }),
+    });
+
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      throw new Error(`Credit service returned status ${res.status}: ${JSON.stringify(errBody)}`);
+    }
+
+    const json = await res.json() as { success: boolean; data?: any; error?: any };
+    if (!json.success) {
+      throw new Error(json.error?.message ?? 'Credit service failed');
+    }
+
+    return json.data;
   }
 }
