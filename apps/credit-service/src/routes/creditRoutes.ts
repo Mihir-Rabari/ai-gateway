@@ -1,10 +1,20 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { ok, fail, type GatewayError } from '@ai-gateway/utils';
+import { ok, fail, GatewayError } from '@ai-gateway/utils';
 import { CreditService } from '../services/creditService.js';
 
 export async function creditRoutes(fastify: FastifyInstance) {
   const getService = () =>
     new CreditService(fastify.pg, fastify.redis, fastify.kafka.publish.bind(fastify.kafka));
+
+  const authPreHandler: any = async (req: FastifyRequest, reply: FastifyReply) => {
+    const internalSecret = process.env['INTERNAL_SERVICE_SECRET'];
+    const clientSecret = req.headers['x-internal-secret'];
+    if (!internalSecret || clientSecret !== internalSecret) {
+      return reply.status(401).send(
+        fail(new GatewayError('UNAUTHORIZED', 'Invalid or missing internal service secret', 401))
+      );
+    }
+  };
 
   // GET /credits/balance
   fastify.get(
@@ -54,6 +64,7 @@ export async function creditRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/lock',
     {
+      preHandler: authPreHandler,
       schema: {
         body: {
           type: 'object',
@@ -76,6 +87,7 @@ export async function creditRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/confirm',
     {
+      preHandler: authPreHandler,
       schema: {
         body: {
           type: 'object',
@@ -98,6 +110,7 @@ export async function creditRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/release',
     {
+      preHandler: authPreHandler,
       schema: {
         body: {
           type: 'object',
@@ -120,6 +133,7 @@ export async function creditRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/add',
     {
+      preHandler: authPreHandler,
       schema: {
         body: {
           type: 'object',

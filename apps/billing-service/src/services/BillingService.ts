@@ -117,7 +117,10 @@ export class BillingService {
 
         await this.httpFetch(`${process.env['CREDIT_SERVICE_URL'] ?? 'http://localhost:3005'}/credits/add`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+          },
           body: JSON.stringify({ userId, amount: planCredits, reason: 'subscription' }),
         });
 
@@ -230,7 +233,10 @@ export class BillingService {
 
     const res = await this.httpFetch(`${process.env['CREDIT_SERVICE_URL'] ?? 'http://localhost:3005'}/credits/add`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+      },
       body: JSON.stringify({ userId: payload.userId, amount: credits, reason: 'topup' }),
     });
 
