@@ -27,7 +27,7 @@ interface ServiceClients {
   routingServiceUrl: string;
   kafkaPublish: (topic: string, msg: object) => Promise<void>;
   redis: Redis;
-  pgPool: any; // Add pgPool to ServiceClients for API key validation
+  pgPool?: any; // optional – only needed for API-key-based auth paths
   /** TTL in seconds for the validated-token Redis cache. Default: 60. */
   tokenCacheTtlSeconds?: number;
 }
