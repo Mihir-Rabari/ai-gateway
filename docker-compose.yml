@@ -303,6 +303,10 @@ services:
     command: pnpm start
     restart: unless-stopped
     depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
       clickhouse:
         condition: service_healthy
       kafka:
@@ -310,6 +314,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3007
+      DATABASE_URL: postgresql://${POSTGRES_USER:-gateway_user}:${POSTGRES_PASSWORD:-gateway_pass}@postgres:5432/${POSTGRES_DB:-ai_gateway}
+      REDIS_URL: redis://redis:6379
       KAFKA_BROKERS: kafka:29092
       CLICKHOUSE_HOST: http://clickhouse:8123
       CLICKHOUSE_DATABASE: ${CLICKHOUSE_DATABASE:-ai_gateway_analytics}
