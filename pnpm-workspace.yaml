@@ -1,3 +1,4 @@
+dangerouslyAllowAllBuilds: true
 packages:
   - 'apps/*'
   - 'packages/*'
