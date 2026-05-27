@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api, setAuthToken, setRefreshToken } from "@/lib/api";
@@ -76,27 +77,36 @@ export default function AuthPopupPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <p className="text-sm text-red-400 text-center">{error}</p>}
-          <Input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="bg-[#0a0a0a] border-white/10 text-white placeholder:text-white/30 focus-visible:ring-white/20"
-          />
-          <Input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="bg-[#0a0a0a] border-white/10 text-white placeholder:text-white/30 focus-visible:ring-white/20"
-          />
+          <div>
+            <label htmlFor="email" className="sr-only">Email address</label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="bg-[#0a0a0a] border-white/10 text-white placeholder:text-white/30 focus-visible:ring-white/20"
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="sr-only">Password</label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="bg-[#0a0a0a] border-white/10 text-white placeholder:text-white/30 focus-visible:ring-white/20"
+            />
+          </div>
           <Button
             type="submit"
             className="w-full bg-white text-black hover:bg-white/90 font-medium"
             disabled={loading}
           >
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {loading ? 'Signing in…' : 'Authorize'}
           </Button>
           <Button
