@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Loader2, Menu, X } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import { api, getAuthToken, getRefreshToken, type UserProfile } from "@/lib/api";
@@ -185,6 +185,7 @@ export default function DashboardLayout({
               disabled={enrolling}
               onClick={handleBecomeDeveloper}
             >
+              {enrolling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {enrolling ? "Enrolling…" : "Become a Developer"}
             </Button>
           )}
