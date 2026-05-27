@@ -280,16 +280,18 @@ app.get(
       clickhouse.query({ query: last7DaysQuery, query_params: { userId }, format: 'JSONEachRow' }),
     ]);
 
-    const thisMonthRows = await thisMonthResult.json<{
-      total_requests: number;
-      total_tokens: number;
-      total_credits: number;
-      success_rate: number;
-      avg_latency_ms: number;
-    }>();
-
-    const modelsRows = await modelsResult.json<{ model: string; count: number }>();
-    const last7DaysRows = await last7DaysResult.json<{ date: string; count: number }>();
+    // ⚡ Bolt: Parallelize ClickHouse JSON parsing to prevent sequential I/O bottleneck
+    const [thisMonthRows, modelsRows, last7DaysRows] = await Promise.all([
+      thisMonthResult.json<{
+        total_requests: number;
+        total_tokens: number;
+        total_credits: number;
+        success_rate: number;
+        avg_latency_ms: number;
+      }>(),
+      modelsResult.json<{ model: string; count: number }>(),
+      last7DaysResult.json<{ date: string; count: number }>(),
+    ]);
 
     const thisMonthStats = thisMonthRows[0] ?? {
       total_requests: 0,
