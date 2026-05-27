@@ -11,7 +11,7 @@ export class AppService {
 
   async registerApp(developerId: string, name: string, description?: string, redirectUris: string[] = []) {
     const appId = generateId();
-    const rawApiKey = `agk_${generateId()}${generateId()}`;
+    const rawApiKey = `agk_live_${generateId()}${generateId()}`;
     const keyId = generateId();
     const keyHash = await bcrypt.hash(rawApiKey, 10);
 
@@ -54,7 +54,7 @@ export class AppService {
   }
 
   async rotateApiKey(appId: string, developerId: string) {
-    const rawApiKey = `agk_${generateId()}${generateId()}`;
+    const rawApiKey = `agk_live_${generateId()}${generateId()}`;
     const keyId = generateId();
     const keyHash = await bcrypt.hash(rawApiKey, 10);
 
