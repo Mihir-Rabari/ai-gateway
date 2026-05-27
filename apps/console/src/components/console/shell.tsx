@@ -9,7 +9,8 @@ import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/console/toaster";
 import { Badge, Button, SkeletonBlock, Surface } from "@/components/console/system";
 
-const WEB_URL = process.env.NEXT_PUBLIC_WEB_URL ?? "http://localhost:3000";
+const isBrowser = typeof window !== "undefined";
+const WEB_URL = process.env.NEXT_PUBLIC_WEB_URL ?? (isBrowser ? window.location.origin : "http://localhost:3000");
 
 const links = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },

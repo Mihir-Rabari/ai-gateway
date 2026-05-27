@@ -14,6 +14,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
+const isBrowser = typeof window !== "undefined";
+const CONSOLE_URL = process.env.NEXT_PUBLIC_CONSOLE_URL ?? (isBrowser ? `${window.location.origin}/console` : "http://localhost:3009");
+
 const pillars = [
   {
     title: "Universal Model Layer",
@@ -130,7 +133,7 @@ export default function LandingPage() {
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="rounded-full border-slate-900/20 bg-white/80 px-7">
-                  <a href={`${process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009"}/docs`} target="_blank" rel="noopener noreferrer">
+                  <a href={`${CONSOLE_URL}/docs`} target="_blank" rel="noopener noreferrer">
                     Read docs
                   </a>
                 </Button>
@@ -318,7 +321,7 @@ export default function LandingPage() {
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="rounded-full border-white/60 bg-transparent text-white hover:bg-white/10">
-                  <a href={process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009"} target="_blank" rel="noopener noreferrer">
+                  <a href={CONSOLE_URL} target="_blank" rel="noopener noreferrer">
                     Open developer console
                   </a>
                 </Button>
@@ -339,7 +342,7 @@ export default function LandingPage() {
               Privacy
             </Link>
             <a
-              href={`${process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009"}/docs`}
+              href={`${CONSOLE_URL}/docs`}
               className="transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
               target="_blank"
               rel="noopener noreferrer"

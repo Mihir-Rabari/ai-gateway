@@ -9,7 +9,8 @@ import { Button, Field, InlineMessage, Surface, TextInput } from "@/components/c
 
 export default function LoginPage() {
   const router = useRouter();
-  const webUrl = process.env.NEXT_PUBLIC_WEB_URL ?? "http://localhost:3000";
+  const isBrowser = typeof window !== "undefined";
+  const webUrl = process.env.NEXT_PUBLIC_WEB_URL ?? (isBrowser ? window.location.origin : "http://localhost:3000");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
