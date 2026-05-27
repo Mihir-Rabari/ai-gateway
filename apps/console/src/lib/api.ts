@@ -1,5 +1,6 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
-const AUTH_URL = process.env.NEXT_PUBLIC_AUTH_URL ?? "http://localhost:3003/auth";
+const isBrowser = typeof window !== "undefined";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? (isBrowser ? "" : "http://localhost:3001");
+const AUTH_URL = process.env.NEXT_PUBLIC_AUTH_URL ?? (isBrowser ? "/auth" : "http://localhost:3003/auth");
 
 // Deduplication lock: if multiple in-flight requests all hit 401 at the same time
 // only one refresh call is issued; all callers await the same promise.
