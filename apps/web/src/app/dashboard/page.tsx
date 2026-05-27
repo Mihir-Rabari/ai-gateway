@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, type CreditTransaction, type UsageSummary } from "@/lib/api";
 
+const isBrowser = typeof window !== "undefined";
+const CONSOLE_URL = process.env.NEXT_PUBLIC_CONSOLE_URL ?? (isBrowser ? `${window.location.origin}/console` : "http://localhost:3009");
+
 type DashboardState = {
   balance: number;
   usage: UsageSummary | null;
@@ -68,12 +71,12 @@ export default function DashboardOverview() {
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline" className="border-white/20 bg-white/5 text-white hover:bg-white/10">
-            <a href={`${process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009"}/docs`} target="_blank" rel="noopener noreferrer">
+            <a href={`${CONSOLE_URL}/docs`} target="_blank" rel="noopener noreferrer">
               SDK Docs
             </a>
           </Button>
           <Button asChild className="bg-white text-black hover:bg-white/90">
-            <a href={process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009"} target="_blank" rel="noopener noreferrer">
+            <a href={CONSOLE_URL} target="_blank" rel="noopener noreferrer">
               Developer Console
             </a>
           </Button>
@@ -186,7 +189,7 @@ export default function DashboardOverview() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-white">Recent Credit Transactions</CardTitle>
           <a
-            href={`${process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:3009"}/earnings`}
+            href={`${CONSOLE_URL}/earnings`}
             className="text-xs text-white/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             target="_blank"
             rel="noopener noreferrer"

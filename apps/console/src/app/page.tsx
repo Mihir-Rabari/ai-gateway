@@ -9,7 +9,8 @@ import { Button, Surface } from "@/components/console/system";
 
 export default function ConsolePage() {
   const router = useRouter();
-  const webUrl = process.env.NEXT_PUBLIC_WEB_URL ?? "http://localhost:3000";
+  const isBrowser = typeof window !== "undefined";
+  const webUrl = process.env.NEXT_PUBLIC_WEB_URL ?? (isBrowser ? window.location.origin : "http://localhost:3000");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
