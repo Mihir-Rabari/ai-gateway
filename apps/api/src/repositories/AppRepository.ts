@@ -120,8 +120,10 @@ export class AppRepository {
   }
 
   async findActiveAppById(client: PoolClient, appId: string, developerId: string): Promise<boolean> {
+    // ⚡ Bolt: Use `SELECT 1` instead of `SELECT id` to avoid loading full UUIDs into memory.
+    // Reduces network payload and DB memory overhead during existence checks.
     const result = await client.query(
-      `SELECT id FROM registered_apps WHERE id = $1 AND developer_id = $2 AND is_active = true`,
+      `SELECT 1 FROM registered_apps WHERE id = $1 AND developer_id = $2 AND is_active = true`,
       [appId, developerId],
     );
     return result.rowCount !== null && result.rowCount > 0;
