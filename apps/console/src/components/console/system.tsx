@@ -104,7 +104,7 @@ export const IconButton = forwardRef<
       ref={ref}
       type="button"
       className={cn(
-        "rounded-full border border-white/10 bg-white/[0.04] p-3 text-white/66 transition hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+        "rounded-full border border-white/10 bg-white/[0.04] p-3 text-white/66 transition hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-55 disabled:cursor-not-allowed",
         className,
       )}
       aria-label={ariaLabel}
