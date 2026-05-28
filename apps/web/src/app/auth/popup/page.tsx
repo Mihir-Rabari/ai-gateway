@@ -45,7 +45,7 @@ export default function AuthPopupPage() {
         const callbackOrigin = params.get('origin');
         const allowedOrigins = GET_ALLOWED_ORIGINS();
 
-        if (callbackOrigin && allowedOrigins.includes(callbackOrigin)) {
+        if (callbackOrigin && callbackOrigin !== '*' && allowedOrigins.includes(callbackOrigin)) {
           window.opener.postMessage(
             { type: 'AI_GATEWAY_AUTH', accessToken: res.accessToken, user: res.user },
             callbackOrigin
