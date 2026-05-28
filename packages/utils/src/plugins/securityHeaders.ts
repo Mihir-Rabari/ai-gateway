@@ -18,7 +18,7 @@ export const securityHeadersPlugin = fp(async (fastify: FastifyInstance) => {
     reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 
     // Allow inline scripts and styles for Swagger UI
-    reply.header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'");
+    reply.header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:");
 
     reply.header('X-XSS-Protection', '0');
 
