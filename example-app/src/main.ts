@@ -77,8 +77,9 @@ const state: State = {
 };
 
 function createMessage(role: DisplayRole, content: string): DisplayMessage {
+  // 🛡️ Sentinel: Use crypto.randomUUID() instead of Math.random() for secure, unpredictable IDs
   return {
-    id: `${role}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `${role}-${Date.now()}-${crypto.randomUUID()}`,
     role,
     content,
   };
