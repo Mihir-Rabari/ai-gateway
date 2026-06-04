@@ -1,6 +1,6 @@
 import Razorpay from 'razorpay';
 import { fetch } from 'undici';
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { generateId, createLogger } from '@ai-gateway/utils';
 import { PLANS, KAFKA_TOPICS } from '@ai-gateway/config';
 import type { BillingEvent, PlanType } from '@ai-gateway/types';
@@ -223,7 +223,11 @@ export class BillingService {
     const secret = process.env['RAZORPAY_KEY_SECRET'] ?? '';
     const text = `${payload.razorpayOrderId}|${payload.razorpayPaymentId}`;
     const expectedSig = createHmac('sha256', secret).update(text).digest('hex');
-    if (expectedSig !== payload.razorpaySignature) {
+
+    const signatureBuffer = Buffer.from(payload.razorpaySignature || '', 'utf8');
+    const expectedSigBuffer = Buffer.from(expectedSig || '', 'utf8');
+
+    if (signatureBuffer.length !== expectedSigBuffer.length || !timingSafeEqual(signatureBuffer, expectedSigBuffer)) {
       throw new Error('Invalid Razorpay signature');
     }
 
