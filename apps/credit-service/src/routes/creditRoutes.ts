@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ok, fail, GatewayError } from '@ai-gateway/utils';
 import { CreditService } from '../services/creditService.js';
+import { timingSafeEqual } from 'crypto';
 
 export async function creditRoutes(fastify: FastifyInstance) {
   const getService = () =>
@@ -8,8 +9,19 @@ export async function creditRoutes(fastify: FastifyInstance) {
 
   const authPreHandler: any = async (req: FastifyRequest, reply: FastifyReply) => {
     const internalSecret = process.env['INTERNAL_SERVICE_SECRET'];
-    const clientSecret = req.headers['x-internal-secret'];
-    if (!internalSecret || clientSecret !== internalSecret) {
+    const clientSecretRaw = req.headers['x-internal-secret'];
+    const clientSecret = Array.isArray(clientSecretRaw) ? clientSecretRaw[0] : clientSecretRaw;
+
+    if (!internalSecret || !clientSecret) {
+      return reply.status(401).send(
+        fail(new GatewayError('UNAUTHORIZED', 'Invalid or missing internal service secret', 401))
+      );
+    }
+
+    const internalBuf = Buffer.from(internalSecret, 'utf8');
+    const clientBuf = Buffer.from(clientSecret, 'utf8');
+
+    if (internalBuf.length !== clientBuf.length || !timingSafeEqual(internalBuf, clientBuf)) {
       return reply.status(401).send(
         fail(new GatewayError('UNAUTHORIZED', 'Invalid or missing internal service secret', 401))
       );
