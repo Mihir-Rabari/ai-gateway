@@ -201,10 +201,17 @@ export function Field({
 }: {
   label: string;
   hint?: string;
-  children: React.ReactElement<{ id?: string }>;
+  children: React.ReactElement<{ id?: string; "aria-describedby"?: string }>;
 }) {
   const generatedId = useId();
   const id = children.props.id || generatedId;
+  const hintId = hint ? `${id}-hint` : undefined;
+
+  const childProps: { id: string; "aria-describedby"?: string } = { id };
+  if (hintId) {
+    const existing = children.props["aria-describedby"];
+    childProps["aria-describedby"] = existing ? `${existing} ${hintId}` : hintId;
+  }
 
   return (
     <div className="block space-y-2">
@@ -212,9 +219,13 @@ export function Field({
         <label htmlFor={id} className="text-sm font-medium text-white/82">
           {label}
         </label>
-        {hint ? <span className="text-xs text-white/38">{hint}</span> : null}
+        {hint ? (
+          <span id={hintId} className="text-xs text-white/38">
+            {hint}
+          </span>
+        ) : null}
       </div>
-      {React.cloneElement(children, { id })}
+      {React.cloneElement(children, childProps)}
     </div>
   );
 }
