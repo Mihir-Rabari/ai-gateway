@@ -1,13 +1,13 @@
-import Razorpay from 'razorpay';
-import { fetch } from 'undici';
-import { createHmac } from 'crypto';
-import { generateId, createLogger } from '@ai-gateway/utils';
-import { PLANS, KAFKA_TOPICS } from '@ai-gateway/config';
-import type { BillingEvent, PlanType } from '@ai-gateway/types';
-import type { BillingRepository } from '../repositories/BillingRepository.js';
-import type { FastifyInstance } from 'fastify';
+import Razorpay from "razorpay";
+import { fetch } from "undici";
+import { createHmac, timingSafeEqual } from "crypto";
+import { generateId, createLogger } from "@ai-gateway/utils";
+import { PLANS, KAFKA_TOPICS } from "@ai-gateway/config";
+import type { BillingEvent, PlanType } from "@ai-gateway/types";
+import type { BillingRepository } from "../repositories/BillingRepository.js";
+import type { FastifyInstance } from "fastify";
 
-const logger = createLogger('billing-service-class');
+const logger = createLogger("billing-service-class");
 
 interface RazorpayClientLike {
   subscriptions: {
@@ -43,8 +43,8 @@ export class BillingService {
     }
     if (!this._razorpayClient) {
       this._razorpayClient = new Razorpay({
-        key_id: process.env['RAZORPAY_KEY_ID'] ?? '',
-        key_secret: process.env['RAZORPAY_KEY_SECRET'] ?? '',
+        key_id: process.env["RAZORPAY_KEY_ID"] ?? "",
+        key_secret: process.env["RAZORPAY_KEY_SECRET"] ?? "",
       }) as unknown as RazorpayClientLike;
     }
     return this._razorpayClient;
@@ -54,11 +54,13 @@ export class BillingService {
     return this.deps.httpFetch ?? fetch;
   }
 
-  private resolveRazorpayPlanId(planId: 'pro' | 'max'): string {
+  private resolveRazorpayPlanId(planId: "pro" | "max"): string {
     const razorpayPlanId =
-      planId === 'pro' ? process.env['RAZORPAY_PLAN_ID_PRO']
-      : planId === 'max' ? process.env['RAZORPAY_PLAN_ID_MAX']
-      : null;
+      planId === "pro"
+        ? process.env["RAZORPAY_PLAN_ID_PRO"]
+        : planId === "max"
+          ? process.env["RAZORPAY_PLAN_ID_MAX"]
+          : null;
 
     if (!razorpayPlanId) {
       throw new Error(`Missing Razorpay plan mapping for ${planId}`);
@@ -67,7 +69,7 @@ export class BillingService {
     return razorpayPlanId;
   }
 
-  async createSubscription(userId: string, planId: 'pro' | 'max') {
+  async createSubscription(userId: string, planId: "pro" | "max") {
     const razorpayPlanId = this.resolveRazorpayPlanId(planId);
 
     const subscription = await this.razorpayClient.subscriptions.create({
@@ -77,7 +79,12 @@ export class BillingService {
       customer_notify: 1,
     });
 
-    await this.repo.createPendingSubscription(generateId(), userId, planId, subscription.id);
+    await this.repo.createPendingSubscription(
+      generateId(),
+      userId,
+      planId,
+      subscription.id,
+    );
 
     return { subscriptionId: subscription.id, planId };
   }
@@ -90,9 +97,11 @@ export class BillingService {
       payment?: { entity: { amount: number } };
     },
   ) {
-    const isProcessed = await this.fastify.redis.get(`webhook:processed:${eventId}`);
+    const isProcessed = await this.fastify.redis.get(
+      `webhook:processed:${eventId}`,
+    );
     if (isProcessed) {
-      return { received: true, message: 'Already processed' };
+      return { received: true, message: "Already processed" };
     }
 
     const subId = payload.subscription?.entity?.id;
@@ -108,107 +117,130 @@ export class BillingService {
     }
 
     if (userId && planId) {
-      if (event === 'subscription.activated' || event === 'subscription.charged') {
+      if (
+        event === "subscription.activated" ||
+        event === "subscription.charged"
+      ) {
         const plan = PLANS[planId];
         const planCredits = plan?.credits ?? 100;
 
-        await this.repo.updateSubscriptionStatus(subId!, 'active');
+        await this.repo.updateSubscriptionStatus(subId!, "active");
         await this.repo.updateUserPlan(userId, planId);
 
-        await this.httpFetch(`${process.env['CREDIT_SERVICE_URL'] ?? 'http://localhost:3005'}/credits/add`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+        await this.httpFetch(
+          `${process.env["CREDIT_SERVICE_URL"] ?? "http://localhost:3005"}/credits/add`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Internal-Secret": process.env["INTERNAL_SERVICE_SECRET"] ?? "",
+            },
+            body: JSON.stringify({
+              userId,
+              amount: planCredits,
+              reason: "subscription",
+            }),
           },
-          body: JSON.stringify({ userId, amount: planCredits, reason: 'subscription' }),
-        });
+        );
 
-        const type: BillingEvent['type'] = event === 'subscription.activated'
-            ? 'billing.subscription.created'
-            : 'billing.subscription.renewed';
+        const type: BillingEvent["type"] =
+          event === "subscription.activated"
+            ? "billing.subscription.created"
+            : "billing.subscription.renewed";
 
         const billingEvent: BillingEvent = {
           eventId: generateId(),
-          topic: 'billing.events',
+          topic: "billing.events",
           type,
           userId,
-          planId: planId as BillingEvent['planId'],
+          planId: planId as BillingEvent["planId"],
           amountPaise: payload.payment?.entity.amount ?? 0,
           timestamp: new Date().toISOString(),
-          version: '1.0',
+          version: "1.0",
         };
-        void this.fastify.kafka.publish(KAFKA_TOPICS.BILLING, billingEvent).catch((err) => {
-          logger.error(err, 'Failed to publish billing event');
-        });
-      } else if (event === 'subscription.cancelled') {
-        await this.repo.updateSubscriptionStatus(subId!, 'cancelled');
-        await this.repo.updateUserPlan(userId, 'free');
+        void this.fastify.kafka
+          .publish(KAFKA_TOPICS.BILLING, billingEvent)
+          .catch((err) => {
+            logger.error(err, "Failed to publish billing event");
+          });
+      } else if (event === "subscription.cancelled") {
+        await this.repo.updateSubscriptionStatus(subId!, "cancelled");
+        await this.repo.updateUserPlan(userId, "free");
 
         const billingEvent: BillingEvent = {
           eventId: generateId(),
-          topic: 'billing.events',
-          type: 'billing.subscription.cancelled',
+          topic: "billing.events",
+          type: "billing.subscription.cancelled",
           userId,
-          planId: 'free',
+          planId: "free",
           amountPaise: 0,
           timestamp: new Date().toISOString(),
-          version: '1.0',
+          version: "1.0",
         };
-        void this.fastify.kafka.publish(KAFKA_TOPICS.BILLING, billingEvent).catch((err) => {
-          logger.error(err, 'Failed to publish billing event');
-        });
-      } else if (event === 'payment.failed') {
+        void this.fastify.kafka
+          .publish(KAFKA_TOPICS.BILLING, billingEvent)
+          .catch((err) => {
+            logger.error(err, "Failed to publish billing event");
+          });
+      } else if (event === "payment.failed") {
         const billingEvent: BillingEvent = {
           eventId: generateId(),
-          topic: 'billing.events',
-          type: 'billing.payment.failed',
+          topic: "billing.events",
+          type: "billing.payment.failed",
           userId,
-          planId: planId as BillingEvent['planId'],
+          planId: planId as BillingEvent["planId"],
           amountPaise: payload.payment?.entity.amount ?? 0,
           timestamp: new Date().toISOString(),
-          version: '1.0',
+          version: "1.0",
         };
 
-        void this.fastify.kafka.publish(KAFKA_TOPICS.BILLING, billingEvent).catch((err) => {
-          logger.error(err, 'Failed to publish billing event for payment failure');
-        });
+        void this.fastify.kafka
+          .publish(KAFKA_TOPICS.BILLING, billingEvent)
+          .catch((err) => {
+            logger.error(
+              err,
+              "Failed to publish billing event for payment failure",
+            );
+          });
       }
     }
 
-    await this.fastify.redis.setex(`webhook:processed:${eventId}`, 86400, '1');
+    await this.fastify.redis.setex(`webhook:processed:${eventId}`, 86400, "1");
     return { received: true };
   }
 
   async getSubscription(userId: string) {
     const sub = await this.repo.getSubscriptionByUserId(userId);
-    return sub ?? { planId: 'free', status: 'none' };
+    return sub ?? { planId: "free", status: "none" };
   }
 
   async cancelSubscription(userId: string) {
-    const razorpaySubscriptionId = await this.repo.getActiveRazorpaySubscriptionIdByUserId(userId);
+    const razorpaySubscriptionId =
+      await this.repo.getActiveRazorpaySubscriptionIdByUserId(userId);
     if (!razorpaySubscriptionId) {
       return null;
     }
 
     // Razorpay typed issue bypass without `any`.
     // The library typing for cancel might be limited.
-    await this.razorpayClient.subscriptions.cancel(
-      razorpaySubscriptionId,
-      { cancel_at_cycle_end: 1 }
-    );
+    await this.razorpayClient.subscriptions.cancel(razorpaySubscriptionId, {
+      cancel_at_cycle_end: 1,
+    });
 
     // According to instructions: cancel at end of billing cycle, but DB immediately to cancelled.
     // Let's do as instruction said:
-    await this.repo.updateSubscriptionStatus(razorpaySubscriptionId, 'cancelled');
+    await this.repo.updateSubscriptionStatus(
+      razorpaySubscriptionId,
+      "cancelled",
+    );
 
-    return { cancelled: true, effectiveAt: 'end-of-billing-cycle' };
+    return { cancelled: true, effectiveAt: "end-of-billing-cycle" };
   }
 
   async createPrepaidOrder(userId: string, amountPaise: number) {
     const order = await (this.razorpayClient as any).orders.create({
       amount: amountPaise,
-      currency: 'INR',
+      currency: "INR",
       receipt: `topup_rcpt_${generateId()}`,
     });
     return { orderId: order.id, amount: order.amount };
@@ -220,34 +252,56 @@ export class BillingService {
     razorpaySignature: string;
     userId: string;
   }) {
-    const secret = process.env['RAZORPAY_KEY_SECRET'] ?? '';
+    const secret = process.env["RAZORPAY_KEY_SECRET"] ?? "";
     const text = `${payload.razorpayOrderId}|${payload.razorpayPaymentId}`;
-    const expectedSig = createHmac('sha256', secret).update(text).digest('hex');
-    if (expectedSig !== payload.razorpaySignature) {
-      throw new Error('Invalid Razorpay signature');
+    const expectedSig = createHmac("sha256", secret).update(text).digest("hex");
+
+    const signatureBuffer = Buffer.from(payload.razorpaySignature || "", "utf8");
+    const expectedSigBuffer = Buffer.from(expectedSig, "utf8");
+
+    if (
+      signatureBuffer.length !== expectedSigBuffer.length ||
+      !timingSafeEqual(signatureBuffer, expectedSigBuffer)
+    ) {
+      throw new Error("Invalid Razorpay signature");
     }
 
-    const orderDetails = await (this.razorpayClient as any).orders.fetch(payload.razorpayOrderId);
+    const orderDetails = await (this.razorpayClient as any).orders.fetch(
+      payload.razorpayOrderId,
+    );
     const amountPaise = orderDetails.amount;
     const credits = Math.floor(amountPaise / 100);
 
-    const res = await this.httpFetch(`${process.env['CREDIT_SERVICE_URL'] ?? 'http://localhost:3005'}/credits/add`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+    const res = await this.httpFetch(
+      `${process.env["CREDIT_SERVICE_URL"] ?? "http://localhost:3005"}/credits/add`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Internal-Secret": process.env["INTERNAL_SERVICE_SECRET"] ?? "",
+        },
+        body: JSON.stringify({
+          userId: payload.userId,
+          amount: credits,
+          reason: "topup",
+        }),
       },
-      body: JSON.stringify({ userId: payload.userId, amount: credits, reason: 'topup' }),
-    });
+    );
 
     if (!res.ok) {
       const errBody = await res.json().catch(() => ({}));
-      throw new Error(`Credit service returned status ${res.status}: ${JSON.stringify(errBody)}`);
+      throw new Error(
+        `Credit service returned status ${res.status}: ${JSON.stringify(errBody)}`,
+      );
     }
 
-    const json = await res.json() as { success: boolean; data?: any; error?: any };
+    const json = (await res.json()) as {
+      success: boolean;
+      data?: any;
+      error?: any;
+    };
     if (!json.success) {
-      throw new Error(json.error?.message ?? 'Credit service failed');
+      throw new Error(json.error?.message ?? "Credit service failed");
     }
 
     return json.data;
