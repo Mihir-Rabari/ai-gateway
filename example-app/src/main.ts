@@ -78,7 +78,7 @@ const state: State = {
 
 function createMessage(role: DisplayRole, content: string): DisplayMessage {
   return {
-    id: `${role}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: crypto.randomUUID(),
     role,
     content,
   };
