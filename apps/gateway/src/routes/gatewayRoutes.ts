@@ -124,7 +124,9 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
   fastify.get('/models', async (_req, reply) => {
     try {
       const routingServiceUrl = process.env['ROUTING_SERVICE_URL'] ?? 'http://localhost:3006';
-      const res = await fetch(`${routingServiceUrl}/internal/routing/models`);
+      const res = await fetch(`${routingServiceUrl}/internal/routing/models`, {
+        headers: { 'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '' }
+      });
       if (res.ok) {
         const body = await res.json() as { success: boolean; data: { models: string[] } };
         return reply.send(ok({ models: body.data.models }));

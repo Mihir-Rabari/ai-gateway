@@ -1,7 +1,8 @@
+import { timingSafeEqual } from 'crypto';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { getRoutingConfig } from '@ai-gateway/config';
-import { createLogger, getFastifyLoggerOptions, ok, fail, redisPlugin, kafkaPlugin, securityHeadersPlugin, type GatewayError } from '@ai-gateway/utils';
+import { createLogger, getFastifyLoggerOptions, ok, fail, redisPlugin, kafkaPlugin, securityHeadersPlugin, GatewayError } from '@ai-gateway/utils';
 import { RoutingService, buildModelConfigFromEnv, validateModelConfig } from './services/routingService.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { Message } from '@ai-gateway/types';
@@ -29,6 +30,30 @@ async function bootstrap() {
   await app.register(redisPlugin);
   await app.register(kafkaPlugin);
 
+  const authPreHandler: any = async (req: FastifyRequest, reply: FastifyReply) => {
+    const internalSecret = process.env['INTERNAL_SERVICE_SECRET'];
+    const rawHeader = req.headers['x-internal-secret'];
+    const clientSecret = Array.isArray(rawHeader) ? rawHeader[0] : (rawHeader || '');
+
+    if (!internalSecret) {
+      return reply.status(401).send(
+        fail(new GatewayError('UNAUTHORIZED', 'Missing internal service secret config', 401))
+      );
+    }
+
+    const internalBuf = Buffer.from(internalSecret, 'utf8');
+    const clientBuf = Buffer.from(clientSecret, 'utf8');
+
+    if (
+      internalBuf.length !== clientBuf.length ||
+      !timingSafeEqual(internalBuf, clientBuf)
+    ) {
+      return reply.status(401).send(
+        fail(new GatewayError('UNAUTHORIZED', 'Invalid internal service secret', 401))
+      );
+    }
+  };
+
   // ── Model config bootstrap ────────────────────────────────────────────
   // Prefer a config stored in Redis (updated via the admin endpoint) so
   // that it survives service restarts. Fall back to env-var / defaults.
@@ -45,6 +70,7 @@ async function bootstrap() {
   app.post(
     '/internal/routing/route',
     {
+      preHandler: authPreHandler,
       schema: {
         body: {
           type: 'object',
@@ -108,7 +134,7 @@ async function bootstrap() {
     },
   );
 
-  app.get('/internal/routing/providers', async (_req, reply) => {
+  app.get('/internal/routing/providers', { preHandler: authPreHandler }, async (_req, reply) => {
     const service = new RoutingService(app.kafka.publish.bind(app.kafka), app.redis, {}, activeModelConfig);
     const providers = await service.getProvidersHealth();
     return reply.send(ok({ providers }));
@@ -117,7 +143,7 @@ async function bootstrap() {
   // GET /internal/routing/models — return the current model list derived from
   // the active model config so other services (e.g. the gateway) don't need
   // their own hardcoded model lists.
-  app.get('/internal/routing/models', async (_req, reply) => {
+  app.get('/internal/routing/models', { preHandler: authPreHandler }, async (_req, reply) => {
     const models = Object.keys(activeModelConfig.modelProvider);
     return reply.send(ok({ models }));
   });
@@ -128,6 +154,7 @@ async function bootstrap() {
   app.put(
     '/internal/routing/models/config',
     {
+      preHandler: authPreHandler,
       schema: {
         body: {
           type: 'object',

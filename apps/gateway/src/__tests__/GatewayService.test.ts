@@ -8,6 +8,15 @@ function createFetchMock(appValidateResult: 'allowed' | 'invalid_key' | 'forbidd
     const normalizedUrl = typeof url === 'string' ? url : String(url);
 
     if (normalizedUrl.includes('/internal/auth/validate')) {
+      const authHeader = init.headers ? (init.headers as any)['X-Internal-Secret'] : undefined;
+      if (authHeader !== (process.env['INTERNAL_SERVICE_SECRET'] ?? '')) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ success: false, error: { statusCode: 401 } }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        );
+      }
       return {
         ok: true,
         status: 200,
@@ -42,6 +51,15 @@ function createFetchMock(appValidateResult: 'allowed' | 'invalid_key' | 'forbidd
     }
 
     if (normalizedUrl.includes('/internal/routing/route')) {
+      const authHeader = init.headers ? (init.headers as any)['X-Internal-Secret'] : undefined;
+      if (authHeader !== (process.env['INTERNAL_SERVICE_SECRET'] ?? '')) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ success: false, error: { statusCode: 401 } }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        );
+      }
       return {
         ok: true,
         status: 200,
