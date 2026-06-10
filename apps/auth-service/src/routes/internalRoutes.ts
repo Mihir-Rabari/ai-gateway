@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { ok, fail, type GatewayError } from '@ai-gateway/utils';
+import { timingSafeEqual } from 'crypto';
+import { ok, fail, Errors, type GatewayError } from '@ai-gateway/utils';
 import { AuthService } from '../services/authService.js';
 import { AppValidationService } from '../services/appValidationService.js';
 import { AppRepository } from '../repositories/appRepository.js';
@@ -12,6 +13,27 @@ export async function internalRoutes(fastify: FastifyInstance) {
     process.env['CLIENT_SECRET_ENCRYPTION_KEY'],
   );
 
+  const authPreHandler: any = async (req: FastifyRequest, reply: FastifyReply) => {
+    const internalSecret = process.env['INTERNAL_SERVICE_SECRET'];
+    const clientSecretHeader = req.headers['x-internal-secret'];
+    const clientSecret = Array.isArray(clientSecretHeader) ? clientSecretHeader[0] : clientSecretHeader;
+
+    if (!internalSecret || !clientSecret) {
+      return reply.status(401).send(
+        fail(Errors.INVALID_TOKEN())
+      );
+    }
+
+    const internalSecretBuffer = Buffer.from(internalSecret, 'utf8');
+    const clientSecretBuffer = Buffer.from(clientSecret, 'utf8');
+
+    if (internalSecretBuffer.length !== clientSecretBuffer.length || !timingSafeEqual(internalSecretBuffer, clientSecretBuffer)) {
+      return reply.status(401).send(
+        fail(Errors.INVALID_TOKEN())
+      );
+    }
+  };
+
   /**
    * POST /internal/auth/validate
    * Used by the Gateway to validate user tokens
@@ -19,6 +41,7 @@ export async function internalRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/validate',
     {
+      preHandler: authPreHandler,
       schema: {
         body: {
           type: 'object',
@@ -44,6 +67,7 @@ export async function internalRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/users/:id',
     {
+      preHandler: authPreHandler,
       schema: {
         params: {
           type: 'object',
@@ -72,6 +96,7 @@ export async function internalRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/apps/validate',
     {
+      preHandler: authPreHandler,
       schema: {
         body: {
           type: 'object',
