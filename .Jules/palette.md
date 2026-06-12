@@ -1,3 +1,6 @@
 ## 2024-05-27 - Loading state implementation differs across workspaces
 **Learning:** The `console` app implements an elegant built-in `busy={true}` prop on its Button component which automatically handles the loading spinner. The `web` app uses standard shadcn-style Buttons which lack this internal state, leading to inconsistent async UX where forms freeze without visual feedback.
 **Action:** When working in `apps/web`, always manually compose `<Loader2 className="mr-2 h-4 w-4 animate-spin" />` inside `<Button>` for async forms to match the perceived performance of the console app.
+## 2024-05-28 - Missing ARIA bindings on Wrapper components
+**Learning:** React wrapper components (like `Field`) that abstract accessibility links (e.g., `<label>` to child `input` mappings) often fail to propagate dynamic IDs downward to attributes like `aria-describedby` when conditionally rendering hint text. This causes assistive technology to miss crucial form instructions.
+**Action:** When auditing wrapper components, verify that dynamic IDs used for descriptive elements (like hints or errors) are explicitly passed down to the child input's `aria-describedby` via `React.cloneElement` or context, and ensure these values merge cleanly without overwriting existing props.
