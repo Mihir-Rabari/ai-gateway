@@ -1,3 +1,3 @@
-## 2024-05-27 - Loading state implementation differs across workspaces
-**Learning:** The `console` app implements an elegant built-in `busy={true}` prop on its Button component which automatically handles the loading spinner. The `web` app uses standard shadcn-style Buttons which lack this internal state, leading to inconsistent async UX where forms freeze without visual feedback.
-**Action:** When working in `apps/web`, always manually compose `<Loader2 className="mr-2 h-4 w-4 animate-spin" />` inside `<Button>` for async forms to match the perceived performance of the console app.
+## 2024-05-18 - Explicit ARIA mapping in cloneElement components
+**Learning:** In highly abstracted React component systems (like `Field` wrapping an `Input`), relying on developers to manually pass `id` and `aria-describedby` props leads to brittle accessibility, especially for hint/helper text. When `React.cloneElement` is used to dynamically inject `id`, it is critical to also inject explicit a11y associations like `aria-describedby` that map to internally generated descriptive text nodes.
+**Action:** Always generate structural IDs for internal descriptive nodes (`useId()`) and inject them via `React.cloneElement({ 'aria-describedby': ... })`, making sure to gracefully combine with any existing `aria-describedby` string passed to the child.
