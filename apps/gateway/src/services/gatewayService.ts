@@ -301,7 +301,10 @@ export class GatewayService {
         `${this.clients.authServiceUrl}/internal/auth/apps/validate`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+          },
           body: JSON.stringify({ appId, appApiKey, appJwt }),
         },
       );
@@ -508,7 +511,10 @@ export class GatewayService {
       withRetry<RoutingResult | AsyncGenerator<string>>(async () => {
         const res = await this.httpFetch(`${this.clients.routingServiceUrl}/internal/routing/route`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+          },
           body: JSON.stringify(data),
         });
 

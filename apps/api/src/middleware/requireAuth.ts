@@ -21,7 +21,10 @@ export async function requireAuth(req: FastifyRequest, reply: FastifyReply): Pro
   try {
     const res = await fetch(`${authServiceUrl}/internal/auth/validate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+      },
       body: JSON.stringify({ token }),
     });
 

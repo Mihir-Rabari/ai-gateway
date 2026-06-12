@@ -20,7 +20,10 @@ async function validateUserToken(req: FastifyRequest, expectedUserId: string): P
   try {
     const res = await fetch(`${authUrl}/internal/auth/validate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+      },
       body: JSON.stringify({ token }),
     });
 
