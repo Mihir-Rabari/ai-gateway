@@ -100,9 +100,9 @@ export default function LandingPage() {
             <Link href="/login" className="hidden text-sm font-medium text-slate-600 transition-colors hover:text-slate-950 sm:block">
               Sign in
             </Link>
-            <Link href="/signup">
-              <Button className="rounded-full bg-slate-950 text-white hover:bg-slate-800">Get Started</Button>
-            </Link>
+            <Button asChild className="rounded-full bg-slate-950 text-white hover:bg-slate-800">
+              <Link href="/signup">Get Started</Link>
+            </Button>
           </div>
         </div>
       </nav>
