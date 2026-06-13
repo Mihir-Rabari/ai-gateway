@@ -1,5 +1,6 @@
+import { timingSafeEqual } from 'crypto';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { ok, fail, type GatewayError } from '@ai-gateway/utils';
+import { ok, fail, GatewayError } from '@ai-gateway/utils';
 import { AuthService } from '../services/authService.js';
 import { AppValidationService } from '../services/appValidationService.js';
 import { AppRepository } from '../repositories/appRepository.js';
@@ -12,6 +13,25 @@ export async function internalRoutes(fastify: FastifyInstance) {
     process.env['CLIENT_SECRET_ENCRYPTION_KEY'],
   );
 
+  const authPreHandler: any = async (req: FastifyRequest, reply: FastifyReply) => {
+    const internalSecretEnv = process.env['INTERNAL_SERVICE_SECRET'] || '';
+    const internalSecretBuf = Buffer.from(internalSecretEnv, 'utf8');
+
+    const headerVal = req.headers['x-internal-secret'];
+    const clientSecretStr = Array.isArray(headerVal) ? headerVal[0] : (headerVal || '');
+    const clientSecretBuf = Buffer.from(clientSecretStr, 'utf8');
+
+    if (
+      internalSecretBuf.length === 0 ||
+      clientSecretBuf.length !== internalSecretBuf.length ||
+      !timingSafeEqual(clientSecretBuf, internalSecretBuf)
+    ) {
+      return reply.status(401).send(
+        fail(new GatewayError('UNAUTHORIZED', 'Invalid or missing internal service secret', 401))
+      );
+    }
+  };
+
   /**
    * POST /internal/auth/validate
    * Used by the Gateway to validate user tokens
@@ -19,6 +39,7 @@ export async function internalRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/validate',
     {
+      preHandler: authPreHandler,
       schema: {
         body: {
           type: 'object',
@@ -44,6 +65,7 @@ export async function internalRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/users/:id',
     {
+      preHandler: authPreHandler,
       schema: {
         params: {
           type: 'object',
@@ -72,6 +94,7 @@ export async function internalRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/apps/validate',
     {
+      preHandler: authPreHandler,
       schema: {
         body: {
           type: 'object',
