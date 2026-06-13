@@ -38,7 +38,16 @@ export async function authRoutes(fastify: FastifyInstance) {
   const controller = new AuthController(fastify.pg, fastify.redis);
 
   // POST /auth/signup
-  fastify.post('/signup', { schema: signupSchema }, controller.signup.bind(controller));
+  fastify.post('/signup', {
+    schema: signupSchema,
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '1 minute',
+        keyGenerator: (req: any) => req.ip,
+      },
+    },
+  }, controller.signup.bind(controller));
 
   // POST /auth/login
   fastify.post('/login', {
@@ -53,7 +62,16 @@ export async function authRoutes(fastify: FastifyInstance) {
   }, controller.login.bind(controller));
 
   // POST /auth/refresh
-  fastify.post('/refresh', { schema: refreshSchema }, controller.refresh.bind(controller));
+  fastify.post('/refresh', {
+    schema: refreshSchema,
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '1 minute',
+        keyGenerator: (req: any) => req.ip,
+      },
+    },
+  }, controller.refresh.bind(controller));
 
   // POST /auth/logout
   fastify.post('/logout', controller.logout.bind(controller));
