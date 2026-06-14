@@ -63,6 +63,7 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
+            title="Close"
             render={
               <Button
                 variant="ghost"
