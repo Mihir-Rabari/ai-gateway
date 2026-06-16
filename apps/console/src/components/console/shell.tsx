@@ -8,6 +8,7 @@ import { api, getAuthToken, type UserProfile } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/console/toaster";
 import { Badge, Button, SkeletonBlock, Surface } from "@/components/console/system";
+import { useUser } from "@/components/UserProvider";
 
 const isBrowser = typeof window !== "undefined";
 const WEB_URL = process.env.NEXT_PUBLIC_WEB_URL ?? (isBrowser ? window.location.origin : "http://localhost:3000");
@@ -22,31 +23,7 @@ const links = [
 export function ConsoleShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-
-  useEffect(() => {
-    const token = getAuthToken();
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-
-    const load = async () => {
-      try {
-        // ⚡ Bolt: `api.auth.me()` already includes `creditBalance`.
-        // Removed redundant `api.credits.getBalance()` call to reduce network requests.
-        const me = await api.auth.me();
-        setUser(me);
-      } catch {
-        router.replace("/login");
-      } finally {
-        setAuthLoading(false);
-      }
-    };
-
-    void load();
-  }, [router]);
+  const { user, loading: authLoading } = useUser();
 
   const logout = async () => {
     await api.auth.logout();
