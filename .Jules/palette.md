@@ -4,3 +4,6 @@
 ## 2026-06-04 - Add aria-describedby for Field hints
 **Learning:** In reusable form field wrappers that render both a label and a hint/description next to an input child, screen readers often fail to announce the hint unless it is explicitly associated with the input. While `htmlFor` handles labels, `aria-describedby` must be used for hints.
 **Action:** Use `useId()` to generate unique IDs and `React.cloneElement` to dynamically attach both the `id` (for the label) and `aria-describedby` (for the hint) to the wrapped child input. Ensure existing `aria-describedby` props on the child are preserved and appended to.
+## 2024-06-17 - Add ARIA live regions for Toasters
+**Learning:** In dynamic toast notification systems, the container must be marked with `role="region"` and an `aria-label` (e.g. 'Notifications') so screen readers can discover the notification area. The individual toasts themselves must also be assigned an appropriate live region role (`role="status"` with `aria-live="polite"` for non-disruptive feedback, or `role="alert"` with `aria-live="assertive"` for destructive errors) so that dynamic updates are immediately and correctly announced.
+**Action:** Always wrap toast groups in a named ARIA region and conditionally apply `role="alert"` and `aria-live="assertive"` to destructive/error messages when building custom toast systems.
