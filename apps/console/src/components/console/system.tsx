@@ -339,7 +339,11 @@ export function InlineMessage({
   }[tone];
 
   return (
-    <div className={cn("rounded-2xl border px-4 py-3 text-sm", tones)}>
+    <div
+      role={tone === "danger" ? "alert" : "status"}
+      aria-live={tone === "danger" ? "assertive" : "polite"}
+      className={cn("rounded-2xl border px-4 py-3 text-sm", tones)}
+    >
       {children}
     </div>
   );
