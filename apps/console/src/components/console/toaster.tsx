@@ -6,10 +6,16 @@ export function Toaster() {
   const { toasts, dismiss } = useToast();
 
   return (
-    <div className="pointer-events-none fixed bottom-6 right-6 z-50 flex w-[min(92vw,24rem)] flex-col gap-3">
+    <div
+      className="pointer-events-none fixed bottom-6 right-6 z-50 flex w-[min(92vw,24rem)] flex-col gap-3"
+      role="region"
+      aria-label="Notifications"
+    >
       {toasts.map((toast) => (
         <div
           key={toast.id}
+          role={toast.variant === "destructive" ? "alert" : "status"}
+          aria-live={toast.variant === "destructive" ? "assertive" : "polite"}
           className={`pointer-events-auto rounded-[24px] border p-4 shadow-panel backdrop-blur ${
             toast.variant === "destructive"
               ? "border-red-300/20 bg-[#180b0b]/95"

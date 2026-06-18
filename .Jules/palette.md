@@ -7,3 +7,7 @@
 ## 2024-06-16 - Do not duplicate aria-label and sr-only text
 **Learning:** Adding an `aria-label` to an icon-only button that already contains an inner `<span className="sr-only">` is an accessibility anti-pattern. Screen readers will read the `aria-label` and completely ignore the inner text, making the `sr-only` span dead code.
 **Action:** When improving accessibility for icon-only buttons, either add a `title` attribute for sighted users and leave the existing `sr-only` text alone, or update the `sr-only` text itself if better context is needed. Do not use both on the same element.
+
+## 2024-05-27 - Toaster accessibility enhancements
+**Learning:** When implementing or modifying dynamic notification components (e.g., Toasters), it is crucial to ensure they are accessible to screen readers. Standard visual feedback is not enough for users relying on assistive technologies to understand that a notification has appeared or to locate it.
+**Action:** Always ensure the main container uses `role="region"` and an `aria-label` (e.g., 'Notifications'), and that individual notification elements use `role="status"` or `role="alert"` (for destructive variants) with an appropriate `aria-live` attribute (`polite` for standard, `assertive` for destructive errors) to guarantee screen reader accessibility.
