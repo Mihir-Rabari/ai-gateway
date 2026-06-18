@@ -4,3 +4,6 @@
 ## 2026-06-04 - Add aria-describedby for Field hints
 **Learning:** In reusable form field wrappers that render both a label and a hint/description next to an input child, screen readers often fail to announce the hint unless it is explicitly associated with the input. While `htmlFor` handles labels, `aria-describedby` must be used for hints.
 **Action:** Use `useId()` to generate unique IDs and `React.cloneElement` to dynamically attach both the `id` (for the label) and `aria-describedby` (for the hint) to the wrapped child input. Ensure existing `aria-describedby` props on the child are preserved and appended to.
+## 2024-06-16 - Do not duplicate aria-label and sr-only text
+**Learning:** Adding an `aria-label` to an icon-only button that already contains an inner `<span className="sr-only">` is an accessibility anti-pattern. Screen readers will read the `aria-label` and completely ignore the inner text, making the `sr-only` span dead code.
+**Action:** When improving accessibility for icon-only buttons, either add a `title` attribute for sighted users and leave the existing `sr-only` text alone, or update the `sr-only` text itself if better context is needed. Do not use both on the same element.
