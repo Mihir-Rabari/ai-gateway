@@ -16,7 +16,9 @@ const navLinks = [
   { href: "/dashboard", label: "Overview" },
 ];
 
-export default function DashboardLayout({
+import { UserProvider, useUser } from "@/components/UserProvider";
+
+function DashboardLayoutContent({
   children,
 }: {
   children: React.ReactNode;
@@ -25,59 +27,8 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [checkingAuth, setCheckingAuth] = useState(true);
-  const [isDeveloper, setIsDeveloper] = useState<boolean | null>(null);
+  const { user, isDeveloper, loading: checkingAuth, setIsDeveloper } = useUser();
   const [enrolling, setEnrolling] = useState(false);
-
-  useEffect(() => {
-    const token = getAuthToken();
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-
-    const bootstrap = async () => {
-      try {
-        // ⚡ Bolt: `api.auth.me()` already includes `creditBalance`.
-        // Removed redundant `api.credits.getBalance()` call to reduce network requests.
-        const [me, devStatus] = await Promise.all([
-          api.auth.me(),
-          api.developers.getStatus().catch(() => ({ isDeveloper: false, enrolledAt: null })),
-        ]);
-        setUser(me);
-        setIsDeveloper(devStatus.isDeveloper);
-      } catch {
-        router.replace("/login");
-      } finally {
-        setCheckingAuth(false);
-      }
-    };
-
-    void bootstrap();
-  }, [router]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const intervalId = window.setInterval(async () => {
-      try {
-        const latestBalance = await api.credits.getBalance();
-        setUser((prev) => (prev ? { ...prev, creditBalance: latestBalance.balance } : prev));
-        if (latestBalance.balance < 10) {
-          toast({
-            title: "Low credits",
-            description: "Your balance is below 10 credits. Recharge to avoid request failures.",
-            variant: "destructive",
-          });
-        }
-      } catch {
-        // Ignore intermittent polling issues.
-      }
-    }, 30_000);
-
-    return () => window.clearInterval(intervalId);
-  }, [toast, user]);
 
   const handleLogout = async () => {
     await api.auth.logout();
@@ -226,5 +177,17 @@ export default function DashboardLayout({
       </main>
       <Toaster />
     </div>
+  );
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <UserProvider>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </UserProvider>
   );
 }

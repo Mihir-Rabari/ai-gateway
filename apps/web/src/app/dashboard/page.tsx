@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, type CreditTransaction, type UsageSummary } from "@/lib/api";
+import { useUser } from "@/components/UserProvider";
 
 const isBrowser = typeof window !== "undefined";
 const CONSOLE_URL = process.env.NEXT_PUBLIC_CONSOLE_URL ?? (isBrowser ? `${window.location.origin}/console` : "http://localhost:3009");
@@ -18,6 +19,7 @@ type DashboardState = {
 };
 
 export default function DashboardOverview() {
+  const { user } = useUser();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [state, setState] = useState<DashboardState>({
@@ -32,15 +34,14 @@ export default function DashboardOverview() {
       setLoading(true);
       setError("");
       try {
-        const [balance, usage, models, transactions] = await Promise.all([
-          api.credits.getBalance(),
+        const [usage, models, transactions] = await Promise.all([
           api.usage.getSummary(),
           api.models.list(),
           api.credits.getTransactions(8, 0),
         ]);
 
         setState({
-          balance: balance.balance,
+          balance: 0, // This is managed by user profile now
           usage,
           models: models.models,
           transactions: transactions.transactions,
@@ -94,7 +95,7 @@ export default function DashboardOverview() {
           title="Credit Balance"
           icon={<CreditCard className="h-4 w-4 text-white/40" />}
           loading={loading}
-          value={state.balance.toLocaleString()}
+          value={(user?.creditBalance ?? 0).toLocaleString()}
           hint="Available right now"
         />
         <StatsCard
