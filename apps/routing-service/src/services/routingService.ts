@@ -299,12 +299,19 @@ export class RoutingService {
 
     const results = await this.redis.mget(keysToFetch);
 
+    // ⚡ Bolt: Pre-compute models by provider to avoid O(N * P) array allocations in the .map loop
+    const modelsByProvider: Record<string, string[]> = {};
+    for (const [model, prov] of Object.entries(modelProvider)) {
+      if (!modelsByProvider[prov]) modelsByProvider[prov] = [];
+      modelsByProvider[prov].push(model);
+    }
+
     return providers.map((p, index) => {
       const unhealthyResult = results[index * 2];
       const failureResult = results[index * 2 + 1];
       return {
         name: p,
-        models: Object.keys(modelProvider).filter((model) => modelProvider[model] === p),
+        models: modelsByProvider[p] ?? [],
         healthy: unhealthyResult === null,
         failureCount: Number(failureResult ?? '0'),
       };
