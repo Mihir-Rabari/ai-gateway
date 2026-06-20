@@ -183,6 +183,10 @@ export class AIGateway {
   /** In-flight refresh promise; serializes concurrent token-refresh calls. */
   private refreshPromise: Promise<RefreshResult> | null = null;
 
+  /** Cache for the last decoded JWT exp claim to avoid redundant decoding */
+  private lastDecodedToken: string | null = null;
+  private lastDecodedTokenExpiry: number | null = null;
+
   /**
    * Create a new AIGateway instance.
    *
@@ -627,9 +631,18 @@ export class AIGateway {
    * or does not contain an `exp` claim.
    */
   private decodeTokenExpiry(token: string): number | null {
+    if (this.lastDecodedToken === token) {
+      return this.lastDecodedTokenExpiry;
+    }
+
+    this.lastDecodedToken = token;
+
     try {
       const parts = token.split('.');
-      if (parts.length !== 3) return null;
+      if (parts.length !== 3) {
+        this.lastDecodedTokenExpiry = null;
+        return null;
+      }
       const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
       // Support both browser (atob) and Node.js (Buffer) environments.
       const json =
@@ -637,8 +650,11 @@ export class AIGateway {
           ? atob(payloadB64)
           : Buffer.from(payloadB64, 'base64').toString('utf8');
       const payload = JSON.parse(json) as { exp?: unknown };
-      return typeof payload.exp === 'number' ? payload.exp : null;
+      const exp = typeof payload.exp === 'number' ? payload.exp : null;
+      this.lastDecodedTokenExpiry = exp;
+      return exp;
     } catch {
+      this.lastDecodedTokenExpiry = null;
       return null;
     }
   }
