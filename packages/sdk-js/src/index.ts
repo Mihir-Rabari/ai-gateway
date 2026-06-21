@@ -183,6 +183,10 @@ export class AIGateway {
   /** In-flight refresh promise; serializes concurrent token-refresh calls. */
   private refreshPromise: Promise<RefreshResult> | null = null;
 
+  /** Cache for the most recently decoded token expiry to avoid redundant parsing. */
+  private lastDecodedToken: string | null = null;
+  private lastDecodedExpiry: number | null = null;
+
   /**
    * Create a new AIGateway instance.
    *
@@ -627,20 +631,30 @@ export class AIGateway {
    * or does not contain an `exp` claim.
    */
   private decodeTokenExpiry(token: string): number | null {
+    if (this.lastDecodedToken === token) {
+      return this.lastDecodedExpiry;
+    }
+
+    let expiry: number | null = null;
     try {
       const parts = token.split('.');
-      if (parts.length !== 3) return null;
-      const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-      // Support both browser (atob) and Node.js (Buffer) environments.
-      const json =
-        typeof atob === 'function'
-          ? atob(payloadB64)
-          : Buffer.from(payloadB64, 'base64').toString('utf8');
-      const payload = JSON.parse(json) as { exp?: unknown };
-      return typeof payload.exp === 'number' ? payload.exp : null;
+      if (parts.length === 3) {
+        const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        // Support both browser (atob) and Node.js (Buffer) environments.
+        const json =
+          typeof atob === 'function'
+            ? atob(payloadB64)
+            : Buffer.from(payloadB64, 'base64').toString('utf8');
+        const payload = JSON.parse(json) as { exp?: unknown };
+        expiry = typeof payload.exp === 'number' ? payload.exp : null;
+      }
     } catch {
-      return null;
+      // Fall back to null if parsing fails
     }
+
+    this.lastDecodedToken = token;
+    this.lastDecodedExpiry = expiry;
+    return expiry;
   }
 
   private getOAuthBaseUrl(): string {
