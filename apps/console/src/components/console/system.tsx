@@ -338,8 +338,14 @@ export function InlineMessage({
     success: "border-emerald-300/20 bg-emerald-300/10 text-emerald-100",
   }[tone];
 
+  const isAlert = tone === "danger" || tone === "warning";
+
   return (
-    <div className={cn("rounded-2xl border px-4 py-3 text-sm", tones)}>
+    <div
+      className={cn("rounded-2xl border px-4 py-3 text-sm", tones)}
+      role={isAlert ? "alert" : "status"}
+      aria-live={isAlert ? "assertive" : "polite"}
+    >
       {children}
     </div>
   );

@@ -48,7 +48,11 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="p-3 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-md">
+              <div
+                className="p-3 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-md"
+                role="alert"
+                aria-live="assertive"
+              >
                 {error}
               </div>
             )}

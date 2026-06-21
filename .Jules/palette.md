@@ -11,3 +11,7 @@
 ## 2024-05-27 - Toaster accessibility enhancements
 **Learning:** When implementing or modifying dynamic notification components (e.g., Toasters), it is crucial to ensure they are accessible to screen readers. Standard visual feedback is not enough for users relying on assistive technologies to understand that a notification has appeared or to locate it.
 **Action:** Always ensure the main container uses `role="region"` and an `aria-label` (e.g., 'Notifications'), and that individual notification elements use `role="status"` or `role="alert"` (for destructive variants) with an appropriate `aria-live` attribute (`polite` for standard, `assertive` for destructive errors) to guarantee screen reader accessibility.
+
+## 2024-06-21 - Accessible Dynamic Notification Rendering
+**Learning:** In Next.js/React apps where server errors or API failures trigger dynamic text displays (like the `InlineMessage` component in the console, or `error` state displays in form components), inserting the text directly into a standard div forces screen reader users to manually navigate to discover the error.
+**Action:** Always wrap dynamically rendered error or success notification text in a container featuring `role="alert"` and `aria-live="assertive"` for critical/danger tones, or `role="status"` and `aria-live="polite"` for non-critical/success updates. This guarantees immediate announcement by assistive technologies.
