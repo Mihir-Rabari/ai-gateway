@@ -11,3 +11,6 @@
 ## 2024-05-27 - Toaster accessibility enhancements
 **Learning:** When implementing or modifying dynamic notification components (e.g., Toasters), it is crucial to ensure they are accessible to screen readers. Standard visual feedback is not enough for users relying on assistive technologies to understand that a notification has appeared or to locate it.
 **Action:** Always ensure the main container uses `role="region"` and an `aria-label` (e.g., 'Notifications'), and that individual notification elements use `role="status"` or `role="alert"` (for destructive variants) with an appropriate `aria-live` attribute (`polite` for standard, `assertive` for destructive errors) to guarantee screen reader accessibility.
+## 2024-06-22 - Add ARIA live regions to InlineMessage
+**Learning:** Dynamic inline error notifications created without `role='alert'` and `aria-live='assertive'` are completely ignored by screen readers, leading to silent failures when users submit incorrect form data (e.g., login screens).
+**Action:** Always verify that dynamic feedback components (like `InlineMessage`) wrap their content in an element with appropriate ARIA live region attributes based on tone.
