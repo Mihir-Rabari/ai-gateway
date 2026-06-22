@@ -183,6 +183,9 @@ export class AIGateway {
   /** In-flight refresh promise; serializes concurrent token-refresh calls. */
   private refreshPromise: Promise<RefreshResult> | null = null;
 
+  private lastDecodedToken: string | null = null;
+  private lastDecodedExpiry: number | null = null;
+
   /**
    * Create a new AIGateway instance.
    *
@@ -627,6 +630,10 @@ export class AIGateway {
    * or does not contain an `exp` claim.
    */
   private decodeTokenExpiry(token: string): number | null {
+    // Optimization: Cache the last decoded token to prevent unnecessary base64 decoding
+    // and JSON parsing overhead when checking token validity on repeated API requests.
+    if (token === this.lastDecodedToken) return this.lastDecodedExpiry;
+
     try {
       const parts = token.split('.');
       if (parts.length !== 3) return null;
@@ -637,7 +644,11 @@ export class AIGateway {
           ? atob(payloadB64)
           : Buffer.from(payloadB64, 'base64').toString('utf8');
       const payload = JSON.parse(json) as { exp?: unknown };
-      return typeof payload.exp === 'number' ? payload.exp : null;
+      const exp = typeof payload.exp === 'number' ? payload.exp : null;
+
+      this.lastDecodedToken = token;
+      this.lastDecodedExpiry = exp;
+      return exp;
     } catch {
       return null;
     }
