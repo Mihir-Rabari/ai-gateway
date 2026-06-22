@@ -5,7 +5,11 @@ export const usageRoutes: FastifyPluginAsync = async (fastify) => {
   const analyticsServiceUrl = process.env['ANALYTICS_SERVICE_URL'] ?? 'http://localhost:3007';
 
   const getUsageSummary = async (req: Parameters<typeof requireAuth>[0], reply: Parameters<typeof requireAuth>[1]) => {
-    const res = await fetch(`${analyticsServiceUrl}/analytics/dashboard?userId=${req.userId}`);
+    const res = await fetch(`${analyticsServiceUrl}/analytics/dashboard?userId=${req.userId}`, {
+      headers: {
+        'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+      },
+    });
     const data = await res.json();
     return reply.status(res.status).send(data);
   };
