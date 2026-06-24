@@ -27,6 +27,7 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.post('/apps', {
     preHandler: [requireAuth],
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
     schema: {
       tags: ['Developer Apps'],
       description: 'Register a new developer app',
@@ -108,6 +109,7 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.delete('/apps/:id', {
     preHandler: [requireAuth],
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
     schema: {
       tags: ['Developer Apps'],
       description: 'Delete a registered app',
@@ -147,6 +149,7 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.post('/apps/:id/keys', {
     preHandler: [requireAuth],
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
     schema: {
       tags: ['Developer Apps'],
       description: 'Generate a new API key for an app',
@@ -183,6 +186,7 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.put('/apps/:id/redirect-uris', {
     preHandler: [requireAuth],
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
     schema: {
       tags: ['Developer Apps'],
       description: 'Update the list of allowed OAuth redirect URIs for an app',
