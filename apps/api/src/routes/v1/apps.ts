@@ -243,7 +243,11 @@ export const appRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.status(404).send(fail({ name: 'NotFoundError', code: 'APP_NOT_FOUND', message: 'App not found', statusCode: 404 }));
       }
 
-      const analyticsRes = await fetch(`${analyticsServiceUrl}/analytics/usage/app?appId=${encodeURIComponent(id)}`);
+      const analyticsRes = await fetch(`${analyticsServiceUrl}/analytics/usage/app?appId=${encodeURIComponent(id)}`, {
+        headers: {
+          'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+        },
+      });
       const analyticsData = await analyticsRes.json();
       return reply.status(analyticsRes.status).send(analyticsData);
     } catch (err) {

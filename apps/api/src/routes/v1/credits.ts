@@ -12,7 +12,11 @@ export const creditRoutes: FastifyPluginAsync = async (fastify) => {
       security: [{ bearerAuth: [] }],
     },
   }, async (req, reply) => {
-    const res = await fetch(`${creditServiceUrl}/credits/balance?userId=${req.userId}`);
+    const res = await fetch(`${creditServiceUrl}/credits/balance?userId=${req.userId}`, {
+      headers: {
+        'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+      },
+    });
     const data = await res.json();
     return reply.status(res.status).send(data);
   });
@@ -33,7 +37,11 @@ export const creditRoutes: FastifyPluginAsync = async (fastify) => {
     },
   }, async (req, reply) => {
     const { limit = 50, offset = 0 } = req.query as { limit?: number; offset?: number };
-    const res = await fetch(`${creditServiceUrl}/credits/transactions?userId=${req.userId}&limit=${limit}&offset=${offset}`);
+    const res = await fetch(`${creditServiceUrl}/credits/transactions?userId=${req.userId}&limit=${limit}&offset=${offset}`, {
+      headers: {
+        'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+      },
+    });
     const data = await res.json();
     return reply.status(res.status).send(data);
   });
