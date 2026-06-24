@@ -11,3 +11,7 @@
 ## 2024-05-27 - Toaster accessibility enhancements
 **Learning:** When implementing or modifying dynamic notification components (e.g., Toasters), it is crucial to ensure they are accessible to screen readers. Standard visual feedback is not enough for users relying on assistive technologies to understand that a notification has appeared or to locate it.
 **Action:** Always ensure the main container uses `role="region"` and an `aria-label` (e.g., 'Notifications'), and that individual notification elements use `role="status"` or `role="alert"` (for destructive variants) with an appropriate `aria-live` attribute (`polite` for standard, `assertive` for destructive errors) to guarantee screen reader accessibility.
+
+## 2024-06-23 - Improve InlineMessage accessibility
+**Learning:** In `apps/console`, dynamic error/status components like `InlineMessage` were visually distinct using styling but were missing necessary ARIA attributes, meaning screen readers would not proactively announce them when they appeared asynchronously after user actions (e.g., form submissions).
+**Action:** Always map notification components' semantic tones to corresponding accessibility attributes (e.g., warning/danger -> `role="alert"` + `aria-live="assertive"`, success/default -> `role="status"` + `aria-live="polite"`). Ensure that HTML5 validation bypasses are correctly mapped to inputs when testing these backend-driven UI states in Playwright.
