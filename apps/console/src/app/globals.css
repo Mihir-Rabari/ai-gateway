@@ -5,44 +5,59 @@
 
 @layer base {
   :root {
-    --bg: #050505;
-    --bg-elevated: #0a0a0a;
-    --bg-panel: #101010;
-    --bg-soft: #151515;
-    --bg-strong: #1d1d1d;
-    --line: rgba(255, 255, 255, 0.08);
-    --line-strong: rgba(255, 255, 255, 0.16);
-    --text: rgba(255, 255, 255, 0.96);
-    --text-muted: rgba(255, 255, 255, 0.62);
-    --text-faint: rgba(255, 255, 255, 0.38);
-    --accent: rgba(255, 255, 255, 0.92);
-    --accent-ink: #050505;
-    --danger: #f87171;
-    --success: #86efac;
-    --warning: #facc15;
-    --shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
-    --radius: 28px;
+    --bg: #09090b;
+    --bg-elevated: #18181b;
+    --bg-panel: #18181b;
+    --bg-soft: #27272a;
+    --bg-strong: #3f3f46;
+    --line: #27272a; /* zinc-800 */
+    --line-strong: #3f3f46;
+    --text: #fafafa;
+    --text-muted: #a1a1aa;
+    --text-faint: #71717a;
+    --accent: #ffffff;
+    --accent-ink: #09090b;
+    --danger: #ef4444;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --radius: 8px;
+  }
+
+  .light {
+    --bg: #ffffff;
+    --bg-elevated: #fafafa;
+    --bg-panel: #ffffff;
+    --bg-soft: #f4f4f5;
+    --bg-strong: #e4e4e7;
+    --line: #e4e4e7; /* zinc-200 */
+    --line-strong: #d4d4d8;
+    --text: #09090b;
+    --text-muted: #71717a;
+    --text-faint: #a1a1aa;
+    --accent: #09090b;
+    --accent-ink: #ffffff;
+    --danger: #ef4444;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    --radius: 8px;
   }
 
   * {
-    @apply border-white/10;
+    border-color: var(--line);
     box-sizing: border-box;
   }
 
   html {
-    background:
-      radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 24rem),
-      linear-gradient(180deg, #090909 0%, #050505 45%, #030303 100%);
+    background: var(--bg);
     color: var(--text);
     scroll-behavior: smooth;
   }
 
   body {
     min-height: 100vh;
-    background:
-      radial-gradient(circle at top right, rgba(255, 255, 255, 0.07), transparent 26rem),
-      radial-gradient(circle at bottom left, rgba(255, 255, 255, 0.04), transparent 24rem),
-      linear-gradient(180deg, #090909 0%, #050505 48%, #030303 100%);
+    background: var(--bg);
     color: var(--text);
     font-family: var(--font-body), sans-serif;
     text-rendering: optimizeLegibility;
@@ -71,10 +86,7 @@
   }
 
   .bg-grid {
-    background-image:
-      linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-    background-size: 40px 40px;
+    background-image: none !important;
   }
 
   .surface-edge {
@@ -82,19 +94,24 @@
     overflow: hidden;
   }
 
+  /* Strip out gradient border highlights */
   .surface-edge::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.04));
-    -webkit-mask:
-      linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
+    display: none !important;
+  }
+
+  /* Force Surface component to use solid monochrome backgrounds and borders */
+  .surface-edge,
+  .bg-\[linear-gradient\(180deg\,rgba\(255\,255\,255\,0\.04\)\,rgba\(255\,255\,255\,0\.02\)\)\] {
+    background: var(--bg-elevated) !important;
+    border-color: var(--line) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: var(--shadow) !important;
+  }
+
+  /* Force flat neutral background for console aside panel operators */
+  .bg-white\/\[0\.03\] {
+    background-color: var(--bg-soft) !important;
   }
 
   .text-balance {
@@ -111,7 +128,38 @@
 
   .scrollbar-subtle {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+
+  /* Override bubbly corner radii globally to achieve small, crisp corners */
+  .rounded-\[28px\],
+  .rounded-\[24px\],
+  .rounded-\[22px\],
+  .rounded-2xl,
+  .rounded-xl,
+  .rounded-lg {
+    border-radius: 8px !important;
+  }
+  .rounded-full:not(.h-11.w-11) {
+    border-radius: 8px !important;
+  }
+
+  /* Professional typography for keys, metrics, values, data points */
+  code, 
+  pre, 
+  .font-mono,
+  .metric-value,
+  .data-value,
+  table td,
+  table th {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  }
+
+  /* Target MetricCard values specifically to use monospace */
+  .surface-edge p.font-display.text-3xl,
+  .surface-edge p.font-display.text-4xl {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+    letter-spacing: -0.02em !important;
   }
 }
 
