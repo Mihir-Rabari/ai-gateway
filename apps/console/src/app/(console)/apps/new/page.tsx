@@ -48,9 +48,43 @@ export default function RegisterAppPage() {
   if (created) {
     return (
       <div className="space-y-6">
-        <ShellSection eyebrow="New app" title="Credentials issued" description="This is the only time the client secret and API key are shown in full. Save them before leaving this screen." action={<Button onClick={() => router.push(`/apps/${created.id}`)}>Open app detail</Button>} />
-        <InlineMessage tone="warning">Client secret and API key are write-once display values. Store them in a secret manager before you navigate away.</InlineMessage>
-        <Surface className="p-6 md:p-7"><div className="space-y-4"><CredentialRow label="Client ID" value={created.clientId} onCopy={() => copy(created.clientId, "Client ID")} /><CredentialRow label="Client Secret" value={created.clientSecret} secret onCopy={() => copy(created.clientSecret, "Client Secret")} /><CredentialRow label="API Key" value={created.apiKey} secret onCopy={() => copy(created.apiKey, "API Key")} /></div></Surface>
+        <ShellSection
+          eyebrow="New app"
+          title="Credentials issued"
+          description="This is the only time the client secret and API key are shown in full. Save them before leaving this screen."
+          action={
+            <Button
+              onClick={() => router.push(`/apps/${created.id}`)}
+              className="rounded-md bg-white text-black hover:bg-zinc-200 px-4 h-9 text-xs transition duration-200 font-semibold"
+            >
+              Open app detail
+            </Button>
+          }
+        />
+        <InlineMessage tone="warning" className="rounded-md border-yellow-900/30 bg-yellow-950/20 text-yellow-200">
+          Client secret and API key are write-once display values. Store them in a secret manager before you navigate away.
+        </InlineMessage>
+        <Surface className="rounded-lg border-zinc-800 bg-zinc-950 p-6 md:p-7 shadow-none">
+          <div className="space-y-4">
+            <CredentialRow
+              label="Client ID"
+              value={created.clientId}
+              onCopy={() => copy(created.clientId, "Client ID")}
+            />
+            <CredentialRow
+              label="Client Secret"
+              value={created.clientSecret}
+              secret
+              onCopy={() => copy(created.clientSecret, "Client Secret")}
+            />
+            <CredentialRow
+              label="API Key"
+              value={created.apiKey}
+              secret
+              onCopy={() => copy(created.apiKey, "API Key")}
+            />
+          </div>
+        </Surface>
       </div>
     );
   }
@@ -58,12 +92,49 @@ export default function RegisterAppPage() {
   return (
     <div className="space-y-6">
       <ShellSection eyebrow="Create" title="Register a new app" description="Issue fresh developer credentials and define the first redirect URIs for your OAuth flow." />
-      <Surface className="p-6 md:p-7">
+      <Surface className="rounded-lg border-zinc-800 bg-zinc-950 p-6 md:p-7 shadow-none">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Field label="App name" hint="Required"><TextInput value={name} onChange={(event) => setName(event.target.value)} placeholder="My AI product" required /></Field>
-          <Field label="Description" hint="Optional"><TextInput value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Short summary of what the app does" /></Field>
-          <Field label="Redirect URIs" hint="One per line"><TextArea value={redirectUrisRaw} onChange={(event) => setRedirectUrisRaw(event.target.value)} placeholder={"http://localhost:3000/callback\nhttps://myapp.com/callback"} /></Field>
-          <div className="flex flex-wrap gap-3"><Button type="submit" busy={loading}>{loading ? "Registering" : "Register app"}</Button><Button asChild variant="secondary"><Link href="/apps">Cancel</Link></Button></div>
+          <Field label="App name" hint="Required">
+            <TextInput
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="My AI product"
+              required
+              className="rounded-md border-zinc-800 bg-zinc-950 px-3 py-2 text-sm focus:border-zinc-700 focus:bg-zinc-950 focus-visible:ring-zinc-800"
+            />
+          </Field>
+          <Field label="Description" hint="Optional">
+            <TextInput
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Short summary of what the app does"
+              className="rounded-md border-zinc-800 bg-zinc-950 px-3 py-2 text-sm focus:border-zinc-700 focus:bg-zinc-950 focus-visible:ring-zinc-800"
+            />
+          </Field>
+          <Field label="Redirect URIs" hint="One per line">
+            <TextArea
+              value={redirectUrisRaw}
+              onChange={(event) => setRedirectUrisRaw(event.target.value)}
+              placeholder={"http://localhost:3000/callback\nhttps://myapp.com/callback"}
+              className="rounded-md border-zinc-800 bg-zinc-950 px-3 py-2 text-sm font-mono focus:border-zinc-700 focus:bg-zinc-950 focus-visible:ring-zinc-800"
+            />
+          </Field>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              type="submit"
+              busy={loading}
+              className="rounded-md bg-white text-black hover:bg-zinc-200 px-4 h-9 text-xs transition duration-200 font-semibold"
+            >
+              {loading ? "Registering" : "Register app"}
+            </Button>
+            <Button
+              asChild
+              variant="secondary"
+              className="rounded-md h-9 px-4 text-xs font-semibold border border-zinc-800 bg-zinc-900 text-white hover:bg-zinc-800 transition"
+            >
+              <Link href="/apps">Cancel</Link>
+            </Button>
+          </div>
         </form>
       </Surface>
     </div>
@@ -74,15 +145,29 @@ function CredentialRow({ label, value, secret = false, onCopy }: { label: string
   const [revealed, setRevealed] = useState(!secret);
 
   return (
-    <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">{label}</p>
-          <p className="mt-3 break-all font-mono text-sm text-white/82">{revealed ? value : "•".repeat(24)}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {secret ? <IconButton onClick={() => setRevealed((current) => !current)} aria-label={revealed ? `Hide ${label}` : `Show ${label}`}>{revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</IconButton> : null}
-          <Button variant="secondary" onClick={onCopy}>Copy</Button>
+    <div className="rounded-md border border-zinc-800 bg-zinc-950 p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">{label}</p>
+      <div className="mt-3 flex items-center justify-between gap-3 bg-black border border-zinc-800 rounded px-3 py-2 font-mono text-sm text-white">
+        <span className="min-w-0 flex-1 break-all select-all selection:bg-zinc-800">
+          {revealed ? value : "•".repeat(24)}
+        </span>
+        <div className="flex items-center gap-1.5">
+          {secret ? (
+            <button
+              onClick={() => setRevealed((current) => !current)}
+              className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded"
+              title={revealed ? `Hide ${label}` : `Show ${label}`}
+            >
+              {revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          ) : null}
+          <button
+            onClick={onCopy}
+            className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded"
+            title={`Copy ${label}`}
+          >
+            <Copy className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </div>
