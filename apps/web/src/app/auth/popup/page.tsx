@@ -76,7 +76,7 @@ export default function AuthPopupPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+          {error && <p className="text-sm text-red-400 text-center" role="alert" aria-live="assertive">{error}</p>}
           <div>
             <label htmlFor="email" className="sr-only">Email address</label>
             <Input
