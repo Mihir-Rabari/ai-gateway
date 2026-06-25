@@ -74,8 +74,24 @@ export async function authRoutes(fastify: FastifyInstance) {
   }, controller.refresh.bind(controller));
 
   // POST /auth/logout
-  fastify.post('/logout', controller.logout.bind(controller));
+  fastify.post('/logout', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '1 minute',
+        keyGenerator: (req) => req.ip,
+      },
+    },
+  }, controller.logout.bind(controller));
 
   // GET /auth/me
-  fastify.get('/me', controller.me.bind(controller));
+  fastify.get('/me', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '1 minute',
+        keyGenerator: (req) => req.ip,
+      },
+    },
+  }, controller.me.bind(controller));
 }
