@@ -35,50 +35,54 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6 font-sans">
-      <Card className="w-full max-w-sm bg-[#0a0a0a] border-white/10 text-white">
+      <Card className="w-full max-w-sm bg-[#09090b] border border-zinc-800 text-white rounded-xl shadow-2xl">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-10 h-10 bg-white text-black flex items-center justify-center rounded-lg font-bold mb-2">
+          <div className="mx-auto w-10 h-10 bg-zinc-100 text-black flex items-center justify-center rounded font-mono text-sm tracking-tighter mb-2">
             AI
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">Welcome back</CardTitle>
-          <CardDescription className="text-white/60">
+          <CardTitle className="text-2xl font-bold tracking-tight text-zinc-100">Welcome back</CardTitle>
+          <CardDescription className="text-zinc-400">
             Sign in to your AI Gateway account
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="p-3 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-md" role="alert" aria-live="assertive">
-                {error}
+              <div className="p-3 text-xs text-red-400 bg-red-950/20 border border-red-900/50 rounded-md font-mono flex items-start gap-2" role="alert" aria-live="assertive">
+                <span>{error}</span>
               </div>
             )}
-            <div className="space-y-2">
-              <label htmlFor="email" className="sr-only">Email address</label>
+            <div className="space-y-1.5">
+              <label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-zinc-400 font-mono">
+                Email Address
+              </label>
               <Input
                 id="email"
                 type="email"
-                placeholder="Email address"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-black border-white/10 text-white placeholder:text-white/30 focus-visible:ring-white/20"
+                className="bg-black border-zinc-800 text-zinc-100 placeholder:text-zinc-600 rounded-md focus-visible:ring-zinc-700 focus-visible:border-zinc-700"
               />
             </div>
-            <div className="space-y-2">
-              <label htmlFor="password" className="sr-only">Password</label>
+            <div className="space-y-1.5">
+              <label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-zinc-400 font-mono">
+                Password
+              </label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="bg-black border-white/10 text-white placeholder:text-white/30 focus-visible:ring-white/20"
+                className="bg-black border-zinc-800 text-zinc-100 placeholder:text-zinc-600 rounded-md focus-visible:ring-zinc-700 focus-visible:border-zinc-700"
               />
             </div>
             <Button
               type="submit"
-              className="w-full bg-white text-black hover:bg-white/90 font-medium h-10"
+              className="w-full bg-zinc-100 text-black hover:bg-white font-medium h-10 rounded-md transition-colors"
               disabled={loading}
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -86,14 +90,14 @@ export default function LoginPage() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-4 border-t border-white/5 mx-6 pt-6 px-0 pb-6">
-          <div className="text-sm text-center text-white/60">
+        <CardFooter className="flex flex-col space-y-4 border-t border-zinc-800 mx-6 pt-6 px-0 pb-6">
+          <div className="text-sm text-center text-zinc-400">
             Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-white hover:underline font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
+            <Link href="/signup" className="text-zinc-100 hover:underline font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700">
               Sign up
             </Link>
           </div>
-          <Link href="/" className="text-xs text-center text-white/40 hover:text-white/80 transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
+          <Link href="/" className="text-xs text-center text-zinc-500 hover:text-zinc-300 transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700">
             ← Back to home
           </Link>
         </CardFooter>
