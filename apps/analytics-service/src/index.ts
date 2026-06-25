@@ -1,9 +1,10 @@
+import { timingSafeEqual } from 'crypto';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { createClient } from '@clickhouse/client';
 import { Kafka } from 'kafkajs';
 import { getAnalyticsConfig } from '@ai-gateway/config';
-import { createLogger, getFastifyLoggerOptions, ok, securityHeadersPlugin } from '@ai-gateway/utils';
+import { createLogger, getFastifyLoggerOptions, ok, fail, securityHeadersPlugin, GatewayError } from '@ai-gateway/utils';
 import type { UsageEvent } from '@ai-gateway/types';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { UsageBatchBuffer, toRequestLogRow } from './services/usageBatch.js';
@@ -118,8 +119,28 @@ async function startConsumer(): Promise<void> {
 
 // ─── HTTP API ────────────────────────────────
 
+const authPreHandler: any = async (req: FastifyRequest, reply: FastifyReply) => {
+  const internalSecretEnv = process.env['INTERNAL_SERVICE_SECRET'] || '';
+  const internalSecretBuf = Buffer.from(internalSecretEnv, 'utf8');
+
+  const headerVal = req.headers['x-internal-secret'];
+  const clientSecretStr = Array.isArray(headerVal) ? headerVal[0] : (headerVal || '');
+  const clientSecretBuf = Buffer.from(clientSecretStr, 'utf8');
+
+  if (
+    internalSecretBuf.length === 0 ||
+    clientSecretBuf.length !== internalSecretBuf.length ||
+    !timingSafeEqual(clientSecretBuf, internalSecretBuf)
+  ) {
+    return reply.status(401).send(
+      fail(new GatewayError('UNAUTHORIZED', 'Invalid or missing internal service secret', 401))
+    );
+  }
+};
+
 app.get(
   '/analytics/models',
+  { preHandler: authPreHandler },
   async (
     req: FastifyRequest<{ Querystring: { from?: string; to?: string; limit?: string } }>,
     reply: FastifyReply,
@@ -175,6 +196,7 @@ app.get(
 
 app.get(
   '/analytics/usage/app',
+  { preHandler: authPreHandler },
   async (
     req: FastifyRequest<{ Querystring: { appId: string; from?: string; to?: string } }>,
     reply: FastifyReply,
@@ -215,6 +237,7 @@ app.get(
 
 app.get(
   '/analytics/usage/me',
+  { preHandler: authPreHandler },
   async (req: FastifyRequest<{ Querystring: { userId: string } }>, reply: FastifyReply) => {
     const { userId } = req.query;
     const result = await clickhouse.query({
@@ -238,6 +261,7 @@ app.get(
 
 app.get(
   '/analytics/dashboard',
+  { preHandler: authPreHandler },
   async (req: FastifyRequest<{ Querystring: { userId: string } }>, reply: FastifyReply) => {
     const { userId } = req.query;
 
