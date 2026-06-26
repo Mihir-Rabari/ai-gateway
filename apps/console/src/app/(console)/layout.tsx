@@ -111,6 +111,7 @@ function ConsoleLayoutContent({ children }: { children: React.ReactNode }) {
               <button
                 onClick={logout}
                 className="flex w-full items-center justify-between rounded-md border border-zinc-800 bg-zinc-900/40 px-3 py-2.5 text-xs font-medium text-zinc-400 transition hover:bg-zinc-900/80 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-700"
+                aria-label="Sign out"
               >
                 <span>Sign out</span>
                 <LogOut className="h-4 w-4 text-zinc-500" />
@@ -130,7 +131,8 @@ function ConsoleLayoutContent({ children }: { children: React.ReactNode }) {
               </div>
               <button
                 onClick={logout}
-                className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition"
+                className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500"
+                aria-label="Exit console"
               >
                 <LogOut className="h-4 w-4 text-zinc-500" />
                 <span>Exit</span>
