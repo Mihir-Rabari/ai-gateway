@@ -374,15 +374,17 @@ export class GatewayService {
 
     // 2. Regular token validation (via auth service)
     const cacheKey = `auth:token:${createHash('sha256').update(token).digest('hex')}`;
-    let user: ValidatedUser | undefined;
+    let user: (ValidatedUser & { clientId?: string; _tokenParsed?: boolean }) | undefined;
     const cached = await this.clients.redis.get(cacheKey);
     if (cached) {
       try {
-        user = JSON.parse(cached) as ValidatedUser;
+        user = JSON.parse(cached) as ValidatedUser & { clientId?: string; _tokenParsed?: boolean };
       } catch {
         await this.clients.redis.del(cacheKey);
       }
     }
+
+    let needsCacheUpdate = false;
 
     if (!user) {
       user = await this.authBreaker.execute(async () => {
@@ -402,33 +404,41 @@ export class GatewayService {
         if (!res.ok || !json.success || !json.data) throw Errors.INVALID_TOKEN();
         return json.data;
       });
+      needsCacheUpdate = true;
+    }
 
+    // Check if the validated token payload contains a clientId.
+    // To prevent unnecessary CPU overhead from parsing JWTs on every cache-hit API request,
+    // we extract the clientId once and store it with the cached session in Redis.
+    if (!user._tokenParsed) {
+      user._tokenParsed = true;
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        try {
+          const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+          const payload = JSON.parse(Buffer.from(base64, 'base64').toString('utf8'));
+          if (payload && typeof payload === 'object' && 'clientId' in payload) {
+            user.clientId = payload.clientId;
+          }
+        } catch (err) {
+          if (err && (err as any).statusCode === 401) {
+            throw err;
+          }
+        }
+      }
+      needsCacheUpdate = true;
+    }
+
+    if (needsCacheUpdate) {
       // Cache the validated user data
       const ttl = this.clients.tokenCacheTtlSeconds ?? 60;
       await this.clients.redis.set(cacheKey, JSON.stringify(user), 'EX', ttl);
     }
 
-    // Check if the validated token payload contains a clientId.
-    // If a clientId is present and the requested app is not a first-party app,
-    // verify that the token's clientId matches the incoming request's appId.
-    const parts = token.split('.');
-    if (parts.length === 3) {
-      try {
-        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-        const payload = JSON.parse(Buffer.from(base64, 'base64').toString('utf8'));
-        if (payload && typeof payload === 'object' && 'clientId' in payload) {
-          const tokenClientId = payload.clientId;
-          if (tokenClientId) {
-            if (!appId || !FIRST_PARTY_APP_IDS.has(appId)) {
-              if (tokenClientId !== appId) {
-                throw Errors.INVALID_TOKEN();
-              }
-            }
-          }
-        }
-      } catch (err) {
-        if (err && (err as any).statusCode === 401) {
-          throw err;
+    if (user.clientId) {
+      if (!appId || !FIRST_PARTY_APP_IDS.has(appId)) {
+        if (user.clientId !== appId) {
+          throw Errors.INVALID_TOKEN();
         }
       }
     }
