@@ -327,9 +327,11 @@ export function EmptyState({
 export function InlineMessage({
   tone = "default",
   children,
+  className,
 }: {
   tone?: "default" | "danger" | "warning" | "success";
   children: React.ReactNode;
+  className?: string;
 }) {
   const tones = {
     default: "border-white/10 bg-white/[0.04] text-white/64",
@@ -343,7 +345,7 @@ export function InlineMessage({
 
   return (
     <div
-      className={cn("rounded-2xl border px-4 py-3 text-sm", tones)}
+      className={cn("rounded-2xl border px-4 py-3 text-sm", tones, className)}
       role={role}
       aria-live={ariaLive}
     >
