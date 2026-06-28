@@ -123,9 +123,11 @@ export default function AppDetailsPage() {
                 <div className="mt-3 flex items-center justify-between gap-3 bg-black border border-zinc-800 rounded px-3 py-2 font-mono text-sm text-white">
                   <span className="min-w-0 flex-1 break-all select-all selection:bg-zinc-800">{appData.id}</span>
                   <button
+                    type="button"
                     onClick={() => copyText(appData.id, "App ID")}
-                    className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded"
+                    className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500"
                     title="Copy App ID"
+                    aria-label="Copy App ID"
                   >
                     <Copy className="h-4 w-4" />
                   </button>
@@ -138,9 +140,11 @@ export default function AppDetailsPage() {
                   <span className="min-w-0 flex-1 break-all select-all selection:bg-zinc-800">{appData.clientId ?? "Unavailable"}</span>
                   {appData.clientId ? (
                     <button
+                      type="button"
                       onClick={() => copyText(appData.clientId!, "Client ID")}
-                      className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded"
+                      className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500"
                       title="Copy Client ID"
+                      aria-label="Copy Client ID"
                     >
                       <Copy className="h-4 w-4" />
                     </button>
@@ -171,17 +175,21 @@ export default function AppDetailsPage() {
                 </span>
                 <div className="flex items-center gap-1.5">
                   <button
+                    type="button"
                     onClick={() => setShowKey((current) => !current)}
-                    className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded"
+                    className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500"
                     title={showKey ? "Hide API Key" : "Show API Key"}
+                    aria-label={showKey ? "Hide API Key" : "Show API Key"}
                   >
                     {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                   <button
+                    type="button"
                     onClick={() => copyText(apiKey, "API Key")}
                     disabled={!apiKey}
-                    className="text-zinc-400 hover:text-white disabled:opacity-30 transition p-1 hover:bg-zinc-900 rounded"
+                    className="text-zinc-400 hover:text-white disabled:opacity-30 transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500"
                     title="Copy API Key"
+                    aria-label="Copy API Key"
                   >
                     <Copy className="h-4 w-4" />
                   </button>
