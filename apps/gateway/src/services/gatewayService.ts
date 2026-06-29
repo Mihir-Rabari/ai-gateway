@@ -414,8 +414,7 @@ export class GatewayService {
     const parts = token.split('.');
     if (parts.length === 3) {
       try {
-        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-        const payload = JSON.parse(Buffer.from(base64, 'base64').toString('utf8'));
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
         if (payload && typeof payload === 'object' && 'clientId' in payload) {
           const tokenClientId = payload.clientId;
           if (tokenClientId) {
