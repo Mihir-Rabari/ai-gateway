@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Copy, Eye, EyeOff } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Button, Field, IconButton, InlineMessage, ShellSection, Surface, TextArea, TextInput } from "@/components/console/system";
@@ -155,16 +155,18 @@ function CredentialRow({ label, value, secret = false, onCopy }: { label: string
           {secret ? (
             <button
               onClick={() => setRevealed((current) => !current)}
-              className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded"
+              className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700"
               title={revealed ? `Hide ${label}` : `Show ${label}`}
+              aria-label={revealed ? `Hide ${label}` : `Show ${label}`}
             >
               {revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           ) : null}
           <button
             onClick={onCopy}
-            className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded"
+            className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700"
             title={`Copy ${label}`}
+            aria-label={`Copy ${label}`}
           >
             <Copy className="h-4 w-4" />
           </button>
