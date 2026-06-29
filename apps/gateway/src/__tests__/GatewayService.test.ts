@@ -77,7 +77,7 @@ function createRedisMockWithStore(store: Map<string, string> = new Map()) {
       return next;
     },
     expire: async () => 1,
-    // eval: async (script: string, numkeys: number, ...keysAndArgs: (string | number)[]) => {
+    eval: async (script: string, numkeys: number, ...keysAndArgs: (string | number)[]) => {
       // Basic mock for the INCR/EXPIRE lua script
       const key = String(keysAndArgs[0]);
       const next = Number(store.get(key) ?? '0') + 1;
