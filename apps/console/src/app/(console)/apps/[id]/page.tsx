@@ -126,6 +126,7 @@ export default function AppDetailsPage() {
                     onClick={() => copyText(appData.id, "App ID")}
                     className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded"
                     title="Copy App ID"
+                    aria-label="Copy App ID"
                   >
                     <Copy className="h-4 w-4" />
                   </button>
@@ -141,6 +142,7 @@ export default function AppDetailsPage() {
                       onClick={() => copyText(appData.clientId!, "Client ID")}
                       className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded"
                       title="Copy Client ID"
+                      aria-label="Copy Client ID"
                     >
                       <Copy className="h-4 w-4" />
                     </button>
@@ -174,6 +176,7 @@ export default function AppDetailsPage() {
                     onClick={() => setShowKey((current) => !current)}
                     className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded"
                     title={showKey ? "Hide API Key" : "Show API Key"}
+                    aria-label={showKey ? "Hide API Key" : "Show API Key"}
                   >
                     {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -182,6 +185,7 @@ export default function AppDetailsPage() {
                     disabled={!apiKey}
                     className="text-zinc-400 hover:text-white disabled:opacity-30 transition p-1 hover:bg-zinc-900 rounded"
                     title="Copy API Key"
+                    aria-label="Copy API Key"
                   >
                     <Copy className="h-4 w-4" />
                   </button>
