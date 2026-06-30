@@ -50,7 +50,7 @@ export default function AppsPage() {
           </Button>
         }
       />
-      {error ? <InlineMessage tone="danger" className="rounded-md border-red-900/30 bg-red-950/20 text-red-200">{error}</InlineMessage> : null}
+      {error ? <InlineMessage tone="danger">{error}</InlineMessage> : null}
       
       <div className="grid gap-4 md:grid-cols-3">
         {loading ? (
