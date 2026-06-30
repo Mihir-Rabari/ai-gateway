@@ -50,6 +50,7 @@ export const developerRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.get('/developers/status', {
     preHandler: [requireAuth],
+    config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
     schema: {
       tags: ['Developers'],
       description: 'Check if the current user is enrolled as a developer',
@@ -77,6 +78,7 @@ export const developerRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.post('/developers/enroll', {
     preHandler: [requireAuth],
+    config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
     schema: {
       tags: ['Developers'],
       description: 'Enroll the current user as a developer',
