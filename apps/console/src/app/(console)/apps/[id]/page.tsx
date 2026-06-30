@@ -102,7 +102,7 @@ export default function AppDetailsPage() {
         }
       />
       {!loading && !appData ? (
-        <InlineMessage tone="danger" className="rounded-md border-red-900/30 bg-red-950/20 text-red-200">
+        <InlineMessage tone="danger" >
           App not found or you no longer have access to it.
         </InlineMessage>
       ) : null}
@@ -124,7 +124,8 @@ export default function AppDetailsPage() {
                   <span className="min-w-0 flex-1 break-all select-all selection:bg-zinc-800">{appData.id}</span>
                   <button
                     onClick={() => copyText(appData.id, "App ID")}
-                    className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded"
+                    className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700"
+                    aria-label="Copy App ID"
                     title="Copy App ID"
                   >
                     <Copy className="h-4 w-4" />
@@ -139,7 +140,8 @@ export default function AppDetailsPage() {
                   {appData.clientId ? (
                     <button
                       onClick={() => copyText(appData.clientId!, "Client ID")}
-                      className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded"
+                      className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700"
+                      aria-label="Copy Client ID"
                       title="Copy Client ID"
                     >
                       <Copy className="h-4 w-4" />
@@ -172,7 +174,8 @@ export default function AppDetailsPage() {
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => setShowKey((current) => !current)}
-                    className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded"
+                    className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700"
+                    aria-label={showKey ? "Hide API Key" : "Show API Key"}
                     title={showKey ? "Hide API Key" : "Show API Key"}
                   >
                     {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -180,7 +183,8 @@ export default function AppDetailsPage() {
                   <button
                     onClick={() => copyText(apiKey, "API Key")}
                     disabled={!apiKey}
-                    className="text-zinc-400 hover:text-white disabled:opacity-30 transition p-1 hover:bg-zinc-900 rounded"
+                    className="text-zinc-400 hover:text-white disabled:opacity-30 transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700"
+                    aria-label="Copy API Key"
                     title="Copy API Key"
                   >
                     <Copy className="h-4 w-4" />
