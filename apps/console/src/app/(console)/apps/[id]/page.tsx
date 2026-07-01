@@ -124,8 +124,8 @@ export default function AppDetailsPage() {
                   <span className="min-w-0 flex-1 break-all select-all selection:bg-zinc-800">{appData.id}</span>
                   <button
                     onClick={() => copyText(appData.id, "App ID")}
-                    className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded"
-                    title="Copy App ID"
+                    className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700"
+                    title="Copy App ID" aria-label="Copy App ID"
                   >
                     <Copy className="h-4 w-4" />
                   </button>
@@ -139,8 +139,8 @@ export default function AppDetailsPage() {
                   {appData.clientId ? (
                     <button
                       onClick={() => copyText(appData.clientId!, "Client ID")}
-                      className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded"
-                      title="Copy Client ID"
+                      className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700"
+                      title="Copy Client ID" aria-label="Copy Client ID"
                     >
                       <Copy className="h-4 w-4" />
                     </button>
@@ -172,16 +172,16 @@ export default function AppDetailsPage() {
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => setShowKey((current) => !current)}
-                    className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded"
-                    title={showKey ? "Hide API Key" : "Show API Key"}
+                    className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700"
+                    title={showKey ? "Hide API Key" : "Show API Key"} aria-label={showKey ? "Hide API Key" : "Show API Key"}
                   >
                     {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                   <button
                     onClick={() => copyText(apiKey, "API Key")}
                     disabled={!apiKey}
-                    className="text-zinc-400 hover:text-white disabled:opacity-30 transition p-1 hover:bg-zinc-900 rounded"
-                    title="Copy API Key"
+                    className="text-zinc-400 hover:text-white disabled:opacity-30 transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700"
+                    title="Copy API Key" aria-label="Copy API Key"
                   >
                     <Copy className="h-4 w-4" />
                   </button>
