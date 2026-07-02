@@ -638,12 +638,11 @@ export class AIGateway {
     try {
       const parts = token.split('.');
       if (parts.length === 3) {
-        const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
         // Support both browser (atob) and Node.js (Buffer) environments.
         const json =
-          typeof atob === 'function'
-            ? atob(payloadB64)
-            : Buffer.from(payloadB64, 'base64').toString('utf8');
+          typeof Buffer !== 'undefined'
+            ? Buffer.from(parts[1], 'base64url').toString('utf8')
+            : (typeof atob === 'function' ? atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')) : '');
         const payload = JSON.parse(json) as { exp?: unknown };
         exp = typeof payload.exp === 'number' ? payload.exp : null;
       }
@@ -698,17 +697,23 @@ export class AIGateway {
 
   /** Encode a UTF-8 string as base64url (no padding). */
   private base64urlEncode(str: string): string {
+    if (typeof Buffer !== 'undefined') return Buffer.from(str).toString('base64url');
     const bytes = new TextEncoder().encode(str);
     let binary = '';
-    for (const byte of bytes) binary += String.fromCharCode(byte);
+    for (let i = 0; i < bytes.length; i += 8192) {
+      binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + 8192)));
+    }
     return btoa(binary).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
   }
 
   /** Encode a raw ArrayBuffer as base64url (no padding). */
   private base64urlEncodeBuffer(buf: ArrayBuffer): string {
+    if (typeof Buffer !== 'undefined') return Buffer.from(buf).toString('base64url');
     let binary = '';
     const bytes = new Uint8Array(buf);
-    for (const byte of bytes) binary += String.fromCharCode(byte);
+    for (let i = 0; i < bytes.length; i += 8192) {
+      binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + 8192)));
+    }
     return btoa(binary).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
   }
 
