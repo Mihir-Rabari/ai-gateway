@@ -17,6 +17,7 @@
     "pm2:status": "pm2 status"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/node": "^20.14.0",
     "eslint": "^9.5.0",
     "pm2": "^7.0.0",

@@ -15,3 +15,6 @@
 ## 2024-06-23 - Improve InlineMessage accessibility
 **Learning:** In `apps/console`, dynamic error/status components like `InlineMessage` were visually distinct using styling but were missing necessary ARIA attributes, meaning screen readers would not proactively announce them when they appeared asynchronously after user actions (e.g., form submissions).
 **Action:** Always map notification components' semantic tones to corresponding accessibility attributes (e.g., warning/danger -> `role="alert"` + `aria-live="assertive"`, success/default -> `role="status"` + `aria-live="polite"`). Ensure that HTML5 validation bypasses are correctly mapped to inputs when testing these backend-driven UI states in Playwright.
+## 2024-11-20 - Ensure Tooltips align with ARIA Attributes
+**Learning:** When using components like custom Buttons with icon-only patterns, adding `title` attributes acts as a tooltip for visual users. However, we must explicitly ensure an `aria-label` matching the title is set to fully expose its descriptive context to screen readers, especially to avoid screen readers attempting to interpret non-semantic icon SVG contents.
+**Action:** When creating icon-only action elements, consistently apply identical text values to the `title` attribute for visually sighted tooltip behavior, and the `aria-label` attribute for screen reader announcements.
