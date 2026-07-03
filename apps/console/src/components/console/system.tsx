@@ -327,9 +327,11 @@ export function EmptyState({
 export function InlineMessage({
   tone = "default",
   children,
+  className,
 }: {
   tone?: "default" | "danger" | "warning" | "success";
   children: React.ReactNode;
+  className?: string;
 }) {
   const tones = {
     default: "border-white/10 bg-white/[0.04] text-white/64",
@@ -343,7 +345,7 @@ export function InlineMessage({
 
   return (
     <div
-      className={cn("rounded-2xl border px-4 py-3 text-sm", tones)}
+      className={cn("rounded-2xl border px-4 py-3 text-sm", tones, className)}
       role={role}
       aria-live={ariaLive}
     >
@@ -363,9 +365,11 @@ export function SkeletonBlock({ className }: { className?: string }) {
 export function Badge({
   children,
   tone = "default",
+  className,
 }: {
   children: React.ReactNode;
   tone?: "default" | "success" | "warning" | "danger";
+  className?: string;
 }) {
   const tones = {
     default: "bg-white/8 text-white/72",
@@ -379,6 +383,7 @@ export function Badge({
       className={cn(
         "inline-flex items-center rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.18em]",
         tones,
+        className
       )}
     >
       {children}
