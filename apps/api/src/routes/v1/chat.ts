@@ -5,6 +5,7 @@ export const chatRoutes: FastifyPluginAsync = async (fastify) => {
   const gatewayUrl = process.env['GATEWAY_URL'] ?? 'http://localhost:3002';
 
   fastify.post('/chat', {
+    config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
     preHandler: [requireAuth],
     schema: {
       tags: ['Gateway'],
