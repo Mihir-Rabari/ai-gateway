@@ -5,6 +5,7 @@ export const meRoutes: FastifyPluginAsync = async (fastify) => {
   const authServiceUrl = process.env['AUTH_SERVICE_URL'] ?? 'http://localhost:3003';
 
   fastify.get('/me', {
+    config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
     preHandler: [requireAuth],
     schema: {
       tags: ['User'],
