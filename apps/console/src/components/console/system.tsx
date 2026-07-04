@@ -326,9 +326,11 @@ export function EmptyState({
 
 export function InlineMessage({
   tone = "default",
+  className,
   children,
 }: {
   tone?: "default" | "danger" | "warning" | "success";
+  className?: string;
   children: React.ReactNode;
 }) {
   const tones = {
