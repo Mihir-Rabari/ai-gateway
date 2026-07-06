@@ -71,7 +71,7 @@ export default function LoginPage() {
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
               {error && (
-                <div className="p-3 text-xs text-red-400 bg-red-950/20 border border-red-900/50 rounded-md font-mono flex items-start gap-2" role="alert">
+                <div className="p-3 text-xs text-red-400 bg-red-950/20 border border-red-900/50 rounded-md font-mono flex items-start gap-2" role="alert" aria-live="assertive">
                   <span>{error}</span>
                 </div>
               )}

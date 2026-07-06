@@ -177,7 +177,7 @@ export default function DashboardPage() {
       </div>
 
       {error ? (
-        <div className="rounded-md border border-red-950 bg-red-950/20 px-4 py-3 text-xs text-red-400 font-mono">
+        <div role="alert" aria-live="assertive" className="rounded-md border border-red-950 bg-red-950/20 px-4 py-3 text-xs text-red-400 font-mono">
           {error}
         </div>
       ) : null}
