@@ -76,6 +76,7 @@ export const developerRoutes: FastifyPluginAsync = async (fastify) => {
    * Enroll the authenticated user as a developer. Idempotent — safe to call multiple times.
    */
   fastify.post('/developers/enroll', {
+    config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
     preHandler: [requireAuth],
     schema: {
       tags: ['Developers'],

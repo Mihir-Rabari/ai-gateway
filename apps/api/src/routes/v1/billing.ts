@@ -16,6 +16,7 @@ export const billingRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/billing/subscribe', {
+    config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
     preHandler: [requireAuth],
     schema: {
       tags: ['Billing'],
@@ -66,6 +67,7 @@ export const billingRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/billing/cancel', {
+    config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
     preHandler: [requireAuth],
     schema: {
       tags: ['Billing'],
@@ -88,6 +90,7 @@ export const billingRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/billing/topup/order', {
+    config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
     preHandler: [requireAuth],
     schema: {
       tags: ['Billing'],
@@ -118,6 +121,7 @@ export const billingRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/billing/topup/verify', {
+    config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
     preHandler: [requireAuth],
     schema: {
       tags: ['Billing'],
