@@ -638,12 +638,11 @@ export class AIGateway {
     try {
       const parts = token.split('.');
       if (parts.length === 3) {
-        const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-        // Support both browser (atob) and Node.js (Buffer) environments.
+        // Support both browser (atob) and Node.js (Buffer) environments natively when possible.
         const json =
-          typeof atob === 'function'
-            ? atob(payloadB64)
-            : Buffer.from(payloadB64, 'base64').toString('utf8');
+          typeof Buffer !== 'undefined'
+            ? Buffer.from(parts[1], 'base64url').toString('utf8')
+            : atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
         const payload = JSON.parse(json) as { exp?: unknown };
         exp = typeof payload.exp === 'number' ? payload.exp : null;
       }
