@@ -698,17 +698,27 @@ export class AIGateway {
 
   /** Encode a UTF-8 string as base64url (no padding). */
   private base64urlEncode(str: string): string {
+    if (typeof Buffer !== 'undefined') {
+      return Buffer.from(str).toString('base64url');
+    }
     const bytes = new TextEncoder().encode(str);
     let binary = '';
-    for (const byte of bytes) binary += String.fromCharCode(byte);
+    for (let i = 0; i < bytes.length; i += 8192) {
+      binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + 8192)));
+    }
     return btoa(binary).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
   }
 
   /** Encode a raw ArrayBuffer as base64url (no padding). */
   private base64urlEncodeBuffer(buf: ArrayBuffer): string {
-    let binary = '';
+    if (typeof Buffer !== 'undefined') {
+      return Buffer.from(buf).toString('base64url');
+    }
     const bytes = new Uint8Array(buf);
-    for (const byte of bytes) binary += String.fromCharCode(byte);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 8192) {
+      binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + 8192)));
+    }
     return btoa(binary).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
   }
 
