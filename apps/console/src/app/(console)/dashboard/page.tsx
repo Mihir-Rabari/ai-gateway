@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Plus } from "lucide-react";
 import { api, type CreditTransaction, type DeveloperApp, type UsageSummary } from "@/lib/api";
 
@@ -140,15 +140,40 @@ export default function DashboardPage() {
     void load();
   }, []);
 
-  const earnedCredits = transactions.reduce((sum, tx) => (tx.type === "debit" ? sum + tx.amount : sum), 0);
-  const estimatedInr = earnedCredits * 0.2;
-  const requests = usage?.thisMonth.totalRequests ?? 0;
-  const tokens = usage?.thisMonth.totalTokens ?? 0;
-  const latency = Math.round(usage?.thisMonth.avgLatencyMs ?? 0);
-  const successRate = Math.round((usage?.thisMonth.successRate ?? 0) * 100);
-  const chartValues = usage?.last7Days.dailyRequests.map((entry) => entry.count) ?? [];
-  const chartLabels = usage?.last7Days.dailyRequests.map((entry) => entry.date.slice(5)) ?? [];
-  const topModels = usage?.thisMonth.topModels ?? [];
+  // ⚡ Bolt: Memoized derived state to prevent recalculation on unrelated re-renders.
+  // Also combined array mappings into a single O(N) reduce pass for chart data.
+  const {
+    earnedCredits,
+    estimatedInr,
+    requests,
+    tokens,
+    latency,
+    successRate,
+    chartValues,
+    chartLabels,
+    topModels,
+  } = useMemo(() => {
+    const earned = transactions.reduce((sum, tx) => (tx.type === "debit" ? sum + tx.amount : sum), 0);
+    const { values, labels } = (usage?.last7Days.dailyRequests ?? []).reduce(
+      (acc, entry) => {
+        acc.values.push(entry.count);
+        acc.labels.push(entry.date.slice(5));
+        return acc;
+      },
+      { values: [] as number[], labels: [] as string[] }
+    );
+    return {
+      earnedCredits: earned,
+      estimatedInr: earned * 0.2,
+      requests: usage?.thisMonth.totalRequests ?? 0,
+      tokens: usage?.thisMonth.totalTokens ?? 0,
+      latency: Math.round(usage?.thisMonth.avgLatencyMs ?? 0),
+      successRate: Math.round((usage?.thisMonth.successRate ?? 0) * 100),
+      chartValues: values,
+      chartLabels: labels,
+      topModels: usage?.thisMonth.topModels ?? [],
+    };
+  }, [transactions, usage]);
 
   return (
     <div className="space-y-6">
