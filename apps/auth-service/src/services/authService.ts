@@ -140,7 +140,7 @@ export class AuthService {
   // Logout
   // ─────────────────────────────────────────
 
-  async logout(userId: string): Promise<void> {
+  async logout(userId: string, token?: string, exp?: number): Promise<void> {
     const match = `refresh:${userId}:*`;
     let cursor = '0';
     const keysToDelete: string[] = [];
@@ -155,6 +155,13 @@ export class AuthService {
 
     if (keysToDelete.length > 0) {
       await this.redis.del(...keysToDelete);
+    }
+
+    if (token && exp) {
+      const remainingTtl = Math.max(0, exp - Math.floor(Date.now() / 1000));
+      if (remainingTtl > 0) {
+        await this.redis.setex(`blacklist:${token.slice(-16)}`, remainingTtl, '1');
+      }
     }
   }
 
