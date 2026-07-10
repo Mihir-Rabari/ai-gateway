@@ -646,8 +646,7 @@ export class AIGateway {
           const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
           json = typeof atob === 'function'
             ? atob(payloadB64)
-            : // @ts-ignore
-              Buffer.from(payloadB64, 'base64').toString('utf8');
+            : Buffer.from(payloadB64, 'base64').toString('utf8');
         }
         const payload = JSON.parse(json) as { exp?: unknown };
         exp = typeof payload.exp === 'number' ? payload.exp : null;
