@@ -408,7 +408,10 @@ export class GatewayService {
       const parts = token.split('.');
       if (parts.length === 3) {
         try {
-          const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+          const json = typeof Buffer !== 'undefined'
+            ? Buffer.from(parts[1], 'base64url').toString('utf8')
+            : atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
+          const payload = JSON.parse(json);
           if (payload && typeof payload === 'object' && 'clientId' in payload) {
             user.clientId = payload.clientId as string;
           }
@@ -430,7 +433,10 @@ export class GatewayService {
       const parts = token.split('.');
       if (parts.length === 3) {
         try {
-          const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+          const json = typeof Buffer !== 'undefined'
+            ? Buffer.from(parts[1], 'base64url').toString('utf8')
+            : atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
+          const payload = JSON.parse(json);
           if (payload && typeof payload === 'object' && 'clientId' in payload) {
             user.clientId = payload.clientId as string;
           }
