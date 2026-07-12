@@ -130,7 +130,7 @@ function ConsoleLayoutContent({ children }: { children: React.ReactNode }) {
               </div>
               <button
                 onClick={logout}
-                className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition"
+                className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-700"
               >
                 <LogOut className="h-4 w-4 text-zinc-500" />
                 <span>Exit</span>
