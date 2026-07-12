@@ -56,7 +56,8 @@ function PremiumMeterList({
 }: {
   items: Array<{ label: string; value: number; hint?: string }>;
 }) {
-  const max = Math.max(...items.map((item) => item.value), 1);
+  // ⚡ Bolt: Avoid O(N) intermediate array allocation and spread operator overhead by using a single reduce pass.
+  const max = items.reduce((currentMax, item) => (item.value > currentMax ? item.value : currentMax), 1);
 
   return (
     <div className="space-y-2.5">
