@@ -638,12 +638,14 @@ export class AIGateway {
     try {
       const parts = token.split('.');
       if (parts.length === 3) {
-        const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-        // Support both browser (atob) and Node.js (Buffer) environments.
-        const json =
-          typeof atob === 'function'
-            ? atob(payloadB64)
-            : Buffer.from(payloadB64, 'base64').toString('utf8');
+        let json;
+        // Support both Node.js (fastest) and browser environments.
+        if (typeof Buffer !== 'undefined') {
+          json = Buffer.from(parts[1], 'base64url').toString('utf8');
+        } else {
+          const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+          json = typeof atob === 'function' ? atob(payloadB64) : '';
+        }
         const payload = JSON.parse(json) as { exp?: unknown };
         exp = typeof payload.exp === 'number' ? payload.exp : null;
       }
