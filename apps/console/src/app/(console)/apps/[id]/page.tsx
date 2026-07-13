@@ -20,6 +20,8 @@ export default function AppDetailsPage() {
   const [usage, setUsage] = useState<AppUsageSummary | null>(null);
   const [redirectUrisRaw, setRedirectUrisRaw] = useState("");
   const [savingUris, setSavingUris] = useState(false);
+  const [isRotating, setIsRotating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -46,6 +48,7 @@ export default function AppDetailsPage() {
 
   const rotateKey = async () => {
     if (!window.confirm("Rotate the API key now? The previous key will stop working immediately.")) return;
+    setIsRotating(true);
     try {
       const result = await api.apps.rotateKey(id);
       setApiKey(result.apiKey);
@@ -53,6 +56,8 @@ export default function AppDetailsPage() {
       toast({ title: "API key rotated", description: "The new key is now visible on screen." });
     } catch (err) {
       toast({ title: "Key rotation failed", description: err instanceof Error ? err.message : "Unexpected error", variant: "destructive" });
+    } finally {
+      setIsRotating(false);
     }
   };
 
@@ -72,12 +77,14 @@ export default function AppDetailsPage() {
 
   const deleteApp = async () => {
     if (!window.confirm("Delete this app? This cannot be undone.")) return;
+    setIsDeleting(true);
     try {
       await api.apps.delete(id);
       toast({ title: "App deleted", description: "The application has been removed." });
       router.push("/apps");
     } catch (err) {
       toast({ title: "Delete failed", description: err instanceof Error ? err.message : "Unexpected error", variant: "destructive" });
+      setIsDeleting(false);
     }
   };
 
@@ -196,17 +203,19 @@ export default function AppDetailsPage() {
             <div className="flex flex-wrap gap-3 pt-2">
               <Button
                 variant="secondary"
+                busy={isRotating}
                 onClick={rotateKey}
                 className="rounded-md h-9 px-4 text-xs font-semibold border border-zinc-800 bg-zinc-900 text-white hover:bg-zinc-800 transition"
               >
-                <RotateCw className="h-3.5 w-3.5 mr-1.5" />Rotate key
+                {!isRotating && <RotateCw className="h-3.5 w-3.5 mr-1.5" />}Rotate key
               </Button>
               <Button
                 variant="danger"
+                busy={isDeleting}
                 onClick={deleteApp}
                 className="rounded-md h-9 px-4 text-xs font-semibold border border-red-900/30 bg-red-950/20 text-red-200 hover:bg-red-900/20 transition"
               >
-                <Trash2 className="h-3.5 w-3.5 mr-1.5" />Delete app
+                {!isDeleting && <Trash2 className="h-3.5 w-3.5 mr-1.5" />}Delete app
               </Button>
             </div>
           </div>
