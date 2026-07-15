@@ -13,12 +13,15 @@ export class AppService {
     const appId = generateId();
     const rawApiKey = `agk_live_${generateId()}${generateId()}`;
     const keyId = generateId();
-    const keyHash = await bcrypt.hash(rawApiKey, 10);
-
     // OAuth credentials
     const clientId = `client_${generateId()}`;
     const rawClientSecret = `secret_${generateId()}${generateId()}`;
-    const clientSecretHash = await bcrypt.hash(rawClientSecret, 10);
+
+    // ⚡ Bolt: Parallelize expensive bcrypt hashes to reduce total request latency
+    const [keyHash, clientSecretHash] = await Promise.all([
+      bcrypt.hash(rawApiKey, 10),
+      bcrypt.hash(rawClientSecret, 10),
+    ]);
 
     // Encrypt the raw secret for later retrieval during JWT verification.
     // Requires CLIENT_SECRET_ENCRYPTION_KEY (64-char hex / 32-byte AES key).
