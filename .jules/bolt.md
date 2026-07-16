@@ -1,0 +1,3 @@
+## 2024-07-16 - Parallelize Independent Libuv Tasks
+**Learning:** In Node.js, `bcrypt.hash` is computationally heavy and offloaded to the libuv thread pool. Awaiting multiple independent `bcrypt.hash` calls sequentially (e.g., when generating an API key and an OAuth client secret simultaneously during app registration) creates unnecessary latency by blocking the event loop across multiple thread pool ticks.
+**Action:** When performing multiple independent asynchronous operations that rely on the libuv thread pool (like hashing, crypto, or file system operations), always parallelize them using `Promise.all` to reduce total response latency.
