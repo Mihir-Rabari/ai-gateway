@@ -30,9 +30,8 @@ export class AuthService {
     name: string;
     password: string;
   }): Promise<AuthResult> {
-    if (!isValidEmail(data.email)) throw Errors.VALIDATION('Invalid email format');
-
     const normalizedEmail = data.email.toLowerCase().trim();
+
     if (!isValidEmail(normalizedEmail)) throw Errors.VALIDATION('Invalid email format');
 
     const exists = await this.userRepo.emailExists(normalizedEmail);
@@ -72,6 +71,7 @@ export class AuthService {
 
   async login(data: { email: string; password: string }): Promise<AuthResult> {
     const normalizedEmail = data.email.toLowerCase().trim();
+
     if (!isValidEmail(normalizedEmail)) throw Errors.VALIDATION('Invalid email format');
 
     const user = await this.userRepo.findByEmail(normalizedEmail);
@@ -145,7 +145,7 @@ export class AuthService {
   // Logout
   // ─────────────────────────────────────────
 
-  async logout(userId: string, token?: string, exp?: number): Promise<void> {
+  async logout(userId: string): Promise<void> {
     const match = `refresh:${userId}:*`;
     let cursor = '0';
     const keysToDelete: string[] = [];
@@ -160,13 +160,6 @@ export class AuthService {
 
     if (keysToDelete.length > 0) {
       await this.redis.del(...keysToDelete);
-    }
-
-    if (token && exp) {
-      const remainingTtl = Math.max(0, exp - Math.floor(Date.now() / 1000));
-      if (remainingTtl > 0) {
-        await this.redis.setex(`blacklist:${token.slice(-16)}`, remainingTtl, '1');
-      }
     }
   }
 
