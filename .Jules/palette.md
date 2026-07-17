@@ -15,3 +15,6 @@
 ## 2024-06-23 - Improve InlineMessage accessibility
 **Learning:** In `apps/console`, dynamic error/status components like `InlineMessage` were visually distinct using styling but were missing necessary ARIA attributes, meaning screen readers would not proactively announce them when they appeared asynchronously after user actions (e.g., form submissions).
 **Action:** Always map notification components' semantic tones to corresponding accessibility attributes (e.g., warning/danger -> `role="alert"` + `aria-live="assertive"`, success/default -> `role="status"` + `aria-live="polite"`). Ensure that HTML5 validation bypasses are correctly mapped to inputs when testing these backend-driven UI states in Playwright.
+## 2024-07-17 - Explicitly hide child icons when Button is busy
+**Learning:** In the `apps/console` UI, the `<Button>` component automatically renders a loading spinner when passed the `busy={true}` prop, but it does not unmount existing children. This causes both the original icon and the spinner to render side-by-side during async actions, leading to layout shifts and visual conflicts.
+**Action:** When adding async loading states via `busy={true}` to buttons with explicit child icons (like `<RotateCw />` or `<Trash2 />`), always conditionally hide the child icon (e.g., `{!isBusy && <Icon />}`) to maintain visual stability.
