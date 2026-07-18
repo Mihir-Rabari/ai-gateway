@@ -15,3 +15,7 @@
 ## 2024-06-23 - Improve InlineMessage accessibility
 **Learning:** In `apps/console`, dynamic error/status components like `InlineMessage` were visually distinct using styling but were missing necessary ARIA attributes, meaning screen readers would not proactively announce them when they appeared asynchronously after user actions (e.g., form submissions).
 **Action:** Always map notification components' semantic tones to corresponding accessibility attributes (e.g., warning/danger -> `role="alert"` + `aria-live="assertive"`, success/default -> `role="status"` + `aria-live="polite"`). Ensure that HTML5 validation bypasses are correctly mapped to inputs when testing these backend-driven UI states in Playwright.
+
+## 2024-08-01 - Mobile Focus Styles
+**Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
+**Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
