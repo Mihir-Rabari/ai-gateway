@@ -18,3 +18,7 @@
 ## 2024-07-18 - Prevent layout shifts in busy buttons
 **Learning:** The `<Button>` component in this app automatically renders a loading spinner when `busy={true}` is passed. If explicit child icons are not conditionally hidden, it causes visual conflicts and layout shifts during async operations.
 **Action:** Always conditionally hide explicit child icons (e.g., `{!isBusy && <Icon />}`) when a button is in a busy state to ensure a smooth transition.
+
+## 2024-08-01 - Mobile Focus Styles
+**Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
+**Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
