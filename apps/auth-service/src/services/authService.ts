@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import type Redis from 'ioredis';
 import type { Pool } from 'pg';
 import { getAuthConfig } from '@ai-gateway/config';
-import { Errors, generateId } from '@ai-gateway/utils';
+import { Errors, generateId, isValidEmail } from '@ai-gateway/utils';
 import type { AuthResult, TokenPayload } from '@ai-gateway/types';
 import { UserRepository } from '../repositories/userRepository.js';
 
@@ -30,6 +30,8 @@ export class AuthService {
     name: string;
     password: string;
   }): Promise<AuthResult> {
+    if (!isValidEmail(data.email)) throw Errors.VALIDATION('Invalid email format');
+
     const normalizedEmail = data.email.toLowerCase().trim();
 
     const exists = await this.userRepo.emailExists(normalizedEmail);
