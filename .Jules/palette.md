@@ -15,6 +15,9 @@
 ## 2024-06-23 - Improve InlineMessage accessibility
 **Learning:** In `apps/console`, dynamic error/status components like `InlineMessage` were visually distinct using styling but were missing necessary ARIA attributes, meaning screen readers would not proactively announce them when they appeared asynchronously after user actions (e.g., form submissions).
 **Action:** Always map notification components' semantic tones to corresponding accessibility attributes (e.g., warning/danger -> `role="alert"` + `aria-live="assertive"`, success/default -> `role="status"` + `aria-live="polite"`). Ensure that HTML5 validation bypasses are correctly mapped to inputs when testing these backend-driven UI states in Playwright.
+## 2024-07-18 - Prevent layout shifts in busy buttons
+**Learning:** The `<Button>` component in this app automatically renders a loading spinner when `busy={true}` is passed. If explicit child icons are not conditionally hidden, it causes visual conflicts and layout shifts during async operations.
+**Action:** Always conditionally hide explicit child icons (e.g., `{!isBusy && <Icon />}`) when a button is in a busy state to ensure a smooth transition.
 
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.

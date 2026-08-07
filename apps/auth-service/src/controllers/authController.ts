@@ -76,7 +76,7 @@ export class AuthController {
       const token = authHeader.slice(7);
       const fastify = req.server as { kafka: { publish: (topic: string, msg: object) => Promise<void> } };
       const payload = await this.authService.validateToken(token);
-      await this.authService.logout(payload.userId);
+      await this.authService.logout(payload.userId, token, payload.exp);
 
       void authEvents.userLogout(fastify.kafka.publish, payload.userId).catch(
         (e: unknown) => logger.error(e, 'Failed to publish user.logout event'),
