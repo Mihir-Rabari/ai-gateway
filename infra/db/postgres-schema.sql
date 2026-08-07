@@ -206,6 +206,28 @@ CREATE TABLE IF NOT EXISTS user_events (
 CREATE INDEX IF NOT EXISTS idx_user_events_user_id ON user_events (user_id);
 CREATE INDEX IF NOT EXISTS idx_user_events_created_at ON user_events (created_at DESC);
 
+-- ──────────────────────────────────────────────
+-- Codex OAuth Sessions (per-user ChatGPT subscription auth)
+-- ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS codex_oauth_sessions (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  access_token   TEXT NOT NULL,       -- encrypted
+  refresh_token  TEXT NOT NULL,       -- encrypted
+  expires_at     TIMESTAMPTZ NOT NULL,
+  account_id     TEXT,
+  plan_tier      TEXT,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_codex_sessions_user_id ON codex_oauth_sessions (user_id);
+CREATE INDEX IF NOT EXISTS idx_codex_sessions_expires_at ON codex_oauth_sessions (expires_at);
+
+CREATE TRIGGER update_codex_sessions_updated_at BEFORE UPDATE ON codex_oauth_sessions
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- (update_updated_at_column function is defined at the top of this file)
 
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users

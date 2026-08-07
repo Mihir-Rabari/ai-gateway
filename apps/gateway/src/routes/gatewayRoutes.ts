@@ -136,16 +136,9 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
     } catch {
       // Routing service unavailable — fall through to hardcoded defaults.
     }
-    // Fallback: return a static list so the gateway stays operational when the
-    // routing service is temporarily unreachable. This list mirrors the
-    // DEFAULT_MODEL_CONFIG in the routing service and is intentionally kept in
-    // sync via the shared source of truth (routing-service Redis config).
+    // Fallback: return empty list when routing service is unavailable
     return reply.send(ok({
-      models: [
-        'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo',
-        'claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307',
-        'gemini-2.5-pro', 'gemini-2.5-flash',
-      ],
+      models: [],
     }));
   });
 
@@ -153,7 +146,7 @@ export async function gatewayRoutes(fastify: FastifyInstance) {
   fastify.get('/status', async (_req, reply) => {
     return reply.send(ok({
       status: 'healthy',
-      providers: ['openai', 'anthropic', 'google'],
+      providers: [],
       timestamp: new Date().toISOString(),
     }));
   });

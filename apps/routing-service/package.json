@@ -8,21 +8,18 @@
     "start": "node dist/index.js",
     "clean": "rm -rf dist",
     "type-check": "tsc --noEmit",
-    "test": "node --experimental-test-isolation=none --test dist/__tests__/RoutingService.test.js dist/__tests__/routingOpenAI.integration.test.js"
+    "test": "node --experimental-test-isolation=none --test dist/__tests__/RoutingService.test.js dist/__tests__/validateModelConfig.test.js"
   },
   "dependencies": {
     "@ai-gateway/config": "workspace:*",
     "@ai-gateway/types": "workspace:*",
     "@ai-gateway/utils": "workspace:*",
-    "@anthropic-ai/sdk": "^0.24.3",
     "@fastify/cors": "^11.2.0",
     "@fastify/rate-limit": "^10.3.0",
-    "@google/generative-ai": "^0.24.1",
     "fastify": "^5.8.5",
     "fastify-plugin": "^5.1.0",
     "ioredis": "^5.4.1",
     "kafkajs": "^2.2.4",
-    "openai": "^4.51.0",
     "undici": "^6.28.0"
   },
   "devDependencies": {

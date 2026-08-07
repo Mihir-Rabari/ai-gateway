@@ -90,9 +90,12 @@ const billingSchema = baseSchema.extend({
 
 const routingSchema = baseSchema.extend({
   ROUTING_SERVICE_PORT: z.coerce.number().default(3006),
-  OPENAI_API_KEY: z.string(),
-  ANTHROPIC_API_KEY: z.string().optional(),
-  GOOGLE_AI_API_KEY: z.string().optional(),
+// Providers will be added back as we integrate new providers (Codex OAuth, etc.)
+  // ── Codex OAuth ────────────────────────────────────────────────
+  CODEX_CLIENT_ID: z.string().default('codex-cli'),
+  CODEX_AUTH_BASE_URL: z.string().default('https://auth.openai.com'),
+  CODEX_API_BASE_URL: z.string().default('https://chatgpt.com/backend-api/codex'),
+  CODEX_TOKEN_REFRESH_MARGIN_SECONDS: z.coerce.number().default(300),
   // Optional JSON overrides for model routing tables.
   // MODEL_PROVIDER_JSON: JSON object mapping model name → provider name
   //   e.g. '{"gpt-4o":"openai","claude-3-5-sonnet-20241022":"anthropic"}'

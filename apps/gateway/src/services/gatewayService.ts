@@ -133,7 +133,7 @@ export class GatewayService {
       await this.releaseCredits(user.userId, requestId);
       const latencyMs = Date.now() - startTime;
       void this.publishUsageEvent(
-        requestId, user.userId, input.appId, input.model, 'openai',
+        requestId, user.userId, input.appId, input.model, 'unknown',
         0, 0, 0, 0, latencyMs, (err as GatewayError).code,
       );
       throw err instanceof Error && err.message === 'Request timeout'

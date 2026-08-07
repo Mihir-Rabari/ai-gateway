@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, type CreditTransaction, type UsageSummary } from "@/lib/api";
 import { useUser } from "@/components/UserProvider";
+import { CodexConnect } from "@/components/CodexConnect";
 
 const isBrowser = typeof window !== "undefined";
 const CONSOLE_URL = process.env.NEXT_PUBLIC_CONSOLE_URL ?? (isBrowser ? `${window.location.origin}/console` : "http://localhost:3009");
@@ -229,8 +230,19 @@ export default function DashboardOverview() {
         </CardContent>
       </Card>
     </div>
-  );
-}
+
+    {/* ChatGPT Account Connection */}
+    <div className="border-t border-white/10 pt-8 mt-12">
+      <h2 className="text-lg font-semibold text-white mb-1">AI Provider Accounts</h2>
+      <p className="text-sm text-white/50 mb-6">
+        Connect your existing AI subscriptions to use them through AI Gateway without API keys.
+      </p>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <CodexConnect />
+      </div>
+    </div>
+  </div>
+);
 
 function StatsCard({
   title,

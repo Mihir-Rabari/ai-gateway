@@ -238,7 +238,7 @@
 - [x] **ClickHouse init** — doesn't use `initdb.d` — needs HTTP API schema creation
 - [x] **Kafka listener fix** — `KAFKA_ADVERTISED_LISTENERS` needs `PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092`
 - [x] **Landing page rebuild** — current Tailwind v4 has syntax issues, migrate to shadcn
-- [ ] **.env real values** — `OPENAI_API_KEY`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` must be set
+- [x] **All legacy providers removed** — OpenAI, Anthropic, Google stripped from types, routing service, config, env, and test files. Ready for new provider integrations.
 
 ---
 
@@ -258,6 +258,23 @@
 | 10 | SDK + Auth Widget | Done | 100% |
 
 **Overall MVP Progress: ~96%**
+
+---
+
+## Features Added: Codex OAuth (Login with ChatGPT)
+
+| Area | What was added |
+|------|---------------|
+| **Types** | `ProviderName = 'codex'`, `CodexOAuthSession`, `CodexDeviceCodeResponse`, `CodexModelName` |
+| **Config** | `CODEX_CLIENT_ID`, `CODEX_AUTH_BASE_URL`, `CODEX_API_BASE_URL`, `CODEX_TOKEN_REFRESH_MARGIN_SECONDS` |
+| **DB Schema** | `codex_oauth_sessions` table (encrypted token storage per user) |
+| **Auth Service** | `CodexOAuthService` — device-code OAuth flow, token encryption/decryption, auto-refresh, Codex API proxy |
+| **Auth Routes** | `POST /auth/codex/device-code`, `POST /auth/codex/poll`, `GET /auth/codex/session`, `POST /auth/codex/disconnect`, `POST /internal/auth/codex/token` |
+| **Routing Service** | `callCodex()` provider — gets user token from auth-service, proxies to `chatgpt.com/backend-api/codex/responses` |
+| **Model Config** | 10 Codex models registered with fallback chain (`gpt-5.6-sol-codex` → `gpt-5.5-codex`, etc.) |
+| **Frontend** | `CodexConnect` component — "Sign in with ChatGPT" button, device-code flow UI, session status |
+| **SDK/API** | `api.codex.*` methods in the web client |
+| **Gateway** | Passes `userId` through to routing for Codex calls |
 
 ---
 

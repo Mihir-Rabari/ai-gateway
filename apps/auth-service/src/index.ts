@@ -7,6 +7,7 @@ import { createLogger, getFastifyLoggerOptions, postgresPlugin, redisPlugin, kaf
 import { authRoutes } from './routes/authRoutes.js';
 import { internalRoutes } from './routes/internalRoutes.js';
 import { oauthRoutes } from './routes/oauthRoutes.js';
+import { codexRoutes } from './routes/codexRoutes.js';
 import { startAuthAuditConsumer } from './events/authAuditConsumer.js';
 
 const logger = createLogger('auth-service');
@@ -55,6 +56,7 @@ async function bootstrap() {
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(internalRoutes, { prefix: '/internal/auth' });
   await app.register(oauthRoutes, { prefix: '/oauth' });
+  await app.register(codexRoutes, { prefix: '' }); // codex routes have their own /auth/codex prefix
 
   // ─── Health Check ──────────────────────────────
   app.get('/health', async () => ({ status: 'ok', service: 'auth-service' }));

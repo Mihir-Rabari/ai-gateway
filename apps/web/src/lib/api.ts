@@ -30,6 +30,22 @@ export type UserProfile = {
   creditBalance: number;
 };
 
+// ── Codex OAuth Types ──────────────────────────────────
+
+export type CodexDeviceCodeResponse = {
+  userCode: string;
+  verificationUri: string;
+  deviceCode: string;
+  interval: number;
+};
+
+export type CodexSessionInfo = {
+  hasSession: boolean;
+  planTier?: string;
+  accountId?: string;
+  expiresAt?: string;
+};
+
 export type AuthPayload = {
   accessToken: string;
   refreshToken: string;
@@ -363,5 +379,35 @@ export const api = {
       fetchApi<{ isDeveloper: boolean; enrolledAt: string | null }>("/api/v1/developers/status"),
     enroll: async () =>
       fetchApi<{ enrolled: boolean }>("/api/v1/developers/enroll", { method: "POST" }),
+  },
+  codex: {
+    /**
+     * Step 1: Start device-code login flow.
+     * Returns a user_code the user enters at verification_uri.
+     */
+    requestDeviceCode: async () => {
+      return fetchApi<CodexDeviceCodeResponse>(`${AUTH_URL}/codex/device-code`, { method: "POST" });
+    },
+    /**
+     * Step 2: Poll for completion after user authorizes in browser.
+     */
+    pollDeviceCode: async (deviceCode: string) => {
+      return fetchApi<{ status: string; accountId?: string }>(`${AUTH_URL}/codex/poll`, {
+        method: "POST",
+        body: JSON.stringify({ deviceCode }),
+      });
+    },
+    /**
+     * Check if the current user has an active ChatGPT session linked.
+     */
+    getSession: async () => {
+      return fetchApi<CodexSessionInfo>(`${AUTH_URL}/codex/session`);
+    },
+    /**
+     * Disconnect/link ChatGPT account.
+     */
+    disconnect: async () => {
+      return fetchApi<{ status: string }>(`${AUTH_URL}/codex/disconnect`, { method: "POST" });
+    },
   },
 };

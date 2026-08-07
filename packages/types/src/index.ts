@@ -98,10 +98,45 @@ export interface GatewayResponse {
 // Provider Types
 // ─────────────────────────────────────────
 
-export type ProviderName = 'openai' | 'anthropic' | 'google';
+export type ProviderName = 'codex';
+
+// ─────────────────────────────────────────
+// Codex OAuth Types
+// ─────────────────────────────────────────
+
+export interface CodexOAuthSession {
+  userId: string;
+  accessToken: string;       // encrypted
+  refreshToken: string;      // encrypted
+  expiresAt: Date;
+  accountId?: string;
+  planTier?: string;         // 'free' | 'plus' | 'pro' | 'team' | 'enterprise'
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CodexDeviceCodeResponse {
+  device_code: string;
+  user_code: string;
+  verification_uri: string;
+  interval: number;
+  expires_in: number;
+}
+
+export type CodexModelName =
+  | 'gpt-5.6-sol-codex'
+  | 'gpt-5.6-terra-codex'
+  | 'gpt-5.6-luna-codex'
+  | 'gpt-5.5-codex'
+  | 'gpt-5.5-codex-fast'
+  | 'gpt-5.4-codex'
+  | 'gpt-5.3-codex'
+  | 'gpt-5.2-codex'
+  | 'gpt-5.1-codex'
+  | 'gpt-image-2-codex';
 
 export interface Provider {
-  name: ProviderName;
+  name: string;
   models: string[];
   healthy: boolean;
   latencyMs?: number;
@@ -189,7 +224,7 @@ export interface UsageEvent extends BaseEvent {
   userId: string;
   appId: string;
   model: string;
-  provider: ProviderName;
+  provider: string;
   tokensInput: number;
   tokensOutput: number;
   tokensTotal: number;
@@ -206,7 +241,7 @@ export interface RoutingEvent extends BaseEvent {
   type: RoutingEventType;
   requestId: string;
   model: string;
-  provider: ProviderName;
+  provider: string;
   latencyMs?: number;
   reason?: string;
 }

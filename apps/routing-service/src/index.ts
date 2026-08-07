@@ -77,6 +77,7 @@ async function bootstrap() {
             maxTokens: { type: 'number' },
             temperature: { type: 'number' },
             stream: { type: 'boolean' },
+            userId: { type: 'string' },
           },
         },
       },
@@ -90,12 +91,18 @@ async function bootstrap() {
           maxTokens?: number;
           temperature?: number;
           stream?: boolean;
+          userId?: string;
         };
       }>,
       reply: FastifyReply,
     ) => {
       try {
-        const service = new RoutingService(app.kafka.publish.bind(app.kafka), app.redis, {}, activeModelConfig);
+        const service = new RoutingService(
+          app.kafka.publish.bind(app.kafka),
+          app.redis,
+          { authServiceUrl: process.env['AUTH_SERVICE_URL'] ?? 'http://localhost:3003' },
+          activeModelConfig,
+        );
         const result = await service.route(req.body);
 
         if (req.body.stream) {
@@ -166,7 +173,7 @@ async function bootstrap() {
       reply: FastifyReply,
     ) => {
       const incoming: ModelConfig = {
-        modelProvider: req.body.modelProvider as Record<string, import('@ai-gateway/types').ProviderName>,
+        modelProvider: req.body.modelProvider as Record<string, string>,
         fallbackMap: req.body.fallbackMap ?? {},
       };
       const validated = validateModelConfig(incoming);

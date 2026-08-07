@@ -1,9 +1,6 @@
-import OpenAI from 'openai';
-import Anthropic from '@anthropic-ai/sdk';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createLogger, Errors, generateId } from '@ai-gateway/utils';
 import { KAFKA_TOPICS } from '@ai-gateway/config';
-import type { Message, RoutingEvent, ProviderName } from '@ai-gateway/types';
+import type { Message, RoutingEvent } from '@ai-gateway/types';
 import type Redis from 'ioredis';
 
 const logger = createLogger('routing-service');
@@ -16,34 +13,12 @@ interface RouteResult {
   tokensOutput: number;
   tokensTotal: number;
   model: string;
-  provider: ProviderName;
-}
-
-interface OpenAiClientLike {
-  chat: {
-    completions: {
-      create: (...args: any[]) => Promise<any>;
-    };
-  };
-}
-
-interface AnthropicClientLike {
-  messages: {
-    create: (...args: any[]) => Promise<any>;
-  };
-}
-
-interface GoogleClientLike {
-  getGenerativeModel: (...args: any[]) => {
-    generateContent: (...innerArgs: any[]) => Promise<any>;
-    generateContentStream: (...innerArgs: any[]) => Promise<any>;
-  };
+  provider: string;
 }
 
 interface RoutingServiceDeps {
-  openaiClient?: OpenAiClientLike;
-  anthropicClient?: AnthropicClientLike;
-  googleClient?: GoogleClientLike;
+  /** URL of the auth-service for Codex token retrieval */
+  authServiceUrl?: string;
 }
 
 // ─────────────────────────────────────────
@@ -57,40 +32,46 @@ interface RoutingServiceDeps {
 
 export interface ModelConfig {
   /** Maps model name → provider name */
-  modelProvider: Record<string, ProviderName>;
+  modelProvider: Record<string, string>;
   /** Maps model name → fallback model name */
   fallbackMap: Record<string, string>;
 }
 
 export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   modelProvider: {
-    'gpt-4o': 'openai',
-    'gpt-4-turbo': 'openai',
-    'gpt-3.5-turbo': 'openai',
-    'claude-3-5-sonnet-20241022': 'anthropic',
-    'claude-3-haiku-20240307': 'anthropic',
-    'gemini-2.5-pro': 'google',
-    'gemini-2.5-flash': 'google',
+    'gpt-5.6-sol-codex': 'codex',
+    'gpt-5.6-terra-codex': 'codex',
+    'gpt-5.6-luna-codex': 'codex',
+    'gpt-5.5-codex': 'codex',
+    'gpt-5.5-codex-fast': 'codex',
+    'gpt-5.4-codex': 'codex',
+    'gpt-5.3-codex': 'codex',
+    'gpt-5.2-codex': 'codex',
+    'gpt-5.1-codex': 'codex',
+    'gpt-image-2-codex': 'codex',
   },
   fallbackMap: {
-    'gpt-4o': 'gpt-3.5-turbo',
-    'gpt-4-turbo': 'gpt-3.5-turbo',
-    'claude-3-5-sonnet-20241022': 'claude-3-haiku-20240307',
-    'gemini-2.5-pro': 'gemini-2.5-flash',
+    'gpt-5.6-sol-codex': 'gpt-5.5-codex',
+    'gpt-5.6-terra-codex': 'gpt-5.5-codex-fast',
+    'gpt-5.6-luna-codex': 'gpt-5.5-codex-fast',
+    'gpt-5.5-codex': 'gpt-5.4-codex',
+    'gpt-5.5-codex-fast': 'gpt-5.4-codex',
+    'gpt-5.4-codex': 'gpt-5.3-codex',
+    'gpt-5.3-codex': 'gpt-5.2-codex',
   },
 };
 
-const VALID_PROVIDERS = new Set<string>(['openai', 'anthropic', 'google']);
+const VALID_PROVIDERS = new Set<string>(['codex']);
 
 /**
  * Validate that all provider values in a ModelConfig are known ProviderName
  * values. Strips out unknown entries and returns the cleaned config.
  */
 export function validateModelConfig(config: ModelConfig): ModelConfig {
-  const modelProvider: Record<string, ProviderName> = {};
+  const modelProvider: Record<string, string> = {};
   for (const [model, provider] of Object.entries(config.modelProvider)) {
     if (VALID_PROVIDERS.has(provider)) {
-      modelProvider[model] = provider as ProviderName;
+      modelProvider[model] = provider;
     } else {
       logger.warn({ model, provider }, 'Unknown provider in model config — skipping entry');
     }
@@ -132,21 +113,17 @@ export function buildModelConfigFromEnv(): ModelConfig {
 }
 
 export class RoutingService {
-  private readonly openai: OpenAiClientLike;
-  private readonly anthropic: AnthropicClientLike;
-  private readonly genAI: GoogleClientLike;
   private readonly FAILURE_THRESHOLD = 5;
   private modelConfig: ModelConfig;
+
+  private readonly httpFetch = globalThis.fetch.bind(globalThis);
 
   constructor(
     private readonly kafkaPublish: (topic: string, msg: object) => Promise<void>,
     private readonly redis: Redis,
-    deps: RoutingServiceDeps = {},
+    private readonly deps: RoutingServiceDeps = {},
     modelConfig?: ModelConfig,
   ) {
-    this.openai = deps.openaiClient ?? new OpenAI({ apiKey: process.env['OPENAI_API_KEY'] ?? '' });
-    this.anthropic = deps.anthropicClient ?? new Anthropic({ apiKey: process.env['ANTHROPIC_API_KEY'] ?? '' });
-    this.genAI = deps.googleClient ?? new GoogleGenerativeAI(process.env['GOOGLE_AI_API_KEY'] ?? '');
     this.modelConfig = modelConfig ?? buildModelConfigFromEnv();
   }
 
@@ -202,6 +179,8 @@ export class RoutingService {
     maxTokens?: number;
     temperature?: number;
     stream?: boolean;
+    /** Required for Codex provider — the user's ID for token retrieval */
+    userId?: string;
   }): Promise<RouteResult | AsyncIterable<string>> {
     const { modelProvider, fallbackMap } = this.modelConfig;
 
@@ -213,7 +192,7 @@ export class RoutingService {
     if (isPrimaryHealthy) {
       try {
         const startedAt = Date.now();
-        const result = await this.callProvider(provider, data.model, data.messages, data.maxTokens, data.temperature, data.stream);
+        const result = await this.callProvider(provider, data.model, data.messages, data.maxTokens, data.temperature, data.stream, data.userId);
         const latencyMs = Date.now() - startedAt;
         void this.publishRoutingEvent('routing.selected', data.requestId, data.model, provider, undefined, latencyMs);
         await this.recordSuccess(provider);
@@ -234,7 +213,7 @@ export class RoutingService {
 
     try {
       const startedAt = Date.now();
-      const result = await this.callProvider(fallbackProvider, fallbackModel, data.messages, data.maxTokens, data.temperature, data.stream);
+      const result = await this.callProvider(fallbackProvider, fallbackModel, data.messages, data.maxTokens, data.temperature, data.stream, data.userId);
       const latencyMs = Date.now() - startedAt;
       void this.publishRoutingEvent(
         'routing.fallback',
@@ -252,16 +231,16 @@ export class RoutingService {
     }
   }
 
-  private async isHealthy(provider: ProviderName): Promise<boolean> {
+  private async isHealthy(provider: string): Promise<boolean> {
     const result = await this.redis.get(`provider:unhealthy:${provider}`);
     return result === null;
   }
 
-  private async markUnhealthy(provider: ProviderName): Promise<void> {
+  private async markUnhealthy(provider: string): Promise<void> {
     await this.redis.setex(`provider:unhealthy:${provider}`, 60, '1');
   }
 
-  private async recordFailure(provider: ProviderName): Promise<void> {
+  private async recordFailure(provider: string): Promise<void> {
     const key = `provider:failures:${provider}`;
     const LUA_SCRIPT = `
       local key = KEYS[1]
@@ -277,14 +256,12 @@ export class RoutingService {
     }
   }
 
-  private async recordSuccess(provider: ProviderName): Promise<void> {
+  private async recordSuccess(provider: string): Promise<void> {
     await this.redis.del(`provider:failures:${provider}`);
   }
 
   async getProvidersHealth() {
     const { modelProvider } = this.modelConfig;
-    // modelProvider values are guaranteed to be valid ProviderName entries
-    // because validateModelConfig filters out any unknown providers.
     const providers = [...new Set(Object.values(modelProvider))];
 
     if (providers.length === 0) return [];
@@ -318,227 +295,168 @@ export class RoutingService {
     });
   }
 
-  private callProvider(
-    provider: ProviderName,
+  private async callProvider(
+    provider: string,
     model: string,
     messages: Message[],
     maxTokens = 1024,
     temperature = 0.7,
     stream = false,
+    userId?: string,
   ): Promise<RouteResult | AsyncIterable<string>> {
     switch (provider) {
-      case 'openai':
-        return this.callOpenAI(model, messages, maxTokens, temperature, stream);
-      case 'anthropic':
-        return this.callAnthropic(model, messages, maxTokens, temperature, stream);
-      case 'google':
-        return this.callGemini(model, messages, maxTokens, temperature, stream);
+      case 'codex': {
+        if (!userId) throw Errors.ROUTING_FAILED();
+        return this.callCodex(userId, model, messages, maxTokens, temperature, stream);
+      }
       default:
         throw Errors.ROUTING_FAILED();
     }
   }
 
-  private async callGemini(
+  /**
+   * Call the Codex API via the auth-service internal endpoint.
+   * The auth-service manages per-user OAuth token retrieval/refresh and
+   * proxies the request to chatgpt.com/backend-api/codex/responses.
+   */
+  private async callCodex(
+    userId: string,
     model: string,
     messages: Message[],
     maxTokens: number,
     temperature: number,
     stream: boolean,
   ): Promise<RouteResult | AsyncIterable<string>> {
-    const geminiModel = this.genAI.getGenerativeModel({ model });
+    const authServiceUrl = this.deps.authServiceUrl ?? 'http://localhost:3003';
 
-    // ⚡ Bolt: Combine `.filter().map()` and `.filter().map().join()` into a single O(N) pass
-    // to avoid multiple intermediate array allocations when processing large conversation histories.
-    const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
-    const systemInstructionsArray: string[] = [];
-    for (let i = 0; i < messages.length; i++) {
-      const m = messages[i];
-      if (m.role === 'system') {
-        systemInstructionsArray.push(m.content);
-      } else {
-        contents.push({
-          role: m.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: m.content }],
-        });
-      }
+    // Get the user's access token from auth-service
+    const tokenRes = await this.httpFetch(
+      `${authServiceUrl}/internal/auth/codex/token`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+        },
+        body: JSON.stringify({ userId }),
+      },
+    );
+
+    if (!tokenRes.ok) {
+      const body = await tokenRes.json().catch(() => ({})) as { error?: { message?: string } };
+      logger.warn({ userId, status: tokenRes.status }, 'Failed to get Codex token from auth-service');
+      throw tokenRes.status === 401
+        ? Errors.ROUTING_FAILED()
+        : Errors.ROUTING_FAILED();
     }
-    const systemInstruction = systemInstructionsArray.join('\n');
+
+    const tokenData = (await tokenRes.json()) as {
+      success: boolean;
+      data?: { accessToken: string };
+    };
+    if (!tokenData.success || !tokenData.data?.accessToken) {
+      throw Errors.ROUTING_FAILED();
+    }
+
+    const accessToken = tokenData.data.accessToken;
+    const codexBaseUrl = process.env['CODEX_API_BASE_URL'] ?? 'https://chatgpt.com/backend-api/codex';
+
+    const body: Record<string, unknown> = {
+      model,
+      input: messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+      max_tokens: maxTokens,
+      temperature,
+    };
 
     if (stream) {
-      const resultStream = await geminiModel.generateContentStream({
-        contents,
-        ...(systemInstruction ? { systemInstruction } : {}),
-        generationConfig: { maxOutputTokens: maxTokens, temperature },
-      });
-
-      return (async function* () {
-        for await (const chunk of resultStream.stream) {
-          const chunkText = chunk.text();
-          if (chunkText) {
-            yield `data: ${JSON.stringify({ output: chunkText })}\n\n`;
-          }
-        }
-        const finalResponse = await resultStream.response;
-        const usage = finalResponse.usageMetadata;
-        yield `data: ${JSON.stringify({ usage: { tokensInput: usage?.promptTokenCount ?? 0, tokensOutput: usage?.candidatesTokenCount ?? 0, tokensTotal: usage?.totalTokenCount ?? 0 }, provider: 'google' })}\n\n`;
-        yield `data: [DONE]\n\n`;
-      })();
+      body.stream = true;
+      return this.streamCodexResponse(accessToken, codexBaseUrl, body);
     }
 
-    const response = await geminiModel.generateContent({
-      contents,
-      ...(systemInstruction ? { systemInstruction } : {}),
-      generationConfig: { maxOutputTokens: maxTokens, temperature },
+    const res = await this.httpFetch(`${codexBaseUrl}/responses`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+        'OpenAI-Beta': 'responses=v1',
+      },
+      body: JSON.stringify(body),
     });
 
-    const text = response.response.text();
-    const usage = response.response.usageMetadata;
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      logger.warn({ status: res.status, body: text.slice(0, 200) }, 'Codex API call failed');
+      if (res.status === 401) throw Errors.ROUTING_FAILED();
+      throw Errors.ROUTING_FAILED();
+    }
+
+    const data = (await res.json()) as {
+      output_text?: string;
+      usage?: { input_tokens: number; output_tokens: number; total_tokens: number };
+    };
 
     return {
-      output: text,
-      tokensInput: usage?.promptTokenCount ?? 0,
-      tokensOutput: usage?.candidatesTokenCount ?? 0,
-      tokensTotal: usage?.totalTokenCount ?? 0,
+      output: data.output_text ?? '',
+      tokensInput: data.usage?.input_tokens ?? 0,
+      tokensOutput: data.usage?.output_tokens ?? 0,
+      tokensTotal: data.usage?.total_tokens ?? 0,
       model,
-      provider: 'google',
+      provider: 'codex',
     };
   }
 
-  private async callOpenAI(
-    model: string,
-    messages: Message[],
-    maxTokens: number,
-    temperature: number,
-    stream: boolean,
-  ): Promise<RouteResult | AsyncIterable<string>> {
-    if (stream) {
-      const responseStream = await this.openai.chat.completions.create({
-        model,
-        messages,
-        max_tokens: maxTokens,
-        temperature,
-        stream: true,
-        stream_options: { include_usage: true },
-      });
-
-      return (async function* () {
-        let tokensInput = 0;
-        let tokensOutput = 0;
-        let tokensTotal = 0;
-        for await (const chunk of responseStream) {
-          const content = chunk.choices[0]?.delta?.content || '';
-          if (content) {
-            yield `data: ${JSON.stringify({ output: content })}\n\n`;
-          }
-          if (chunk.usage) {
-            tokensInput = chunk.usage.prompt_tokens ?? 0;
-            tokensOutput = chunk.usage.completion_tokens ?? 0;
-            tokensTotal = chunk.usage.total_tokens ?? 0;
-          }
-        }
-        yield `data: ${JSON.stringify({ usage: { tokensInput, tokensOutput, tokensTotal }, provider: 'openai' })}\n\n`;
-        yield `data: [DONE]\n\n`;
-      })();
-    }
-
-    const response = await this.openai.chat.completions.create({
-      model,
-      messages,
-      max_tokens: maxTokens,
-      temperature,
+  private async *streamCodexResponse(
+    accessToken: string,
+    codexBaseUrl: string,
+    body: Record<string, unknown>,
+  ): AsyncIterable<string> {
+    const res = await this.httpFetch(`${codexBaseUrl}/responses`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+        'OpenAI-Beta': 'responses=v1',
+      },
+      body: JSON.stringify({ ...body, stream: true }),
     });
 
-    const choice = response.choices[0];
-    if (!choice?.message.content) throw Errors.PROVIDER_ERROR('Empty response from OpenAI');
+    if (!res.ok || !res.body) {
+      throw Errors.ROUTING_FAILED();
+    }
 
-    return {
-      output: choice.message.content,
-      tokensInput: response.usage?.prompt_tokens ?? 0,
-      tokensOutput: response.usage?.completion_tokens ?? 0,
-      tokensTotal: response.usage?.total_tokens ?? 0,
-      model,
-      provider: 'openai',
-    };
-  }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
 
-  private async callAnthropic(
-    model: string,
-    messages: Message[],
-    maxTokens: number,
-    temperature: number,
-    stream: boolean,
-  ): Promise<RouteResult | AsyncIterable<string>> {
-    // ⚡ Bolt: Combine `.filter().map()` and `.filter().map().join()` into a single O(N) pass
-    // to avoid multiple intermediate array allocations when processing large conversation histories.
-    const conversationMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
-    const systemMessagesArray: string[] = [];
-    for (let i = 0; i < messages.length; i++) {
-      const m = messages[i];
-      if (m.role === 'system') {
-        systemMessagesArray.push(m.content);
-      } else {
-        conversationMessages.push({ role: m.role as 'user' | 'assistant', content: m.content });
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+
+          yield `${trimmed}\n\n`;
+        }
       }
+    } finally {
+      reader.releaseLock();
     }
-    const systemMessages = systemMessagesArray.join('\n');
-
-    if (stream) {
-      const responseStream = await this.anthropic.messages.create({
-        model,
-        max_tokens: maxTokens,
-        temperature,
-        ...(systemMessages ? { system: systemMessages } : {}),
-        messages: conversationMessages,
-        stream: true,
-      });
-
-      return (async function* () {
-        let tokensInput = 0;
-        let tokensOutput = 0;
-        for await (const chunk of responseStream) {
-          if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-            yield `data: ${JSON.stringify({ output: chunk.delta.text })}\n\n`;
-          }
-          if (chunk.type === 'message_start' && chunk.message?.usage) {
-            tokensInput = chunk.message.usage.input_tokens ?? 0;
-            tokensOutput = chunk.message.usage.output_tokens ?? 0;
-          }
-          if (chunk.type === 'message_delta' && chunk.usage) {
-            tokensOutput = chunk.usage.output_tokens ?? tokensOutput;
-          }
-        }
-        const tokensTotal = tokensInput + tokensOutput;
-        yield `data: ${JSON.stringify({ usage: { tokensInput, tokensOutput, tokensTotal }, provider: 'anthropic' })}\n\n`;
-        yield `data: [DONE]\n\n`;
-      })();
-    }
-
-    const response = await this.anthropic.messages.create({
-      model,
-      max_tokens: maxTokens,
-      temperature,
-      ...(systemMessages ? { system: systemMessages } : {}),
-      messages: conversationMessages,
-    });
-
-    const textBlock = response.content.find((b: { type: string }) => b.type === 'text');
-    if (!textBlock || textBlock.type !== 'text') throw Errors.PROVIDER_ERROR('Empty response from Anthropic');
-
-    return {
-      output: textBlock.text,
-      tokensInput: response.usage.input_tokens,
-      tokensOutput: response.usage.output_tokens,
-      tokensTotal: response.usage.input_tokens + response.usage.output_tokens,
-      model,
-      provider: 'anthropic',
-    };
   }
 
   private publishRoutingEvent(
     type: RoutingEvent['type'],
     requestId: string,
     model: string,
-    provider: ProviderName,
+    provider: string,
     reason?: string,
     latencyMs?: number,
   ): Promise<void> {
