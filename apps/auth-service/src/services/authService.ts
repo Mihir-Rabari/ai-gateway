@@ -33,6 +33,7 @@ export class AuthService {
     if (!isValidEmail(data.email)) throw Errors.VALIDATION('Invalid email format');
 
     const normalizedEmail = data.email.toLowerCase().trim();
+    if (!isValidEmail(normalizedEmail)) throw Errors.VALIDATION('Invalid email format');
 
     const exists = await this.userRepo.emailExists(normalizedEmail);
     if (exists) throw Errors.EMAIL_TAKEN();
@@ -71,6 +72,8 @@ export class AuthService {
 
   async login(data: { email: string; password: string }): Promise<AuthResult> {
     const normalizedEmail = data.email.toLowerCase().trim();
+    if (!isValidEmail(normalizedEmail)) throw Errors.VALIDATION('Invalid email format');
+
     const user = await this.userRepo.findByEmail(normalizedEmail);
     if (!user) throw Errors.INVALID_CREDENTIALS();
 
