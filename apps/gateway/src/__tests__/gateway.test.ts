@@ -2,7 +2,43 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GatewayService } from '../services/gatewayService.js';
 import { CircuitBreaker } from '../services/circuitBreaker.js';
 import { GatewayError, Errors } from '@ai-gateway/utils';
-import { createRedisMock, createKafkaMock, createFetchMock } from '../../../test-setup.js';
+// Inline mock factories
+function createRedisMock() {
+  const store = new Map<string, string>();
+  return {
+    get: async (k: string) => store.get(k) ?? null,
+    set: async (k: string, v: string) => { store.set(k, v); return 'OK' as const; },
+    setex: async (k: string, _t: number, v: string) => { store.set(k, v); return 'OK' as const; },
+    del: async (...keys: string[]) => { let n = 0; keys.forEach(k => { if (store.delete(k)) n++; }); return n; },
+    keys: async (p: string) => { const r = new RegExp(p.replace(/\*/g, '.*')); return [...store.keys()].filter(k => r.test(k)); },
+    scan: async (_c: string, ...args: unknown[]) => {
+      const mi = args.indexOf('MATCH'); const pat = mi >= 0 ? args[mi+1] as string : '*';
+      const r = new RegExp(String(pat).replace(/\*/g, '.*'));
+      return ['0', [...store.keys()].filter(k => r.test(k))] as [string, string[]];
+    },
+    incr: async (k: string) => { const v = (parseInt(store.get(k) ?? '0') + 1).toString(); store.set(k, v); return parseInt(v); },
+    expire: async () => 1, eval: async () => 1, quit: async () => 'OK',
+  };
+}
+function createKafkaMock() {
+  const messages: Array<{ topic: string; msg: unknown }> = [];
+  return {
+    producer: { connect: async () => {}, send: async (topic: string, msg: unknown) => { messages.push({ topic, msg }); } },
+    consumer: { connect: async () => {}, subscribe: async () => {}, run: async () => {} },
+    _messages: messages,
+  };
+}
+function createFetchMock() {
+  return vi.fn(async (url: string, init?: RequestInit) => {
+    const response: Response = {
+      ok: true, status: 200,
+      json: async () => ({ choices: [{ message: { content: 'test response' } }] }),
+      text: async () => JSON.stringify({ choices: [{ message: { content: 'test response' } }] }),
+      headers: new Headers(),
+    } as unknown as Response;
+    return response;
+  });
+}
 import type Redis from 'ioredis';
 import type { GatewayResponse } from '@ai-gateway/types';
 
