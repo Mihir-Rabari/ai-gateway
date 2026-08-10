@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AuthService } from '../services/authService.js';
 import { UserRepository } from '../repositories/userRepository.js';
-import type { TokenPayload, AuthResult } from '@ai-gateway/types';
-import { createRedisMock, createPgSequenceMock } from '../../../test-setup.js';
+import { createRedisMock } from '../../../test-setup.js';
 
 // ───────────────────────────────────────────────────────────────────────────
 // Mocks for external dependencies
@@ -186,7 +185,7 @@ describe('AuthService', () => {
         expect.stringContaining('SELECT'),
         ['test@example.com'],
       );
-      expect(result).toMatchObject<AuthResult>({
+      expect(result).toMatchObject({
         accessToken: 'mock_access_token',
         refreshToken: 'mock_refresh_token',
         user: { id: 'user-1', email: 'test@example.com', planId: 'free' },
