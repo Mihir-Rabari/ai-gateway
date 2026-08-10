@@ -384,6 +384,7 @@ services:
       BILLING_SERVICE_URL: http://billing-service:3004
       ANALYTICS_SERVICE_URL: http://analytics-service:3007
       GATEWAY_URL: http://gateway:3002
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-some-secure-s2s-fallback}
     networks:
       - gateway-network
 
