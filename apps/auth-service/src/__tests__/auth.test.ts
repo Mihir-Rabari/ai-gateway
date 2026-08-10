@@ -1,7 +1,34 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AuthService } from '../services/authService.js';
 import { UserRepository } from '../repositories/userRepository.js';
-import { createRedisMock } from '../../../test-setup.js';
+// Inline Redis mock (avoids cross-package import issues)
+function createRedisMock() {
+  const store = new Map<string, string>();
+  return {
+    get: vi.fn(async (key: string) => store.get(key) ?? null),
+    set: vi.fn(async (key: string, value: string, ..._args: unknown[]) => { store.set(key, value); return 'OK' as const; }),
+    setex: vi.fn(async (key: string, _ttl: number, value: string) => { store.set(key, value); return 'OK' as const; }),
+    del: vi.fn(async (...keys: string[]) => { let n = 0; keys.forEach(k => { if (store.delete(k)) n++; }); return n; }),
+    keys: vi.fn(async (pattern: string) => { const r = new RegExp(pattern.replace(/\*/g, '.*')); return [...store.keys()].filter(k => r.test(k)); }),
+    scan: vi.fn(async (_cursor: string, ...args: unknown[]) => {
+      const matchIdx = args.indexOf('MATCH');
+      const pattern = matchIdx >= 0 ? args[matchIdx + 1] as string : '*';
+      const r = new RegExp(String(pattern).replace(/\*/g, '.*'));
+      const keys = [...store.keys()].filter(k => r.test(k));
+      return ['0', keys] as [string, string[]];
+    }),
+    incr: vi.fn(async (key: string) => { const v = (parseInt(store.get(key) ?? '0') + 1).toString(); store.set(key, v); return parseInt(v); }),
+    expire: vi.fn(async () => 1),
+    eval: vi.fn(async () => 1),
+    quit: vi.fn(async () => 'OK'),
+  };
+}
+
+import jwt from 'jsonwebtoken';
+
+const jwtMocked = vi.mocked(jwt, true);
+const jwtSign = jwtMocked.sign;
+const jwtVerify = jwtMocked.verify;
 
 // ───────────────────────────────────────────────────────────────────────────
 // Mocks for external dependencies
@@ -17,10 +44,11 @@ vi.mock('bcrypt', () => ({
   },
 }));
 
-const jwtSign = vi.fn();
-const jwtVerify = vi.fn();
 vi.mock('jsonwebtoken', () => ({
-  default: { sign: jwtSign, verify: jwtVerify },
+  default: {
+    sign: vi.fn().mockReturnValue('mock_access_token'),
+    verify: vi.fn().mockReturnValue({ userId: 'test-user-id', email: 'test@example.com', exp: 9999999999 }),
+  },
 }));
 
 vi.mock('@ai-gateway/config', () => ({
