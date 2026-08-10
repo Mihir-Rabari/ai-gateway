@@ -145,7 +145,7 @@ export class AuthService {
   // Logout
   // ─────────────────────────────────────────
 
-  async logout(userId: string): Promise<void> {
+  async logout(userId: string, token?: string, exp?: number): Promise<void> {
     const match = `refresh:${userId}:*`;
     let cursor = '0';
     const keysToDelete: string[] = [];
@@ -160,6 +160,15 @@ export class AuthService {
 
     if (keysToDelete.length > 0) {
       await this.redis.del(...keysToDelete);
+    }
+
+    // Blacklist the access token if provided
+    if (token && exp) {
+      const blacklistKey = `blacklist:${token.slice(-16)}`;
+      const ttl = exp - Math.floor(Date.now() / 1000);
+      if (ttl > 0) {
+        await this.redis.set(blacklistKey, '1', 'EX', ttl);
+      }
     }
   }
 

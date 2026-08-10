@@ -57,8 +57,14 @@ const plans = [
 export default function LandingPage() {
   return (
     <div className="relative min-h-screen bg-[#09090b] text-zinc-100 antialiased selection:bg-zinc-800 selection:text-white">
+      {/* Ambient gradient background */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <div className="absolute -top-1/4 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-zinc-700/10 blur-[120px] animate-pulse-slow" />
+        <div className="absolute top-1/2 -left-1/4 h-[400px] w-[400px] rounded-full bg-zinc-600/5 blur-[100px] animate-pulse-slow" />
+      </div>
+
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 border-b border-zinc-800 bg-[#09090b]/80 backdrop-blur-xl">
+      <nav className="sticky top-0 z-50 border-b border-zinc-800/50 bg-[#09090b]/80 backdrop-blur-xl">
         <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <div className="grid h-8 w-8 place-items-center rounded bg-zinc-100 text-xs font-mono font-bold text-zinc-950">
@@ -67,13 +73,13 @@ export default function LandingPage() {
             <p className="text-sm font-mono tracking-tight font-bold text-zinc-50">AI Gateway</p>
           </div>
           <div className="hidden items-center gap-7 text-xs font-mono uppercase tracking-wider text-zinc-400 md:flex">
-            <Link href="#capabilities" className="transition-colors hover:text-zinc-105">
+            <Link href="#capabilities" className="transition-colors hover:text-zinc-100">
               Capabilities
             </Link>
-            <Link href="#how" className="transition-colors hover:text-zinc-105">
+            <Link href="#how" className="transition-colors hover:text-zinc-100">
               How it works
             </Link>
-            <Link href="#pricing" className="transition-colors hover:text-zinc-105">
+            <Link href="#pricing" className="transition-colors hover:text-zinc-100">
               Pricing
             </Link>
           </div>
@@ -81,7 +87,7 @@ export default function LandingPage() {
             <Link href="/login" className="hidden text-xs font-mono uppercase tracking-wider text-zinc-400 transition-colors hover:text-zinc-100 sm:block">
               Sign in
             </Link>
-            <Button asChild size="sm" className="rounded-md bg-zinc-50 text-zinc-950 hover:bg-zinc-200 font-mono text-xs uppercase tracking-wider h-8">
+            <Button asChild size="sm" className="rounded-md bg-zinc-50 text-zinc-950 hover:bg-zinc-200 font-mono text-xs uppercase tracking-wider h-8 btn-glow">
               <Link href="/signup">Get Started</Link>
             </Button>
           </div>
@@ -92,8 +98,8 @@ export default function LandingPage() {
         {/* Hero Section */}
         <section className="container mx-auto px-4 pb-16 pt-14 md:px-6 md:pb-24 md:pt-20 lg:px-8">
           <div className="grid items-center gap-12 lg:grid-cols-12">
-            <div className="lg:col-span-7 flex flex-col items-start">
-              <div className="mb-6 font-mono text-xs tracking-widest text-zinc-500 uppercase">
+            <div className="lg:col-span-7 flex flex-col items-start animate-slide-up">
+              <div className="mb-6 font-mono text-xs tracking-widest text-zinc-500 uppercase animate-fade-in">
                 v1.0.4 // PRODUCT-GRADE AI ROUTING
               </div>
               <h1 className="text-balance text-5xl font-bold leading-[1.05] tracking-tight text-white md:text-7xl lg:text-8xl">
@@ -129,8 +135,8 @@ export default function LandingPage() {
             </div>
 
             {/* Live Routing Console */}
-            <div className="lg:col-span-5">
-              <div className="border border-zinc-800 bg-[#0c0c0e] rounded-lg p-6 font-mono">
+            <div className="lg:col-span-5 animate-slide-up-delay">
+              <div className="border border-zinc-800 bg-[#0c0c0e] rounded-lg p-6 font-mono glass-card">
                 <div className="mb-4 flex items-center justify-between border-b border-zinc-800 pb-4">
                   <div>
                     <h3 className="text-sm font-bold text-zinc-200">LIVE ROUTING CONSOLE</h3>

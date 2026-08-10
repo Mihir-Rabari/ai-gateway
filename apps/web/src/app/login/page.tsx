@@ -34,8 +34,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-6 font-sans">
-      <Card className="w-full max-w-sm bg-[#09090b] border border-zinc-800 text-white rounded-xl shadow-2xl">
+    <div className="min-h-screen bg-[#09090b] flex items-center justify-center p-6 font-sans relative overflow-hidden">
+      {/* Ambient glow */}
+      <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 h-[400px] w-[600px] rounded-full bg-zinc-700/10 blur-[120px]" />
+      
+      <Card className="relative w-full max-w-sm bg-[#09090b] border border-zinc-800 text-white rounded-xl shadow-2xl animate-scale-in">
         <CardHeader className="text-center space-y-2">
           <div className="mx-auto w-10 h-10 bg-zinc-100 text-black flex items-center justify-center rounded font-mono text-sm tracking-tighter mb-2">
             AI

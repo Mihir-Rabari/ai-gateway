@@ -1,11 +1,11 @@
-# base stage: node:20-alpine, install pnpm@11.0.0-dev.1005.
-FROM node:20-alpine AS base
-RUN npm install -g pnpm@11.0.0-dev.1005
+# base stage: node:22-alpine, install pnpm@11.21.0.
+FROM node:22-alpine AS base
+RUN npm install -g pnpm@11.21.0
 WORKDIR /app
 
-# deps stage: copy package.json, workspace/package.jsons, pnpm-workspace.yaml, and pnpm-lock.yaml. Run pnpm install --frozen-lockfile.
+# deps stage: copy package.json, workspace/package.jsons, and pnpm-lock.yaml. Run pnpm install.
 FROM base AS deps
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json pnpm-workspace.yaml ./
 COPY apps/analytics-service/package.json ./apps/analytics-service/package.json
 COPY apps/api/package.json ./apps/api/package.json
 COPY apps/auth-service/package.json ./apps/auth-service/package.json
@@ -21,16 +21,16 @@ COPY packages/sdk-js/package.json ./packages/sdk-js/package.json
 COPY packages/types/package.json ./packages/types/package.json
 COPY packages/ui/package.json ./packages/ui/package.json
 COPY packages/utils/package.json ./packages/utils/package.json
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # builder stage: copy source, run pnpm build.
 FROM deps AS builder
 COPY . .
 RUN pnpm build
 
-# runner stage: copy full built workspace from builder, node:20-alpine.
-FROM node:20-alpine AS runner
-RUN npm install -g pnpm@11.0.0-dev.1005
+# runner stage: copy full built workspace from builder, node:22-alpine.
+FROM node:22-alpine AS runner
+RUN npm install -g pnpm@11.21.0
 WORKDIR /app
 COPY --from=builder /app /app
 

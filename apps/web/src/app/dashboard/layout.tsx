@@ -57,17 +57,20 @@ function DashboardLayoutContent({
 
   if (checkingAuth) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black text-white">
-        <div className="text-sm text-white/60">Loading dashboard...</div>
+      <div className="flex min-h-screen items-center justify-center bg-[#09090b] text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
+          <div className="text-sm text-white/60 font-mono">Loading dashboard...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-black text-white">
+    <div className="flex min-h-screen bg-[#09090b] text-white">
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/80 md:hidden"
+          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -151,8 +154,8 @@ function DashboardLayoutContent({
         </div>
       </aside>
 
-      <main className="flex min-w-0 flex-1 flex-col bg-black">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/10 bg-black/70 px-4 backdrop-blur md:px-6">
+      <main className="flex min-w-0 flex-1 flex-col bg-[#09090b]">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/5 bg-[#09090b]/70 px-4 backdrop-blur md:px-6">
           <button
             className="rounded-md p-2 text-white/60 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 md:hidden"
             onClick={() => setSidebarOpen(true)}

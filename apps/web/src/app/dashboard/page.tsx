@@ -229,9 +229,7 @@ export default function DashboardOverview() {
           )}
         </CardContent>
       </Card>
-    </div>
 
-    {/* ChatGPT Account Connection */}
     <div className="border-t border-white/10 pt-8 mt-12">
       <h2 className="text-lg font-semibold text-white mb-1">AI Provider Accounts</h2>
       <p className="text-sm text-white/50 mb-6">
@@ -243,6 +241,7 @@ export default function DashboardOverview() {
     </div>
   </div>
 );
+}
 
 function StatsCard({
   title,
