@@ -11,7 +11,6 @@ export function CodexConnect() {
   const [session, setSession] = useState<CodexSessionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [deviceCode, setDeviceCode] = useState<{
     userCode: string;
     verificationUri: string;
