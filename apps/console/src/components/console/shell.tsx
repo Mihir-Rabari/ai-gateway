@@ -35,7 +35,7 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen items-center justify-center bg-grid px-6">
         <Surface className="w-full max-w-xl p-10 text-center">
           <p className="text-[11px] uppercase tracking-[0.3em] text-white/34">AI Gateway Console</p>
-          <p className="mt-4 font-display text-3xl tracking-[-0.05em] text-white">Loading workspace</p>
+          <p className="mt-4 font-sans text-3xl tracking-[-0.05em] text-white">Loading workspace</p>
           <div className="mt-8 space-y-3">
             <SkeletonBlock className="h-12 w-full" />
             <SkeletonBlock className="h-12 w-4/5" />
@@ -53,7 +53,7 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.32em] text-white/38">AI Gateway</p>
-                <h2 className="mt-2 font-display text-2xl tracking-[-0.06em] text-white">Developer Console</h2>
+                <h2 className="mt-2 font-sans text-2xl tracking-[-0.06em] text-white">Developer Console</h2>
               </div>
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-base font-semibold text-black">
                 AI
@@ -113,7 +113,7 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
             <div className="flex items-center justify-between px-4 py-4">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.28em] text-white/36">AI Gateway</p>
-                <p className="mt-2 font-display text-2xl tracking-[-0.05em] text-white">Console</p>
+                <p className="mt-2 font-sans text-2xl tracking-[-0.05em] text-white">Console</p>
               </div>
               <Button variant="secondary" onClick={logout}>
                 <LogOut className="h-4 w-4" />

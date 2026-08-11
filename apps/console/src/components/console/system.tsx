@@ -11,6 +11,7 @@ import { Loader2 } from "lucide-react";
 import { Slot, Slottable } from "@radix-ui/react-slot";
 import { cn } from "@/lib/utils";
 
+// ── Surface (matches web app Card) ──────────────────────────────
 export function Surface({
   className,
   ...props
@@ -18,7 +19,7 @@ export function Surface({
   return (
     <div
       className={cn(
-        "rounded-lg border border-zinc-800 bg-[#09090b] shadow-sm",
+        "flex flex-col gap-6 overflow-hidden rounded-4xl bg-[#0a0a0a] py-6 text-sm text-white shadow-md ring-1 ring-white/10",
         className,
       )}
       {...props}
@@ -26,6 +27,7 @@ export function Surface({
   );
 }
 
+// ── ShellSection (page header) ───────────────────────────────────
 export function ShellSection({
   eyebrow,
   title,
@@ -42,21 +44,19 @@ export function ShellSection({
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between border-b border-zinc-800 pb-6",
+        "flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between",
         className,
       )}
     >
       <div className="max-w-3xl">
         {eyebrow ? (
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-            {eyebrow}
-          </p>
+          <p className="mb-2 text-xs text-white/40">{eyebrow}</p>
         ) : null}
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-100 md:text-3xl">
+        <h1 className="text-3xl font-bold tracking-tight text-white">
           {title}
         </h1>
         {description ? (
-          <p className="mt-2 max-w-2xl text-sm text-zinc-400">
+          <p className="mt-2 max-w-2xl text-sm text-white/50">
             {description}
           </p>
         ) : null}
@@ -68,6 +68,7 @@ export function ShellSection({
   );
 }
 
+// ── MetricCard (matches web StatsCard) ───────────────────────────
 export function MetricCard({
   label,
   value,
@@ -80,18 +81,17 @@ export function MetricCard({
   className?: string;
 }) {
   return (
-    <Surface className={cn("p-5", className)}>
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-        {label}
-      </p>
-      <p className="mt-4 font-mono text-2xl font-bold tracking-tight text-zinc-100 md:text-3xl">
-        {value}
-      </p>
-      {hint ? <p className="mt-2 text-xs text-zinc-500">{hint}</p> : null}
+    <Surface className={cn("gap-2 px-6", className)}>
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-white/60">{label}</p>
+      </div>
+      <p className="text-2xl font-bold text-white">{value}</p>
+      {hint ? <p className="text-xs text-white/40">{hint}</p> : null}
     </Surface>
   );
 }
 
+// ── IconButton ───────────────────────────────────────────────────
 export const IconButton = forwardRef<
   HTMLButtonElement,
   ButtonHTMLAttributes<HTMLButtonElement> & { "aria-label": string }
@@ -104,7 +104,7 @@ export const IconButton = forwardRef<
       ref={ref}
       type="button"
       className={cn(
-        "rounded-md border border-zinc-800 bg-zinc-900 p-2.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-700",
+        "rounded-lg border border-white/10 bg-white/5 p-2.5 text-white/60 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
         className,
       )}
       aria-label={ariaLabel}
@@ -116,6 +116,7 @@ export const IconButton = forwardRef<
   );
 });
 
+// ── Button (matches web Button: rounded-4xl, h-9) ───────────────
 export const Button = forwardRef<
   HTMLButtonElement,
   ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -136,12 +137,12 @@ export const Button = forwardRef<
   ref,
 ) {
   const palette = {
-    primary: "bg-zinc-100 text-zinc-950 hover:bg-zinc-200",
+    primary: "bg-white text-black hover:bg-white/90",
     secondary:
-      "border border-zinc-800 bg-zinc-900 text-zinc-100 hover:bg-zinc-800",
-    ghost: "bg-transparent text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100",
+      "border border-white/10 bg-white/5 text-white hover:bg-white/10",
+    ghost: "bg-transparent text-white/60 hover:bg-white/5 hover:text-white",
     danger:
-      "border border-red-900/40 bg-red-950/30 text-red-300 hover:bg-red-900/30",
+      "border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20",
   }[variant];
 
   const Comp = asChild ? Slot : "button";
@@ -151,7 +152,7 @@ export const Button = forwardRef<
       ref={ref}
       disabled={disabled || busy}
       className={cn(
-        "inline-flex h-9 items-center justify-center gap-2 rounded-md px-4 text-xs font-semibold transition duration-200 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-700",
+        "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-4xl px-3 text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4",
         palette,
         className,
       )}
@@ -163,6 +164,7 @@ export const Button = forwardRef<
   );
 });
 
+// ── TextInput ───────────────────────────────────────────────────
 export const TextInput = forwardRef<
   HTMLInputElement,
   InputHTMLAttributes<HTMLInputElement>
@@ -171,7 +173,7 @@ export const TextInput = forwardRef<
     <input
       ref={ref}
       className={cn(
-        "h-10 w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none transition focus:border-zinc-700 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-700",
+        "h-10 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-white placeholder:text-white/30 outline-none transition focus:border-white/20 focus:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
         className,
       )}
       {...props}
@@ -179,6 +181,7 @@ export const TextInput = forwardRef<
   );
 });
 
+// ── TextArea ────────────────────────────────────────────────────
 export const TextArea = forwardRef<
   HTMLTextAreaElement,
   TextareaHTMLAttributes<HTMLTextAreaElement>
@@ -187,7 +190,7 @@ export const TextArea = forwardRef<
     <textarea
       ref={ref}
       className={cn(
-        "min-h-[120px] w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none transition focus:border-zinc-700 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-700",
+        "min-h-[120px] w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/30 outline-none transition focus:border-white/20 focus:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
         className,
       )}
       {...props}
@@ -195,6 +198,7 @@ export const TextArea = forwardRef<
   );
 });
 
+// ── Field ───────────────────────────────────────────────────────
 export function Field({
   label,
   hint,
@@ -211,11 +215,11 @@ export function Field({
   return (
     <div className="block space-y-2">
       <div className="flex items-center justify-between gap-4">
-        <label htmlFor={id} className="text-xs font-semibold uppercase tracking-wider text-zinc-400 font-mono">
+        <label htmlFor={id} className="text-sm font-medium text-white/80">
           {label}
         </label>
         {hint ? (
-          <span id={hintId} className="text-xs text-zinc-500">
+          <span id={hintId} className="text-xs text-white/40">
             {hint}
           </span>
         ) : null}
@@ -232,6 +236,7 @@ export function Field({
   );
 }
 
+// ── DataTable ───────────────────────────────────────────────────
 export function DataTable({
   columns,
   rows,
@@ -247,16 +252,16 @@ export function DataTable({
     <Surface className={cn("overflow-hidden", className)}>
       <div className="overflow-x-auto scrollbar-subtle">
         <table className="min-w-full border-collapse text-left text-sm">
-          <thead className="bg-zinc-900/50 border-b border-zinc-800 text-[10px] uppercase tracking-[0.2em] text-zinc-400 font-bold">
+          <thead className="bg-white/5 text-xs text-white/50">
             <tr>
               {columns.map((column) => (
-                <th key={column} className="px-5 py-4 font-semibold">
+                <th key={column} className="px-6 py-4 font-medium">
                   {column}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-900">{rows}</tbody>
+          <tbody className="divide-y divide-white/5">{rows}</tbody>
         </table>
       </div>
       {empty}
@@ -264,6 +269,7 @@ export function DataTable({
   );
 }
 
+// ── MobileCardList ──────────────────────────────────────────────
 export function MobileCardList({
   items,
   children,
@@ -276,6 +282,7 @@ export function MobileCardList({
   return <div className={cn("space-y-3", className)}>{items ?? children}</div>;
 }
 
+// ── DetailList ──────────────────────────────────────────────────
 export function DetailList({
   items,
   className,
@@ -288,18 +295,17 @@ export function DetailList({
       {items.map((item) => (
         <div
           key={item.label}
-          className="rounded-md border border-zinc-800 bg-zinc-950 p-4"
+          className="rounded-lg border border-white/10 bg-black/40 p-4"
         >
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
-            {item.label}
-          </p>
-          <div className="mt-2 text-sm text-zinc-300">{item.value}</div>
+          <p className="text-xs text-white/50">{item.label}</p>
+          <div className="mt-2 text-sm text-white/80">{item.value}</div>
         </div>
       ))}
     </div>
   );
 }
 
+// ── EmptyState ──────────────────────────────────────────────────
 export function EmptyState({
   title,
   description,
@@ -310,21 +316,20 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <Surface className="p-8 text-center">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
-        Nothing Yet
-      </p>
-      <h3 className="mt-3 text-lg font-bold text-zinc-100">
-        {title}
+    <Surface className="px-6 py-12 text-center">
+      <p className="text-xs text-white/40">{title}</p>
+      <h3 className="mt-3 text-lg font-semibold text-white">
+        Nothing here yet
       </h3>
-      <p className="mx-auto mt-2 max-w-md text-sm text-zinc-400">
+      <p className="mx-auto mt-2 max-w-md text-sm text-white/50">
         {description}
       </p>
-      {action ? <div className="mt-5 flex justify-center">{action}</div> : null}
+      {action ? <div className="mt-6 flex justify-center">{action}</div> : null}
     </Surface>
   );
 }
 
+// ── InlineMessage ───────────────────────────────────────────────
 export function InlineMessage({
   tone = "default",
   className,
@@ -335,10 +340,10 @@ export function InlineMessage({
   children: React.ReactNode;
 }) {
   const tones = {
-    default: "border-zinc-800 bg-zinc-900 text-zinc-400",
-    danger: "border-red-900/40 bg-red-950/20 text-red-300",
-    warning: "border-yellow-900/40 bg-yellow-950/20 text-yellow-300",
-    success: "border-emerald-900/40 bg-emerald-950/20 text-emerald-300",
+    default: "border-white/10 bg-white/5 text-white/60",
+    danger: "border-red-500/30 bg-red-500/10 text-red-300",
+    warning: "border-yellow-500/30 bg-yellow-500/10 text-yellow-300",
+    success: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
   }[tone];
 
   const role = tone === "danger" || tone === "warning" ? "alert" : "status";
@@ -346,7 +351,7 @@ export function InlineMessage({
 
   return (
     <div
-      className={cn("rounded-md border px-4 py-3 text-sm", tones, className)}
+      className={cn("rounded-2xl border px-4 py-3 text-sm", tones, className)}
       role={role}
       aria-live={ariaLive}
     >
@@ -355,14 +360,16 @@ export function InlineMessage({
   );
 }
 
+// ── SkeletonBlock ───────────────────────────────────────────────
 export function SkeletonBlock({ className }: { className?: string }) {
   return (
     <div
-      className={cn("animate-pulse rounded-md bg-zinc-900 border border-zinc-800", className)}
+      className={cn("animate-pulse rounded-2xl bg-white/10", className)}
     />
   );
 }
 
+// ── Badge (matches web Badge: rounded-3xl, h-5) ──────────────────
 export function Badge({
   children,
   tone = "default",
@@ -371,16 +378,16 @@ export function Badge({
   tone?: "default" | "success" | "warning" | "danger";
 }) {
   const tones = {
-    default: "bg-zinc-900 text-zinc-400",
-    success: "bg-emerald-950/30 text-emerald-400",
-    warning: "bg-yellow-950/30 text-yellow-400",
-    danger: "bg-red-950/30 text-red-400",
+    default: "bg-white/10 text-white/70",
+    success: "bg-emerald-500/10 text-emerald-300",
+    warning: "bg-yellow-500/10 text-yellow-300",
+    danger: "bg-red-500/10 text-red-300",
   }[tone];
 
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded border border-zinc-800 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider",
+        "inline-flex h-5 w-fit items-center gap-1 rounded-3xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap",
         tones,
       )}
     >

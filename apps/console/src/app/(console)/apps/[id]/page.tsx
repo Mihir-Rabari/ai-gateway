@@ -103,35 +103,35 @@ export default function AppDetailsPage() {
         title={appData?.name ?? "Application detail"}
         description="Inspect credentials, edit redirect URIs, and review analytics for this app."
         action={
-          <Button asChild variant="secondary" className="rounded-md h-9 px-4 text-xs font-semibold border border-zinc-800 bg-zinc-900 text-white hover:bg-zinc-800 transition">
+          <Button asChild variant="secondary" className="rounded-lg h-9 px-4 text-xs font-semibold border border-white/10 bg-white/5 text-white hover:bg-white/10 transition">
             <Link href="/apps">Back to apps</Link>
           </Button>
         }
       />
       {!loading && !appData ? (
-        <InlineMessage tone="danger" className="rounded-md border-red-900/30 bg-red-950/20 text-red-200">
+        <InlineMessage tone="danger" className="rounded-lg border-red-500/30 bg-red-500/10 text-red-300">
           App not found or you no longer have access to it.
         </InlineMessage>
       ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-        <Surface className="rounded-lg border-zinc-800 bg-zinc-950 p-6 md:p-7 shadow-none">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-400">Identity</p>
+        <Surface className="rounded-2xl border-white/10 bg-black/40 p-6 md:p-7 shadow-none">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/50">Identity</p>
           {loading ? (
             <div className="mt-8 space-y-3">
-              <div className="animate-pulse rounded-md bg-zinc-900/60 border border-zinc-800 h-12" />
-              <div className="animate-pulse rounded-md bg-zinc-900/60 border border-zinc-800 h-20" />
-              <div className="animate-pulse rounded-md bg-zinc-900/60 border border-zinc-800 h-12" />
+              <div className="animate-pulse rounded-lg bg-white/10 border border-white/10 h-12" />
+              <div className="animate-pulse rounded-lg bg-white/10 border border-white/10 h-20" />
+              <div className="animate-pulse rounded-lg bg-white/10 border border-white/10 h-12" />
             </div>
           ) : appData ? (
             <div className="mt-8 space-y-4">
-              <div className="rounded-md border border-zinc-800 bg-zinc-900/20 p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">App ID</p>
-                <div className="mt-3 flex items-center justify-between gap-3 bg-black border border-zinc-800 rounded px-3 py-2 font-mono text-sm text-white">
-                  <span className="min-w-0 flex-1 break-all select-all selection:bg-zinc-800">{appData.id}</span>
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">App ID</p>
+                <div className="mt-3 flex items-center justify-between gap-3 bg-black border border-white/10 rounded px-3 py-2 font-mono text-sm text-white">
+                  <span className="min-w-0 flex-1 break-all select-all selection:bg-white/10">{appData.id}</span>
                   <button
                     onClick={() => copyText(appData.id, "App ID")}
-                    className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                    className="text-white/50 hover:text-white transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                     title="Copy App ID"
                     aria-label="Copy App ID"
                   >
@@ -140,14 +140,14 @@ export default function AppDetailsPage() {
                 </div>
               </div>
 
-              <div className="rounded-md border border-zinc-800 bg-zinc-900/20 p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Client ID</p>
-                <div className="mt-3 flex items-center justify-between gap-3 bg-black border border-zinc-800 rounded px-3 py-2 font-mono text-sm text-white">
-                  <span className="min-w-0 flex-1 break-all select-all selection:bg-zinc-800">{appData.clientId ?? "Unavailable"}</span>
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">Client ID</p>
+                <div className="mt-3 flex items-center justify-between gap-3 bg-black border border-white/10 rounded px-3 py-2 font-mono text-sm text-white">
+                  <span className="min-w-0 flex-1 break-all select-all selection:bg-white/10">{appData.clientId ?? "Unavailable"}</span>
                   {appData.clientId ? (
                     <button
                       onClick={() => copyText(appData.clientId!, "Client ID")}
-                      className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                      className="text-white/50 hover:text-white transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                       title="Copy Client ID"
                       aria-label="Copy Client ID"
                     >
@@ -158,10 +158,10 @@ export default function AppDetailsPage() {
               </div>
 
               <div className="flex items-center gap-2 pt-2">
-                <span className="inline-flex items-center rounded border border-emerald-800/60 bg-emerald-950/20 px-2 py-0.5 text-xs font-medium text-emerald-400">
+                <span className="inline-flex items-center rounded border border-emerald-800/60 bg-emerald-950/20 px-2 py-0.5 text-xs font-medium text-emerald-300">
                   Active
                 </span>
-                <span className="inline-flex items-center rounded border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-xs font-medium text-zinc-400">
+                <span className="inline-flex items-center rounded border border-white/10 bg-white/5 px-2 py-0.5 text-xs font-medium text-white/50">
                   Created {new Date(appData.createdAt).toLocaleDateString()}
                 </span>
               </div>
@@ -169,19 +169,19 @@ export default function AppDetailsPage() {
           ) : null}
         </Surface>
 
-        <Surface className="rounded-lg border-zinc-800 bg-zinc-950 p-6 md:p-7 shadow-none">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-400">Credentials</p>
+        <Surface className="rounded-2xl border-white/10 bg-black/40 p-6 md:p-7 shadow-none">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/50">Credentials</p>
           <div className="mt-8 space-y-4">
-            <div className="rounded-md border border-zinc-800 bg-zinc-900/20 p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Visible API key</p>
-              <div className="mt-3 flex items-center justify-between gap-3 bg-black border border-zinc-800 rounded px-3 py-2 font-mono text-sm text-white">
-                <span className="min-w-0 flex-1 break-all select-all selection:bg-zinc-800">
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">Visible API key</p>
+              <div className="mt-3 flex items-center justify-between gap-3 bg-black border border-white/10 rounded px-3 py-2 font-mono text-sm text-white">
+                <span className="min-w-0 flex-1 break-all select-all selection:bg-white/10">
                   {apiKey ? (showKey ? apiKey : "•".repeat(24)) : "Rotate key to generate a fresh visible value"}
                 </span>
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => setShowKey((current) => !current)}
-                    className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                    className="text-white/50 hover:text-white transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                     title={showKey ? "Hide API Key" : "Show API Key"}
                     aria-label={showKey ? "Hide API Key" : "Show API Key"}
                   >
@@ -190,7 +190,7 @@ export default function AppDetailsPage() {
                   <button
                     onClick={() => copyText(apiKey, "API Key")}
                     disabled={!apiKey}
-                    className="text-zinc-400 hover:text-white disabled:opacity-30 transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                    className="text-white/50 hover:text-white disabled:opacity-30 transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                     title="Copy API Key"
                     aria-label="Copy API Key"
                   >
@@ -205,7 +205,7 @@ export default function AppDetailsPage() {
                 variant="secondary"
                 onClick={rotateKey}
                 busy={isRotating}
-                className="rounded-md h-9 px-4 text-xs font-semibold border border-zinc-800 bg-zinc-900 text-white hover:bg-zinc-800 transition"
+                className="rounded-lg h-9 px-4 text-xs font-semibold border border-white/10 bg-white/5 text-white hover:bg-white/10 transition"
               >
                 {!isRotating && <RotateCw className="h-3.5 w-3.5 mr-1.5" />}Rotate key
               </Button>
@@ -213,7 +213,7 @@ export default function AppDetailsPage() {
                 variant="danger"
                 onClick={deleteApp}
                 busy={isDeleting}
-                className="rounded-md h-9 px-4 text-xs font-semibold border border-red-900/30 bg-red-950/20 text-red-200 hover:bg-red-900/20 transition"
+                className="rounded-lg h-9 px-4 text-xs font-semibold border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-900/20 transition"
               >
                 {!isDeleting && <Trash2 className="h-3.5 w-3.5 mr-1.5" />}Delete app
               </Button>
@@ -222,34 +222,34 @@ export default function AppDetailsPage() {
         </Surface>
       </div>
 
-      <Surface className="rounded-lg border-zinc-800 bg-zinc-950 p-6 md:p-7 shadow-none">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-400">OAuth redirect URIs</p>
+      <Surface className="rounded-2xl border-white/10 bg-black/40 p-6 md:p-7 shadow-none">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/50">OAuth redirect URIs</p>
         <div className="mt-8 space-y-4">
           <Field label="Allowed redirect URIs" hint="One URI per line">
             <TextArea
               value={redirectUrisRaw}
               onChange={(event) => setRedirectUrisRaw(event.target.value)}
               placeholder={"http://localhost:3000/callback\nhttps://myapp.com/callback"}
-              className="rounded-md border-zinc-800 bg-zinc-950 px-3 py-2 text-sm font-mono focus:border-zinc-700 focus:bg-zinc-950 focus-visible:ring-zinc-800"
+              className="rounded-lg border-white/10 bg-black/40 px-3 py-2 text-sm font-mono focus:border-white/20 focus:bg-black/40 focus-visible:ring-white/10"
             />
           </Field>
           <Button
             busy={savingUris}
             onClick={saveRedirectUris}
-            className="rounded-md bg-white text-black hover:bg-zinc-200 px-4 h-9 text-xs transition duration-200 font-semibold"
+            className="rounded-lg bg-white text-black hover:bg-white/90 px-4 h-9 text-xs transition duration-200 font-semibold"
           >
             {savingUris ? "Saving" : "Save redirect URIs"}
           </Button>
         </div>
       </Surface>
 
-      <Surface className="rounded-lg border-zinc-800 bg-zinc-950 p-6 md:p-7 shadow-none">
+      <Surface className="rounded-2xl border-white/10 bg-black/40 p-6 md:p-7 shadow-none">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-400">Usage</p>
-            <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-white">Traffic summary</h2>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/50">Usage</p>
+            <h2 className="mt-3 font-sans text-3xl font-bold tracking-tight text-white">Traffic summary</h2>
           </div>
-          <div className="flex items-center gap-2 text-sm text-zinc-500 font-mono">
+          <div className="flex items-center gap-2 text-sm text-white/40 font-mono">
             <span>{totalRequests.toLocaleString()} requests</span>
             <span>·</span>
             <span>{totalCredits.toLocaleString()} credits</span>
@@ -258,26 +258,26 @@ export default function AppDetailsPage() {
 
         {loading ? (
           <div className="mt-8 space-y-3">
-            <div className="animate-pulse rounded-md bg-zinc-900/60 border border-zinc-800 h-16" />
-            <div className="animate-pulse rounded-md bg-zinc-900/60 border border-zinc-800 h-16" />
-            <div className="animate-pulse rounded-md bg-zinc-900/60 border border-zinc-800 h-16" />
+            <div className="animate-pulse rounded-lg bg-white/10 border border-white/10 h-16" />
+            <div className="animate-pulse rounded-lg bg-white/10 border border-white/10 h-16" />
+            <div className="animate-pulse rounded-lg bg-white/10 border border-white/10 h-16" />
           </div>
         ) : usageRows.length === 0 ? (
-          <p className="mt-8 text-sm text-zinc-500">No usage events have been recorded for this app yet.</p>
+          <p className="mt-8 text-sm text-white/40">No usage events have been recorded for this app yet.</p>
         ) : (
           <div className="mt-8 space-y-3">
             {usageRows.map((row) => (
               <div
                 key={row.model}
-                className="flex flex-col gap-3 rounded-md border border-zinc-800 bg-zinc-950 px-4 py-3 md:flex-row md:items-center md:justify-between transition hover:bg-zinc-900/30"
+                className="flex flex-col gap-3 rounded-lg border border-white/10 bg-black/40 px-4 py-3 md:flex-row md:items-center md:justify-between transition hover:bg-white/5"
               >
                 <div>
                   <p className="font-mono text-sm font-bold text-white">{row.model}</p>
-                  <p className="mt-1 text-xs text-zinc-500">Average latency {Math.round(row.avg_latency_ms || 0)} ms</p>
+                  <p className="mt-1 text-xs text-white/40">Average latency {Math.round(row.avg_latency_ms || 0)} ms</p>
                 </div>
-                <div className="text-xs text-zinc-400 md:text-right">
+                <div className="text-xs text-white/50 md:text-right">
                   <p className="font-medium">{Number(row.total_requests || 0).toLocaleString()} requests</p>
-                  <p className="mt-1 font-medium text-zinc-500">{Number(row.total_credits || 0).toLocaleString()} credits</p>
+                  <p className="mt-1 font-medium text-white/40">{Number(row.total_credits || 0).toLocaleString()} credits</p>
                 </div>
               </div>
             ))}

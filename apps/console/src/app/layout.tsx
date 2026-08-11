@@ -1,17 +1,20 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
+import localFont from "next/font/local";
+import { Inter, Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
 import "./globals.css";
 
-const bodyFont = IBM_Plex_Sans({
-  subsets: ["latin"],
-  variable: "--font-body",
-  weight: ["400", "500", "600"],
-});
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
-const displayFont = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-display",
-  weight: ["500", "700"],
+const geistSans = localFont({
+  src: "./fonts/GeistVF.woff",
+  variable: "--font-geist-sans",
+  weight: "100 900",
+});
+const geistMono = localFont({
+  src: "./fonts/GeistMonoVF.woff",
+  variable: "--font-geist-mono",
+  weight: "100 900",
 });
 
 export const metadata: Metadata = {
@@ -25,8 +28,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${bodyFont.variable} ${displayFont.variable}`}>
-      <body className="antialiased">{children}</body>
+    <html lang="en" className={cn("font-sans", geist.variable)}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        {children}
+      </body>
     </html>
   );
 }

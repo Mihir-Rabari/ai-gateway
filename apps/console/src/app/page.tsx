@@ -62,7 +62,7 @@ export default function ConsolePage() {
             </div>
             <div>
               <p className="text-[11px] uppercase tracking-[0.32em] text-white/38">AI Gateway</p>
-              <p className="mt-1 font-display text-2xl tracking-[-0.05em] text-white">Developer Console</p>
+              <p className="mt-1 font-sans text-2xl tracking-[-0.05em] text-white">Developer Console</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -70,7 +70,7 @@ export default function ConsolePage() {
               href={webUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden rounded-md px-2 py-1 text-sm text-white/54 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 md:block"
+              className="hidden rounded-lg px-2 py-1 text-sm text-white/54 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 md:block"
             >
               Main website
             </a>
@@ -90,7 +90,7 @@ export default function ConsolePage() {
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_25rem)]" />
             <div className="relative max-w-3xl">
               <p className="text-[11px] uppercase tracking-[0.34em] text-white/34">Developer Portal</p>
-              <h1 className="mt-6 text-balance font-display text-4xl tracking-[-0.06em] text-white md:text-6xl">
+              <h1 className="mt-6 text-balance font-sans text-4xl tracking-[-0.06em] text-white md:text-6xl">
                 Build, ship, and monetize AI apps from one control room.
               </h1>
               <p className="mt-6 max-w-2xl text-base leading-7 text-white/54 md:text-lg">
@@ -118,7 +118,7 @@ export default function ConsolePage() {
             {cards.map((card) => (
               <Surface key={card.title} className="p-6">
                 <card.icon className="h-5 w-5 text-white/64" />
-                <p className="mt-4 font-display text-2xl tracking-[-0.04em] text-white">{card.title}</p>
+                <p className="mt-4 font-sans text-2xl tracking-[-0.04em] text-white">{card.title}</p>
                 <p className="mt-2 text-sm leading-6 text-white/50">
                   {card.description}
                 </p>

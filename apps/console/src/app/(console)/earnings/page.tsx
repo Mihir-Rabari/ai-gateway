@@ -132,7 +132,7 @@ export default function EarningsPage() {
 
       {/* Transaction history */}
       <Surface className="p-6 md:p-7">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
           Transaction history
         </p>
 
@@ -151,21 +151,21 @@ export default function EarningsPage() {
                   {transactions.map((tx) => (
                     <div
                       key={tx.id}
-                      className="rounded-md border border-zinc-800 bg-zinc-950 p-4"
+                      className="rounded-lg border border-white/10 bg-black/40 p-4"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-sm text-zinc-100">{tx.reason}</p>
-                          <p className="mt-1 text-xs text-zinc-500">
+                          <p className="text-sm text-white">{tx.reason}</p>
+                          <p className="mt-1 text-xs text-white/40">
                             {new Date(tx.created_at).toLocaleString()}
                           </p>
                         </div>
-                        <p className="text-sm font-medium text-zinc-300">
+                        <p className="text-sm font-medium text-white/80">
                           {tx.type === "debit" ? "-" : "+"}
                           {tx.amount}
                         </p>
                       </div>
-                      <p className="mt-3 text-xs uppercase tracking-wider text-zinc-500">
+                      <p className="mt-3 text-xs uppercase tracking-wider text-white/40">
                         Balance after {tx.balance_after}
                       </p>
                     </div>
@@ -180,27 +180,27 @@ export default function EarningsPage() {
                 rows={transactions.map((tx) => (
                   <tr
                     key={tx.id}
-                    className="align-top text-zinc-300 transition hover:bg-zinc-900/30"
+                    className="align-top text-white/80 transition hover:bg-white/5"
                   >
-                    <td className="px-5 py-4 text-zinc-500">
+                    <td className="px-5 py-4 text-white/40">
                       {new Date(tx.created_at).toLocaleString()}
                     </td>
-                    <td className="px-5 py-4 text-zinc-100">{tx.reason}</td>
-                    <td className="px-5 py-4 uppercase tracking-wider text-zinc-500 text-xs">
+                    <td className="px-5 py-4 text-white">{tx.reason}</td>
+                    <td className="px-5 py-4 uppercase tracking-wider text-white/40 text-xs">
                       {tx.type}
                     </td>
-                    <td className="px-5 py-4 font-medium text-zinc-200">
+                    <td className="px-5 py-4 font-medium text-white/90">
                       {tx.type === "debit" ? "-" : "+"}
                       {tx.amount}
                     </td>
-                    <td className="px-5 py-4 text-zinc-500">
+                    <td className="px-5 py-4 text-white/40">
                       {tx.balance_after}
                     </td>
                   </tr>
                 ))}
                 empty={
                   transactions.length === 0 ? (
-                    <p className="px-5 py-8 text-sm text-zinc-500">
+                    <p className="px-5 py-8 text-sm text-white/40">
                       No transactions found.
                     </p>
                   ) : undefined

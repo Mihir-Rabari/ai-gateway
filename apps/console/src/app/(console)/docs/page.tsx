@@ -93,10 +93,10 @@ export default function DocsPage() {
 
         {/* Model registry */}
         <Surface className="p-6 md:p-7">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
             Live model registry
           </p>
-          <h2 className="mt-3 text-lg font-bold tracking-tight text-zinc-100">
+          <h2 className="mt-3 text-lg font-bold tracking-tight text-white">
             Available models
           </h2>
 
@@ -106,7 +106,7 @@ export default function DocsPage() {
               {
                 label: "Backend route",
                 value: (
-                  <code className="rounded border border-zinc-800 bg-zinc-950 px-1.5 py-0.5 font-mono text-xs text-zinc-300">
+                  <code className="rounded border border-white/10 bg-black/40 px-1.5 py-0.5 font-mono text-xs text-white/80">
                     api.models.list()
                   </code>
                 ),
@@ -125,7 +125,7 @@ export default function DocsPage() {
               <SkeletonBlock className="h-12" />
             </div>
           ) : models.length === 0 ? (
-            <p className="mt-6 text-sm text-zinc-500">
+            <p className="mt-6 text-sm text-white/40">
               No models were returned from the live registry.
             </p>
           ) : (
@@ -133,9 +133,9 @@ export default function DocsPage() {
               {models.map((model) => (
                 <div
                   key={model}
-                  className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-4 py-3"
+                  className="flex items-center justify-between rounded-lg border border-white/10 bg-black/40 px-4 py-3"
                 >
-                  <p className="font-mono text-sm text-zinc-200">{model}</p>
+                  <p className="font-mono text-sm text-white/90">{model}</p>
                   <Badge tone="success">Available</Badge>
                 </div>
               ))}
@@ -160,9 +160,9 @@ function CodeSurface({
 }) {
   return (
     <Surface className="overflow-hidden">
-      <div className="border-b border-zinc-800 px-5 py-4">
+      <div className="border-b border-white/10 px-5 py-4">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
             {label}
           </p>
           <Button variant="secondary" onClick={() => void onCopy(code)}>
@@ -170,9 +170,9 @@ function CodeSurface({
             Copy
           </Button>
         </div>
-        <p className="mt-2 text-sm text-zinc-400">{summary}</p>
+        <p className="mt-2 text-sm text-white/50">{summary}</p>
       </div>
-      <pre className="overflow-x-auto px-5 py-5 font-mono text-sm leading-7 text-zinc-300">
+      <pre className="overflow-x-auto px-5 py-5 font-mono text-sm leading-7 text-white/80">
         {code}
       </pre>
     </Surface>

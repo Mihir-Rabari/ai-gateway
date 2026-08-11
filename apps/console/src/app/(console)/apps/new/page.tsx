@@ -55,16 +55,16 @@ export default function RegisterAppPage() {
           action={
             <Button
               onClick={() => router.push(`/apps/${created.id}`)}
-              className="rounded-md bg-white text-black hover:bg-zinc-200 px-4 h-9 text-xs transition duration-200 font-semibold"
+              className="rounded-lg bg-white text-black hover:bg-white/90 px-4 h-9 text-xs transition duration-200 font-semibold"
             >
               Open app detail
             </Button>
           }
         />
-        <InlineMessage tone="warning" className="rounded-md border-yellow-900/30 bg-yellow-950/20 text-yellow-200">
+        <InlineMessage tone="warning" className="rounded-lg border-yellow-500/30 bg-yellow-500/10 text-yellow-300">
           Client secret and API key are write-once display values. Store them in a secret manager before you navigate away.
         </InlineMessage>
-        <Surface className="rounded-lg border-zinc-800 bg-zinc-950 p-6 md:p-7 shadow-none">
+        <Surface className="rounded-2xl border-white/10 bg-black/40 p-6 md:p-7 shadow-none">
           <div className="space-y-4">
             <CredentialRow
               label="Client ID"
@@ -92,7 +92,7 @@ export default function RegisterAppPage() {
   return (
     <div className="space-y-6">
       <ShellSection eyebrow="Create" title="Register a new app" description="Issue fresh developer credentials and define the first redirect URIs for your OAuth flow." />
-      <Surface className="rounded-lg border-zinc-800 bg-zinc-950 p-6 md:p-7 shadow-none">
+      <Surface className="rounded-2xl border-white/10 bg-black/40 p-6 md:p-7 shadow-none">
         <form onSubmit={handleSubmit} className="space-y-6">
           <Field label="App name" hint="Required">
             <TextInput
@@ -100,7 +100,7 @@ export default function RegisterAppPage() {
               onChange={(event) => setName(event.target.value)}
               placeholder="My AI product"
               required
-              className="rounded-md border-zinc-800 bg-zinc-950 px-3 py-2 text-sm focus:border-zinc-700 focus:bg-zinc-950 focus-visible:ring-zinc-800"
+              className="rounded-lg border-white/10 bg-black/40 px-3 py-2 text-sm focus:border-white/20 focus:bg-black/40 focus-visible:ring-white/10"
             />
           </Field>
           <Field label="Description" hint="Optional">
@@ -108,7 +108,7 @@ export default function RegisterAppPage() {
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               placeholder="Short summary of what the app does"
-              className="rounded-md border-zinc-800 bg-zinc-950 px-3 py-2 text-sm focus:border-zinc-700 focus:bg-zinc-950 focus-visible:ring-zinc-800"
+              className="rounded-lg border-white/10 bg-black/40 px-3 py-2 text-sm focus:border-white/20 focus:bg-black/40 focus-visible:ring-white/10"
             />
           </Field>
           <Field label="Redirect URIs" hint="One per line">
@@ -116,21 +116,21 @@ export default function RegisterAppPage() {
               value={redirectUrisRaw}
               onChange={(event) => setRedirectUrisRaw(event.target.value)}
               placeholder={"http://localhost:3000/callback\nhttps://myapp.com/callback"}
-              className="rounded-md border-zinc-800 bg-zinc-950 px-3 py-2 text-sm font-mono focus:border-zinc-700 focus:bg-zinc-950 focus-visible:ring-zinc-800"
+              className="rounded-lg border-white/10 bg-black/40 px-3 py-2 text-sm font-mono focus:border-white/20 focus:bg-black/40 focus-visible:ring-white/10"
             />
           </Field>
           <div className="flex flex-wrap gap-3">
             <Button
               type="submit"
               busy={loading}
-              className="rounded-md bg-white text-black hover:bg-zinc-200 px-4 h-9 text-xs transition duration-200 font-semibold"
+              className="rounded-lg bg-white text-black hover:bg-white/90 px-4 h-9 text-xs transition duration-200 font-semibold"
             >
               {loading ? "Registering" : "Register app"}
             </Button>
             <Button
               asChild
               variant="secondary"
-              className="rounded-md h-9 px-4 text-xs font-semibold border border-zinc-800 bg-zinc-900 text-white hover:bg-zinc-800 transition"
+              className="rounded-lg h-9 px-4 text-xs font-semibold border border-white/10 bg-white/5 text-white hover:bg-white/10 transition"
             >
               <Link href="/apps">Cancel</Link>
             </Button>
@@ -145,17 +145,17 @@ function CredentialRow({ label, value, secret = false, onCopy }: { label: string
   const [revealed, setRevealed] = useState(!secret);
 
   return (
-    <div className="rounded-md border border-zinc-800 bg-zinc-950 p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">{label}</p>
-      <div className="mt-3 flex items-center justify-between gap-3 bg-black border border-zinc-800 rounded px-3 py-2 font-mono text-sm text-white">
-        <span className="min-w-0 flex-1 break-all select-all selection:bg-zinc-800">
+    <div className="rounded-lg border border-white/10 bg-black/40 p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">{label}</p>
+      <div className="mt-3 flex items-center justify-between gap-3 bg-black border border-white/10 rounded px-3 py-2 font-mono text-sm text-white">
+        <span className="min-w-0 flex-1 break-all select-all selection:bg-white/10">
           {revealed ? value : "•".repeat(24)}
         </span>
         <div className="flex items-center gap-1.5">
           {secret ? (
             <button
               onClick={() => setRevealed((current) => !current)}
-              className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+              className="text-white/50 hover:text-white transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
               title={revealed ? `Hide ${label}` : `Show ${label}`}
               aria-label={revealed ? `Hide ${label}` : `Show ${label}`}
             >
@@ -164,7 +164,7 @@ function CredentialRow({ label, value, secret = false, onCopy }: { label: string
           ) : null}
           <button
             onClick={onCopy}
-            className="text-zinc-400 hover:text-white transition p-1 hover:bg-zinc-900 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+            className="text-white/50 hover:text-white transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
             title={`Copy ${label}`}
             aria-label={`Copy ${label}`}
           >

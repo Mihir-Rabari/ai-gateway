@@ -39,36 +39,36 @@ export default function LoginPage() {
         {/* Left: Brand panel */}
         <Surface className="flex flex-col justify-between p-7 md:p-10">
           <div>
-            <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-zinc-500">
+            <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/40">
               Developer Console
             </p>
-            <h1 className="mt-6 max-w-2xl text-4xl font-bold tracking-tight text-zinc-100 md:text-6xl">
+            <h1 className="mt-6 max-w-2xl text-4xl font-bold tracking-tight text-white md:text-6xl">
               One control room for every AI app you ship.
             </h1>
-            <p className="mt-6 max-w-xl text-base leading-7 text-zinc-400">
+            <p className="mt-6 max-w-xl text-base leading-7 text-white/50">
               Launch apps, manage OAuth redirect flows, inspect live usage,
               and monitor earnings from one clean surface.
             </p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-md border border-zinc-800 bg-zinc-950 p-5">
-              <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+            <div className="rounded-lg border border-white/10 bg-black/40 p-5">
+              <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/40">
                 Apps
               </p>
-              <p className="mt-3 text-xl font-bold text-zinc-100">Register</p>
+              <p className="mt-3 text-xl font-bold text-white">Register</p>
             </div>
-            <div className="rounded-md border border-zinc-800 bg-zinc-950 p-5">
-              <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+            <div className="rounded-lg border border-white/10 bg-black/40 p-5">
+              <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/40">
                 Usage
               </p>
-              <p className="mt-3 text-xl font-bold text-zinc-100">Analyze</p>
+              <p className="mt-3 text-xl font-bold text-white">Analyze</p>
             </div>
-            <div className="rounded-md border border-zinc-800 bg-zinc-950 p-5">
-              <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+            <div className="rounded-lg border border-white/10 bg-black/40 p-5">
+              <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/40">
                 Revenue
               </p>
-              <p className="mt-3 text-xl font-bold text-zinc-100">Track</p>
+              <p className="mt-3 text-xl font-bold text-white">Track</p>
             </div>
           </div>
         </Surface>
@@ -76,20 +76,20 @@ export default function LoginPage() {
         {/* Right: Login form */}
         <Surface className="flex items-center justify-center p-6 md:p-10">
           <div className="w-full max-w-md">
-            <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-zinc-500">
+            <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/40">
               Access
             </p>
-            <h2 className="mt-4 text-3xl font-bold tracking-tight text-zinc-100">
+            <h2 className="mt-4 text-3xl font-bold tracking-tight text-white">
               Sign in
             </h2>
-            <p className="mt-2 text-sm text-zinc-400">
+            <p className="mt-2 text-sm text-white/50">
               Use the same credentials you use on the main AI Gateway site.
             </p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
               {error && (
                 <div
-                  className="rounded-md border border-red-900/40 bg-red-950/20 px-3 py-2.5 text-xs text-red-300 font-mono"
+                  className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-xs text-red-300 font-mono"
                   role="alert"
                   aria-live="assertive"
                 >
@@ -100,7 +100,7 @@ export default function LoginPage() {
               <div className="space-y-1.5">
                 <label
                   htmlFor="email"
-                  className="text-xs font-semibold uppercase tracking-wider text-zinc-400 font-mono"
+                  className="text-xs font-semibold uppercase tracking-wider text-white/50 font-mono"
                 >
                   Email
                 </label>
@@ -111,14 +111,14 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="h-10 w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none transition focus:border-zinc-700 focus-visible:ring-1 focus-visible:ring-zinc-700"
+                  className="h-10 w-full rounded-lg border border-white/10 bg-black/40 px-3 text-sm text-white placeholder:text-white/30 outline-none transition focus:border-white/20 focus-visible:ring-1 focus-visible:ring-white/50"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label
                   htmlFor="password"
-                  className="text-xs font-semibold uppercase tracking-wider text-zinc-400 font-mono"
+                  className="text-xs font-semibold uppercase tracking-wider text-white/50 font-mono"
                 >
                   Password
                 </label>
@@ -129,14 +129,14 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="h-10 w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none transition focus:border-zinc-700 focus-visible:ring-1 focus-visible:ring-zinc-700"
+                  className="h-10 w-full rounded-lg border border-white/10 bg-black/40 px-3 text-sm text-white placeholder:text-white/30 outline-none transition focus:border-white/20 focus-visible:ring-1 focus-visible:ring-white/50"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-zinc-100 px-4 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-white px-4 text-sm font-semibold text-zinc-950 transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
               >
                 {loading ? (
                   <>
@@ -152,10 +152,10 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <div className="mt-8 flex flex-wrap items-center justify-between gap-3 text-sm text-zinc-500">
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-3 text-sm text-white/40">
               <Link
                 href="/"
-                className="inline-flex items-center gap-2 rounded-md px-2 py-1 transition hover:text-zinc-300"
+                className="inline-flex items-center gap-2 rounded-lg px-2 py-1 transition hover:text-white/80"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back to landing
@@ -164,7 +164,7 @@ export default function LoginPage() {
                 href={`${webUrl}/signup`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-md px-2 py-1 transition hover:text-zinc-300"
+                className="rounded-lg px-2 py-1 transition hover:text-white/80"
               >
                 Create account
               </a>
