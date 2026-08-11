@@ -1,0 +1,187 @@
+name: Deploy
+
+# Triggers automatically when the CI workflow completes on main.
+# Only proceeds if CI succeeded — this is the production-correct way to
+# "deploy after CI passes" with separate workflow files.
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false # never cancel an in-flight deploy
+
+env:
+  DEPLOY_DIR: /app
+  REMOTE_HEALTH_URL: http://localhost/api/health
+  HEALTH_MAX_ATTEMPTS: '30'
+  HEALTH_INTERVAL_SECONDS: '5'
+
+jobs:
+  deploy:
+    name: SSH Deploy + Health Check
+    # Only deploy when the triggering CI run was successful AND it ran on main.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # ───────────────────────────────────────────────────────────────
+      # Step 1: Configure SSH with the private key from secrets.
+      # Uses SSH_KNOWN_HOSTS if provided; falls back to accept-new
+      # (auto-trusts on first connection, rejects on key change).
+      # ───────────────────────────────────────────────────────────────
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          # Write the private key
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+
+          # Build SSH options
+          SSH_OPTS="-o ConnectTimeout=10 -o ServerAliveInterval=30 -o ServerAliveCountMax=3"
+
+          if [ -n "$SSH_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+            SSH_OPTS="$SSH_OPTS -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/known_hosts"
+          else
+            # accept-new: trusts on first connect, rejects if key changes later
+            SSH_OPTS="$SSH_OPTS -o StrictHostKeyChecking=accept-new"
+          fi
+
+          SSH_PORT="${SSH_PORT:-22}"
+
+          echo "SSH_OPTS=$SSH_OPTS" >> "$GITHUB_ENV"
+          echo "SSH_PORT=$SSH_PORT" >> "$GITHUB_ENV"
+          echo "SSH_TARGET=$SERVER_USER@$SERVER_HOST" >> "$GITHUB_ENV"
+
+      # ───────────────────────────────────────────────────────────────
+      # Step 2: Pull the latest code on the server.
+      # Hard-resets to origin/main to ensure the deployed tree matches
+      # the repo exactly (no uncommitted drift).
+      # ───────────────────────────────────────────────────────────────
+      - name: Pull latest code on server
+        env:
+          SSH_OPTS: ${{ env.SSH_OPTS }}
+          SSH_PORT: ${{ env.SSH_PORT }}
+          SSH_TARGET: ${{ env.SSH_TARGET }}
+          DEPLOY_DIR: ${{ env.DEPLOY_DIR }}
+        run: |
+          ssh $SSH_OPTS -p "$SSH_PORT" -i ~/.ssh/id_deploy "$SSH_TARGET" bash -s << 'REMOTE_SCRIPT'
+            set -euo pipefail
+            DEPLOY_DIR="${DEPLOY_DIR:-/app}"
+
+            cd "$DEPLOY_DIR" || {
+              echo "ERROR: Deploy directory $DEPLOY_DIR not found on server"
+              exit 1
+            }
+
+            echo "→ Fetching latest from origin"
+            git fetch --all --prune
+            git reset --hard origin/main
+            echo "→ Deployed commit: $(git rev-parse --short HEAD)"
+            echo "→ Commit message:  $(git log -1 --format='%s')"
+          REMOTE_SCRIPT
+
+      # ───────────────────────────────────────────────────────────────
+      # Step 3: Build images and (re)start all services.
+      # Uses --remove-orphans to clean up services removed from
+      # docker-compose.yml. Pulls base images first for better
+      # layer caching during build.
+      # ───────────────────────────────────────────────────────────────
+      - name: Build & start services with Docker Compose
+        env:
+          SSH_OPTS: ${{ env.SSH_OPTS }}
+          SSH_PORT: ${{ env.SSH_PORT }}
+          SSH_TARGET: ${{ env.SSH_TARGET }}
+          DEPLOY_DIR: ${{ env.DEPLOY_DIR }}
+        run: |
+          ssh $SSH_OPTS -p "$SSH_PORT" -i ~/.ssh/id_deploy "$SSH_TARGET" bash -s << 'REMOTE_SCRIPT'
+            set -euo pipefail
+            DEPLOY_DIR="${DEPLOY_DIR:-/app}"
+
+            cd "$DEPLOY_DIR" || {
+              echo "ERROR: Deploy directory $DEPLOY_DIR not found on server"
+              exit 1
+            }
+
+            echo "→ Pulling latest base images"
+            docker compose pull --ignore-pull-failures || true
+
+            echo "→ Building and starting services"
+            docker compose up -d --build --remove-orphans
+
+            echo "→ Pruning dangling images to reclaim space"
+            docker image prune -f || true
+          REMOTE_SCRIPT
+
+      # ───────────────────────────────────────────────────────────────
+      # Step 4: Health check — poll the API /health endpoint from the
+      # server (localhost:80 via nginx → api:3001). Retries up to
+      # HEALTH_MAX_ATTEMPTS times with HEALTH_INTERVAL_SECONDS between
+      # attempts. On failure, dumps service status + logs for debugging.
+      # ───────────────────────────────────────────────────────────────
+      - name: Wait for services to become healthy
+        env:
+          SSH_OPTS: ${{ env.SSH_OPTS }}
+          SSH_PORT: ${{ env.SSH_PORT }}
+          SSH_TARGET: ${{ env.SSH_TARGET }}
+          REMOTE_HEALTH_URL: ${{ env.REMOTE_HEALTH_URL }}
+          HEALTH_MAX_ATTEMPTS: ${{ env.HEALTH_MAX_ATTEMPTS }}
+          HEALTH_INTERVAL_SECONDS: ${{ env.HEALTH_INTERVAL_SECONDS }}
+        run: |
+          set +e
+          echo "→ Polling health endpoint on server: $REMOTE_HEALTH_URL"
+          attempt=1
+          while [ "$attempt" -le "$HEALTH_MAX_ATTEMPTS" ]; do
+            echo "  attempt $attempt/$HEALTH_MAX_ATTEMPTS"
+            HEALTH_RESP=$(ssh $SSH_OPTS -p "$SSH_PORT" -i ~/.ssh/id_deploy "$SSH_TARGET" \
+              "curl -fsS --max-time 5 '$REMOTE_HEALTH_URL'" 2>&1)
+            HEALTH_RC=$?
+            if [ "$HEALTH_RC" -eq 0 ]; then
+              echo "✓ Health check passed (attempt $attempt)"
+              echo "  Response: $HEALTH_RESP"
+              exit 0
+            fi
+            attempt=$((attempt + 1))
+            sleep "$HEALTH_INTERVAL_SECONDS"
+          done
+
+          echo "✗ Health check FAILED after $HEALTH_MAX_ATTEMPTS attempts"
+          echo "→ Last response: $HEALTH_RESP"
+          echo ""
+          echo "→ Dumping service status (docker compose ps):"
+          ssh $SSH_OPTS -p "$SSH_PORT" -i ~/.ssh/id_deploy "$SSH_TARGET" \
+            "cd '$DEPLOY_DIR' 2>/dev/null && docker compose ps" 2>&1 || true
+          echo ""
+          echo "→ Dumping last 80 lines of all app service logs:"
+          ssh $SSH_OPTS -p "$SSH_PORT" -i ~/.ssh/id_deploy "$SSH_TARGET" \
+            "cd '$DEPLOY_DIR' 2>/dev/null && docker compose logs --tail=80" 2>&1 || true
+          exit 1
+
+      # ───────────────────────────────────────────────────────────────
+      # Step 5: Notify on failure — surface a warning annotation with
+      # the server details for quick triage.
+      # ───────────────────────────────────────────────────────────────
+      - name: Notify on deploy failure
+        if: failure()
+        env:
+          SSH_TARGET: ${{ env.SSH_TARGET }}
+          REMOTE_HEALTH_URL: ${{ env.REMOTE_HEALTH_URL }}
+        run: |
+          echo "::warning::Deploy or health check failed. Inspect the logs above."
+          echo "Server:      $SSH_TARGET"
+          echo "Health URL:   $REMOTE_HEALTH_URL"
+          echo "GitHub Run:   $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
