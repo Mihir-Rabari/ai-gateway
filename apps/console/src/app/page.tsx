@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Blocks, Sparkles, Wallet } from "lucide-react";
+import { ArrowRight, Blocks, Sparkles, Wallet, KeyRound, Activity } from "lucide-react";
 import { getAuthToken, setAuthToken, setRefreshToken } from "@/lib/api";
 import { Button, Surface } from "@/components/console/system";
 
@@ -28,13 +28,37 @@ export default function ConsolePage() {
     }
   }, [router]);
 
+  const cards = [
+    {
+      icon: Blocks,
+      title: "Apps",
+      description: "Register apps, rotate API keys, and manage redirect URIs against the live API.",
+    },
+    {
+      icon: Activity,
+      title: "Overview",
+      description: "Track requests, top models, latency, and recent account activity in one view.",
+    },
+    {
+      icon: Wallet,
+      title: "Earnings",
+      description: "Watch credit movement and export payout-facing transaction history whenever you need it.",
+    },
+    {
+      icon: KeyRound,
+      title: "API Keys",
+      description: "Create and rotate keys with scoped permissions. Revoke access instantly if needed.",
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-grid px-4 py-6 md:px-6 md:py-8">
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-[1560px] flex-col gap-6">
+        {/* Top bar */}
         <Surface className="flex items-center justify-between px-5 py-4 md:px-7">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-lg font-semibold text-black">
-              AI
+              AG
             </div>
             <div>
               <p className="text-[11px] uppercase tracking-[0.32em] text-white/38">AI Gateway</p>
@@ -51,28 +75,33 @@ export default function ConsolePage() {
               Main website
             </a>
             <Button asChild>
-              <Link href="/login">Enter Console</Link>
+              <Link href="/login">
+                Enter Console
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
             </Button>
           </div>
         </Surface>
 
+        {/* Hero + cards grid */}
         <div className="grid flex-1 gap-6 lg:grid-cols-[1.25fr_0.75fr]">
+          {/* Hero panel */}
           <Surface className="relative overflow-hidden px-6 py-8 md:px-10 md:py-12">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_30rem)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_25rem)]" />
             <div className="relative max-w-3xl">
-              <p className="text-[11px] uppercase tracking-[0.34em] text-white/34">Monochrome Workspace</p>
-              <h1 className="mt-6 text-balance font-display text-5xl tracking-[-0.08em] text-white md:text-7xl">
+              <p className="text-[11px] uppercase tracking-[0.34em] text-white/34">Developer Portal</p>
+              <h1 className="mt-6 text-balance font-display text-4xl tracking-[-0.06em] text-white md:text-6xl">
                 Build, ship, and monetize AI apps from one control room.
               </h1>
-              <p className="mt-6 max-w-2xl text-base leading-8 text-white/60 md:text-lg">
-                Your console is now set up to become a sharp monochrome workspace for apps, keys, redirect flows,
-                usage, and earnings. Every route still speaks directly to the existing backend client.
+              <p className="mt-6 max-w-2xl text-base leading-7 text-white/54 md:text-lg">
+                Manage your apps, API keys, usage analytics, and earnings — all in one place.
+                Every action speaks directly to the live gateway backend.
               </p>
               <div className="mt-10 flex flex-wrap gap-3">
                 <Button asChild className="h-12 px-6">
                   <Link href="/login">
                     Open dashboard
-                    <ArrowRight className="h-4 w-4" />
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
                 <Button asChild variant="secondary" className="h-12 px-6">
@@ -84,28 +113,17 @@ export default function ConsolePage() {
             </div>
           </Surface>
 
-          <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-1">
-            <Surface className="p-6">
-              <Blocks className="h-5 w-5 text-white/64" />
-              <p className="mt-6 font-display text-3xl tracking-[-0.06em] text-white">Apps</p>
-              <p className="mt-3 text-sm leading-6 text-white/58">
-                Register apps, rotate keys, and manage exact redirect URI lists against the live API.
-              </p>
-            </Surface>
-            <Surface className="p-6">
-              <Sparkles className="h-5 w-5 text-white/64" />
-              <p className="mt-6 font-display text-3xl tracking-[-0.06em] text-white">Overview</p>
-              <p className="mt-3 text-sm leading-6 text-white/58">
-                Track requests, top models, latency, and recent account activity in one view.
-              </p>
-            </Surface>
-            <Surface className="p-6">
-              <Wallet className="h-5 w-5 text-white/64" />
-              <p className="mt-6 font-display text-3xl tracking-[-0.06em] text-white">Earnings</p>
-              <p className="mt-3 text-sm leading-6 text-white/58">
-                Watch credits movement and export payout-facing transaction history whenever you need it.
-              </p>
-            </Surface>
+          {/* Feature cards */}
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1">
+            {cards.map((card) => (
+              <Surface key={card.title} className="p-6">
+                <card.icon className="h-5 w-5 text-white/64" />
+                <p className="mt-4 font-display text-2xl tracking-[-0.04em] text-white">{card.title}</p>
+                <p className="mt-2 text-sm leading-6 text-white/50">
+                  {card.description}
+                </p>
+              </Surface>
+            ))}
           </div>
         </div>
       </div>
