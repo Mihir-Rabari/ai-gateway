@@ -116,11 +116,10 @@ export interface CodexOAuthSession {
 }
 
 export interface CodexDeviceCodeResponse {
-  device_code: string;
+  device_auth_id: string;
   user_code: string;
-  verification_uri: string;
   interval: number;
-  expires_in: number;
+  expires_at: string;
 }
 
 export type CodexModelName =

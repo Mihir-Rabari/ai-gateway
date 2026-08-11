@@ -62,6 +62,13 @@ export async function codexRoutes(fastify: FastifyInstance) {
           validateBody.data.userId,
         );
 
+        // Also store the user_code so pollDeviceCode can send it to OpenAI
+        await fastify.redis.setex(
+          `codex:device:usercode:${deviceCode.deviceCode}`,
+          600,
+          deviceCode.userCode,
+        );
+
         return reply.send(ok({
           userCode: deviceCode.userCode,
           verificationUri: deviceCode.verificationUri,
@@ -124,6 +131,7 @@ export async function codexRoutes(fastify: FastifyInstance) {
 
         // Clean up Redis device code
         await fastify.redis.del(`codex:device:${deviceCode}`);
+        await fastify.redis.del(`codex:device:usercode:${deviceCode}`);
 
         return reply.send(ok({ status: 'authenticated', accountId }));
       } catch (err) {

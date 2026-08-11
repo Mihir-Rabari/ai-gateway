@@ -86,7 +86,8 @@ export class CodexOAuthService {
 
   /**
    * Step 1: Request a device code from OpenAI's auth endpoint.
-   * Returns the user_code, verification_uri, and device_code for polling.
+   * Returns the user_code and device_auth_id for polling.
+   * The verification URL is a fixed OpenAI page: https://auth.openai.com/codex/device
    */
   async requestDeviceCode(): Promise<{
     deviceCode: string;
@@ -107,10 +108,10 @@ export class CodexOAuthService {
 
     const data = (await res.json()) as CodexDeviceCodeResponse;
     return {
-      deviceCode: data.device_code,
+      deviceCode: data.device_auth_id,
       userCode: data.user_code,
-      verificationUri: data.verification_uri,
-      interval: data.interval,
+      verificationUri: `${CODEX_AUTH_BASE_URL}/codex/device`,
+      interval: Number(data.interval),
     };
   }
 
@@ -127,6 +128,13 @@ export class CodexOAuthService {
     const startTime = Date.now();
     const pollIntervalMs = Math.max(interval * 1000, 2000);
 
+    // We need the user_code paired with this device_auth_id for polling.
+    // It was stored in Redis by the route handler alongside the userId.
+    const storedUserCode = await this.redis.get(`codex:device:usercode:${deviceCode}`);
+    if (!storedUserCode) {
+      throw CodexErrors.DEVICE_CODE_FAILED();
+    }
+
     while (Date.now() - startTime < timeoutMs) {
       await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
 
@@ -135,21 +143,23 @@ export class CodexOAuthService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           client_id: CODEX_CLIENT_ID,
-          device_code: deviceCode,
+          device_auth_id: deviceCode,
+          user_code: storedUserCode,
           grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
         }),
       });
 
-      if (res.status === 400) {
-        const body = (await res.json()) as { error?: string };
-        if (body.error === 'authorization_pending') continue; // user hasn't approved yet
-        if (body.error === 'slow_down') {
+      if (res.status === 400 || res.status === 403) {
+        const body = (await res.json()) as { error?: { code?: string } };
+        const errorCode = body.error?.code;
+        if (errorCode === 'deviceauth_authorization_pending') continue; // user hasn't approved yet
+        if (errorCode === 'deviceauth_slow_down') {
           // Increase polling interval per OAuth spec
           await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
           continue;
         }
-        if (body.error === 'expired_token') throw CodexErrors.DEVICE_CODE_FAILED();
-        if (body.error === 'access_denied') throw CodexErrors.DEVICE_CODE_FAILED();
+        if (errorCode === 'deviceauth_expired_token') throw CodexErrors.DEVICE_CODE_FAILED();
+        if (errorCode === 'deviceauth_access_denied') throw CodexErrors.DEVICE_CODE_FAILED();
         continue;
       }
 
@@ -164,6 +174,9 @@ export class CodexOAuthService {
         expires_in: number;
         id_token?: string;
       };
+
+      // Clean up the stored user_code
+      await this.redis.del(`codex:device:usercode:${deviceCode}`);
 
       return {
         accessToken: data.access_token,
