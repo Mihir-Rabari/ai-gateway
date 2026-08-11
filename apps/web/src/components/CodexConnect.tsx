@@ -11,6 +11,7 @@ export function CodexConnect() {
   const [session, setSession] = useState<CodexSessionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [deviceCode, setDeviceCode] = useState<{
     userCode: string;
     verificationUri: string;
@@ -58,7 +59,7 @@ export function CodexConnect() {
         setTimeout(poll, pollInterval);
       };
       setTimeout(poll, pollInterval);
-    } catch (err) {
+    } catch {
       setError("Failed to start ChatGPT login flow. Please try again.");
       setConnecting(false);
     }
