@@ -22,3 +22,6 @@
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
 **Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+## 2024-08-12 - Console Layout Keyboard Focus Styles
+**Learning:** The layout navigation and footer links/buttons in apps/console lacked explicit keyboard focus styles, which made keyboard navigation inaccessible. The existing Tailwind classes for hover didn't extend to focus.
+**Action:** Add explicit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 classes to interactive elements like Link, a, and button that do not use dedicated accessible components.
