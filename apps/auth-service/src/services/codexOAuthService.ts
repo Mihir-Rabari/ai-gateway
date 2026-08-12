@@ -116,77 +116,79 @@ export class CodexOAuthService {
   }
 
   /**
-   * Step 2: Poll for device-code authorization completion.
-   * Returns OAuth tokens when the user completes sign-in in their browser.
+   * Step 2: Single-shot poll for device-code authorization.
+   * Makes ONE call to OpenAI's token endpoint. The caller (frontend) is
+   * responsible for retrying at the interval returned by requestDeviceCode.
+   *
+   * Returns:
+   *   - status 'pending' if the user hasn't approved yet
+   *   - status 'authenticated' with tokens if the flow completed
+   *
+   * This avoids nginx / Cloudflare proxy timeouts that kill long-blocking loops.
    */
-  async pollDeviceCode(deviceCode: string, interval: number, timeoutMs = 300_000): Promise<{
-    accessToken: string;
-    refreshToken: string;
-    expiresIn: number;
+  async pollDeviceCode(deviceCode: string): Promise<{
+    status: 'pending' | 'authenticated';
+    interval?: number;
+    accessToken?: string;
+    refreshToken?: string;
+    expiresIn?: number;
     idToken?: string;
   }> {
-    const startTime = Date.now();
-    const pollIntervalMs = Math.max(interval * 1000, 2000);
-
     // We need the user_code paired with this device_auth_id for polling.
-    // It was stored in Redis by the route handler alongside the userId.
     const storedUserCode = await this.redis.get(`codex:device:usercode:${deviceCode}`);
     if (!storedUserCode) {
       throw CodexErrors.DEVICE_CODE_FAILED();
     }
 
-    while (Date.now() - startTime < timeoutMs) {
-      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+    const res = await fetch(`${CODEX_AUTH_BASE_URL}/api/accounts/deviceauth/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: CODEX_CLIENT_ID,
+        device_auth_id: deviceCode,
+        user_code: storedUserCode,
+        grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+      }),
+    });
 
-      const res = await fetch(`${CODEX_AUTH_BASE_URL}/api/accounts/deviceauth/token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          client_id: CODEX_CLIENT_ID,
-          device_auth_id: deviceCode,
-          user_code: storedUserCode,
-          grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
-        }),
-      });
-
-      if (res.status === 400 || res.status === 403) {
-        const body = (await res.json()) as { error?: { code?: string } };
-        const errorCode = body.error?.code;
-        if (errorCode === 'deviceauth_authorization_pending') continue; // user hasn't approved yet
-        if (errorCode === 'deviceauth_slow_down') {
-          // Increase polling interval per OAuth spec
-          await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
-          continue;
-        }
-        if (errorCode === 'deviceauth_expired_token') throw CodexErrors.DEVICE_CODE_FAILED();
-        if (errorCode === 'deviceauth_access_denied') throw CodexErrors.DEVICE_CODE_FAILED();
-        continue;
+    // 400/403 — authorization pending, slow_down, expired, or denied
+    if (res.status === 400 || res.status === 403) {
+      const body = (await res.json()) as { error?: { code?: string } };
+      const errorCode = body.error?.code;
+      if (errorCode === 'deviceauth_authorization_pending') {
+        return { status: 'pending', interval: 5 };
       }
-
-      if (!res.ok) {
-        logger.warn({ status: res.status }, 'Device-code polling failed');
-        throw CodexErrors.POLL_FAILED();
+      if (errorCode === 'deviceauth_slow_down') {
+        return { status: 'pending', interval: 10 };
       }
-
-      const data = (await res.json()) as {
-        access_token: string;
-        refresh_token: string;
-        expires_in: number;
-        id_token?: string;
-      };
-
-      // Clean up the stored user_code
-      await this.redis.del(`codex:device:usercode:${deviceCode}`);
-
-      return {
-        accessToken: data.access_token,
-        refreshToken: data.refresh_token,
-        expiresIn: data.expires_in,
-        idToken: data.id_token,
-      };
+      if (errorCode === 'deviceauth_expired_token') throw CodexErrors.DEVICE_CODE_FAILED();
+      if (errorCode === 'deviceauth_access_denied') throw CodexErrors.DEVICE_CODE_FAILED();
+      // Unknown error code — treat as pending, let frontend retry
+      return { status: 'pending', interval: 5 };
     }
 
-    throw CodexErrors.DEVICE_CODE_FAILED();
+    if (!res.ok) {
+      logger.warn({ status: res.status }, 'Device-code polling failed');
+      throw CodexErrors.POLL_FAILED();
+    }
+
+    const data = (await res.json()) as {
+      access_token: string;
+      refresh_token: string;
+      expires_in: number;
+      id_token?: string;
+    };
+
+    // Clean up the stored user_code now that we have tokens
+    await this.redis.del(`codex:device:usercode:${deviceCode}`);
+
+    return {
+      status: 'authenticated',
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      expiresIn: data.expires_in,
+      idToken: data.id_token,
+    };
   }
 
   // ─── Token Management ────────────────────────────────────────────

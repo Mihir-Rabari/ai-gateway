@@ -111,23 +111,26 @@ export async function codexRoutes(fastify: FastifyInstance) {
           ));
         }
 
-        // Use default interval from the stored device code info
-        const interval = 5;
-        const tokens = await codexService.pollDeviceCode(deviceCode, interval);
+        // Single-shot poll — one call to OpenAI, return immediately
+        const result = await codexService.pollDeviceCode(deviceCode);
 
-        // Decode account ID from the ID token
+        if (result.status === 'pending') {
+          return reply.send(ok({ status: 'pending', interval: result.interval ?? 5 }));
+        }
+
+        // Authenticated — decode account ID from the ID token
         let accountId: string | undefined;
-        if (tokens.idToken) {
+        if (result.idToken) {
           try {
             const payload = JSON.parse(
-              Buffer.from(tokens.idToken.split('.')[1]!, 'base64url').toString('utf8'),
+              Buffer.from(result.idToken.split('.')[1]!, 'base64url').toString('utf8'),
             ) as { sub?: string };
             accountId = payload.sub;
           } catch { /* ignore */ }
         }
 
         // Store tokens
-        await codexService.storeSession(userId, tokens.accessToken, tokens.refreshToken, tokens.expiresIn, accountId);
+        await codexService.storeSession(userId, result.accessToken!, result.refreshToken!, result.expiresIn!, accountId);
 
         // Clean up Redis device code
         await fastify.redis.del(`codex:device:${deviceCode}`);
