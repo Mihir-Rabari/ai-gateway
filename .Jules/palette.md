@@ -22,3 +22,6 @@
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
 **Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+## 2024-08-12 - Ensure consistent keyboard focus states and IconButton usage
+**Learning:** Raw HTML `<button>` elements used for icon-only actions in the console layout were missing consistent keyboard focus states and ARIA labeling strategies compared to the standard `IconButton` component. Additionally, interactive links in the sidebar and footer lacked `focus-visible` styles, hindering keyboard navigation accessibility.
+**Action:** Always prefer the existing `IconButton` component for icon-only buttons to inherit built-in accessibility (ARIA labels) and consistent focus styling. Ensure all interactive elements, including `<Link>` and raw anchor tags, explicitly include `focus-visible` styles (e.g., `focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none`) for robust keyboard navigation.
