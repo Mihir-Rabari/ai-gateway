@@ -99,7 +99,7 @@ describe('CreditService', () => {
     service = new CreditService(
       makePgPool(mockDbQuery, mockConnect),
       redis as unknown as Redis,
-      kafka.publish,
+      kafka.producer.send,
     );
   });
 
@@ -209,7 +209,7 @@ describe('CreditService', () => {
       // Lock should be deleted from Redis
       expect(await redis.get('credit_lock:user-1:req-1')).toBeNull();
       // Kafka deducted event
-      const deductedEvent = kafka._messages.find((m: { topic: string; msg: { type: string } }) => m.msg.type === 'credit.deducted' || (m.msg as { type: string }).type === 'credit.deducted');
+      const deductedEvent = kafka._messages.find((m) => (m.msg as { type: string }).type === 'credit.deducted');
       expect(deductedEvent).toBeDefined();
     });
 
@@ -267,7 +267,7 @@ describe('CreditService', () => {
 
       expect(await redis.get('credit_lock:user-1:req-1')).toBeNull();
       const releasedEvent = kafka._messages.find(
-        (m: { topic: string; msg: { type: string } }) => (m.msg as { type: string }).type === 'credit.released',
+        (m) => (m.msg as { type: string }).type === 'credit.released',
       );
       expect(releasedEvent).toBeDefined();
     });
@@ -306,7 +306,7 @@ describe('CreditService', () => {
 
       expect(result).toEqual({ balanceAfter: 200 });
       const addedEvent = kafka._messages.find(
-        (m: { topic: string; msg: { type: string } }) => (m.msg as { type: string }).type === 'credit.added',
+        (m) => (m.msg as { type: string }).type === 'credit.added',
       );
       expect(addedEvent).toBeDefined();
     });
