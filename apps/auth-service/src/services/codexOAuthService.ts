@@ -179,16 +179,34 @@ export class CodexOAuthService {
       throw CodexErrors.POLL_FAILED();
     }
 
-    const data = (await res.json()) as {
-      access_token: string;
-      refresh_token: string;
-      expires_in: number;
-      id_token?: string;
-    };
+    const data = (await res.json()) as Record<string, unknown>;
+
+    // Log the raw response for debugging
+    logger.info({ status: res.status, body: JSON.stringify(data).slice(0, 500) }, 'OpenAI token endpoint response');
+
+    // Check for error in 200 body (some APIs wrap errors in 200)
+    const errorObj = data.error as { code?: string; message?: string } | undefined;
+    if (errorObj) {
+      const errorCode = errorObj.code;
+      if (errorCode === 'deviceauth_authorization_pending') {
+        return { status: 'pending', interval: 5 };
+      }
+      if (errorCode === 'deviceauth_slow_down') {
+        return { status: 'pending', interval: 10 };
+      }
+      logger.warn({ errorCode, message: errorObj.message }, 'OpenAI returned error in 200 body');
+      throw CodexErrors.POLL_FAILED();
+    }
+
+    // Extract token fields — handle both snake_case and camelCase
+    const accessToken = (data.access_token ?? data.accessToken) as string | undefined;
+    const refreshToken = (data.refresh_token ?? data.refreshToken) as string | undefined;
+    const expiresIn = (data.expires_in ?? data.expiresIn) as number | undefined;
+    const idToken = (data.id_token ?? data.idToken) as string | undefined;
 
     // Validate we got actual tokens before cleaning up
-    if (!data.access_token || !data.refresh_token) {
-      logger.warn({ hasAccess: !!data.access_token, hasRefresh: !!data.refresh_token }, 'Token response missing fields');
+    if (!accessToken || !refreshToken) {
+      logger.warn({ hasAccess: !!accessToken, hasRefresh: !!refreshToken, bodyKeys: Object.keys(data) }, 'Token response missing fields');
       throw CodexErrors.POLL_FAILED();
     }
 
@@ -197,10 +215,10 @@ export class CodexOAuthService {
 
     return {
       status: 'authenticated',
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      expiresIn: data.expires_in,
-      idToken: data.id_token,
+      accessToken: accessToken!,
+      refreshToken: refreshToken!,
+      expiresIn: expiresIn ?? 3600,
+      idToken: idToken,
     };
   }
 
