@@ -58,7 +58,7 @@ export function CodexConnect() {
         setTimeout(poll, pollInterval);
       };
       setTimeout(poll, pollInterval);
-    } catch (err) {
+    } catch (_err) {
       setError("Failed to start ChatGPT login flow. Please try again.");
       setConnecting(false);
     }
