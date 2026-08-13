@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   RoutingService,
   validateModelConfig,
@@ -7,7 +7,7 @@ import {
   type ModelConfig,
 } from '../services/routingService.js';
 import { Errors } from '@ai-gateway/utils';
-import { createRedisMock, createKafkaMock, createFetchMock } from '../../../test-setup.js';
+import { createRedisMock, createKafkaMock, createFetchMock } from '../../../../test-setup.ts';
 import type Redis from 'ioredis';
 
 // Mock config
