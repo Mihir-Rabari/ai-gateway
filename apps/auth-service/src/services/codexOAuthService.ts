@@ -167,7 +167,14 @@ export class CodexOAuthService {
       return { status: 'pending', interval: 5 };
     }
 
+    // Non-OK responses
     if (!res.ok) {
+      // 500 from OpenAI could be a transient server error or user_code_mismatch
+      // — treat as pending so the frontend retries
+      if (res.status >= 500) {
+        logger.warn({ status: res.status }, 'OpenAI server error during poll, will retry');
+        return { status: 'pending', interval: 5 };
+      }
       logger.warn({ status: res.status }, 'Device-code polling failed');
       throw CodexErrors.POLL_FAILED();
     }
@@ -179,7 +186,13 @@ export class CodexOAuthService {
       id_token?: string;
     };
 
-    // Clean up the stored user_code now that we have tokens
+    // Validate we got actual tokens before cleaning up
+    if (!data.access_token || !data.refresh_token) {
+      logger.warn({ hasAccess: !!data.access_token, hasRefresh: !!data.refresh_token }, 'Token response missing fields');
+      throw CodexErrors.POLL_FAILED();
+    }
+
+    // Clean up the stored user_code only AFTER we have valid tokens
     await this.redis.del(`codex:device:usercode:${deviceCode}`);
 
     return {

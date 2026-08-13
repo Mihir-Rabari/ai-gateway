@@ -1,6 +1,8 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { ok, fail, GatewayError } from '@ai-gateway/utils';
+import { ok, fail, GatewayError, createLogger } from '@ai-gateway/utils';
 import { CodexOAuthService } from '../services/codexOAuthService.js';
+
+const logger = createLogger('codex-routes');
 
 export async function codexRoutes(fastify: FastifyInstance) {
   const codexService = new CodexOAuthService(
@@ -138,6 +140,7 @@ export async function codexRoutes(fastify: FastifyInstance) {
 
         return reply.send(ok({ status: 'authenticated', accountId }));
       } catch (err) {
+        logger.error({ err: (err as Error).message, stack: (err as Error).stack }, 'Codex poll error');
         return reply
           .status((err as GatewayError).statusCode ?? 500)
           .send(fail(err as GatewayError));
