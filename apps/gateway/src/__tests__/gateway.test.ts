@@ -28,8 +28,15 @@ function createKafkaMock() {
     _messages: messages,
   };
 }
-function createFetchMock() {
+function createFetchMock(opts: any = {}) {
   return vi.fn(async (url: string, init?: RequestInit) => {
+    if (opts && opts.routes) {
+      for (const [route, handler] of Object.entries(opts.routes)) {
+        if (url.includes(route)) {
+          return (handler as Function)(url, init);
+        }
+      }
+    }
     const response: Response = {
       ok: true, status: 200,
       json: async () => ({ choices: [{ message: { content: 'test response' } }] }),
@@ -153,7 +160,7 @@ describe('GatewayService', () => {
         authServiceUrl: 'http://auth:3003',
         creditServiceUrl: 'http://credit:3005',
         routingServiceUrl: 'http://routing:3006',
-        kafkaPublish: kafka.publish,
+        kafkaPublish: (topic: string, msg: unknown) => kafka.producer.send(topic, msg),
         redis: redis as unknown as Redis,
         pgPool: options?.pgPool ?? ({} as never),
         tokenCacheTtlSeconds: 60,
@@ -166,7 +173,7 @@ describe('GatewayService', () => {
 
   describe('request routing', () => {
     it('processes a valid request end-to-end and returns a GatewayResponse', async () => {
-      const fetchMock = makeFetchResponses();
+      const fetchMock = makeFetchResponses({});
       const service = makeService(fetchMock);
 
       const result = await service.processRequest({
@@ -239,7 +246,7 @@ describe('GatewayService', () => {
     });
 
     it('caches validated token in Redis for subsequent requests', async () => {
-      const fetchMock = makeFetchResponses();
+      const fetchMock = makeFetchResponses({});
       const service = makeService(fetchMock);
 
       // First request — hits the auth service
@@ -260,7 +267,7 @@ describe('GatewayService', () => {
 
   describe('rate limiting', () => {
     it('allows requests within the plan limit', async () => {
-      const fetchMock = makeFetchResponses();
+      const fetchMock = makeFetchResponses({});
       const service = makeService(fetchMock);
 
       // free plan limit is 10 req/60s; pro is 60
@@ -334,7 +341,7 @@ describe('GatewayService', () => {
 
       // A usage.failed event should have been published
       const failedEvent = kafka._messages.find(
-        (m: { topic: string; msg: { type: string } }) => (m.msg as { type: string }).type === 'usage.request.failed',
+        (m: any) => (m.msg as { type: string }).type === 'usage.request.failed',
       );
       expect(failedEvent).toBeDefined();
     });
@@ -372,7 +379,7 @@ describe('GatewayService', () => {
     });
 
     it('skips app validation for first-party app IDs', async () => {
-      const fetchMock = makeFetchResponses();
+      const fetchMock = makeFetchResponses({});
       const service = makeService(fetchMock);
 
       // "unknown" is in FIRST_PARTY_APP_IDS, so no app validation call

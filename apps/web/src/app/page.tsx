@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Zap, Shield, CreditCard, Layers, Terminal, Check } from "lucide-react";
+import { ArrowRight, Zap, Shield, CreditCard, Layers, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const isBrowser = typeof window !== "undefined";
