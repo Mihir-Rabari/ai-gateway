@@ -149,10 +149,12 @@ export class AppValidationService {
         }
       }
 
-      for (const keyHash of keyHashes) {
-        if (await this.compareHashFn(appApiKey, keyHash)) {
-          return 'allowed';
-        }
+      // Parallelize independent expensive hashing operations to reduce total latency
+      const matchResults = await Promise.all(
+        keyHashes.map((keyHash) => this.compareHashFn(appApiKey, keyHash))
+      );
+      if (matchResults.includes(true)) {
+        return 'allowed';
       }
 
       return 'invalid_key';
