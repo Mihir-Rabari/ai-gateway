@@ -1,8 +1,9 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { ok, fail, GatewayError, createLogger } from '@ai-gateway/utils';
-import { CodexOAuthService } from '../services/codexOAuthService.js';
+import { timingSafeEqual } from "crypto";
+import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import { ok, fail, GatewayError, createLogger } from "@ai-gateway/utils";
+import { CodexOAuthService } from "../services/codexOAuthService.js";
 
-const logger = createLogger('codex-routes');
+const logger = createLogger("codex-routes");
 
 export async function codexRoutes(fastify: FastifyInstance) {
   const codexService = new CodexOAuthService(
@@ -15,44 +16,48 @@ export async function codexRoutes(fastify: FastifyInstance) {
   // POST /auth/codex/device-code
   // Initiates the device-code flow. Returns user_code + verification_uri.
   fastify.post(
-    '/auth/codex/device-code',
+    "/auth/codex/device-code",
     {
       schema: {
         headers: {
-          type: 'object',
-          required: ['authorization'],
+          type: "object",
+          required: ["authorization"],
           properties: {
-            authorization: { type: 'string' },
+            authorization: { type: "string" },
           },
         },
       },
     },
     async (req: FastifyRequest, reply: FastifyReply) => {
       try {
-        const authHeader = req.headers['authorization'];
-        if (!authHeader?.startsWith('Bearer ')) {
-          return reply.status(401).send(fail(new GatewayError('AUTH_001', 'Missing token', 401)));
+        const authHeader = req.headers["authorization"];
+        if (!authHeader?.startsWith("Bearer ")) {
+          return reply
+            .status(401)
+            .send(fail(new GatewayError("AUTH_001", "Missing token", 401)));
         }
 
         // Validate token first to get userId
         const token = authHeader.slice(7);
         const validateRes = await fetch(
-          `${process.env['AUTH_SERVICE_URL'] ?? 'http://localhost:3003'}/internal/auth/validate`,
+          `${process.env["AUTH_SERVICE_URL"] ?? "http://localhost:3003"}/internal/auth/validate`,
           {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
-              'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+              "Content-Type": "application/json",
+              "X-Internal-Secret": process.env["INTERNAL_SERVICE_SECRET"] ?? "",
             },
             body: JSON.stringify({ token }),
           },
         );
-        const validateBody = await validateRes.json() as {
+        const validateBody = (await validateRes.json()) as {
           success: boolean;
           data?: { userId: string };
         };
         if (!validateRes.ok || !validateBody.success || !validateBody.data) {
-          return reply.status(401).send(fail(new GatewayError('AUTH_001', 'Invalid token', 401)));
+          return reply
+            .status(401)
+            .send(fail(new GatewayError("AUTH_001", "Invalid token", 401)));
         }
 
         const deviceCode = await codexService.requestDeviceCode();
@@ -71,12 +76,14 @@ export async function codexRoutes(fastify: FastifyInstance) {
           deviceCode.userCode,
         );
 
-        return reply.send(ok({
-          userCode: deviceCode.userCode,
-          verificationUri: deviceCode.verificationUri,
-          deviceCode: deviceCode.deviceCode,
-          interval: deviceCode.interval,
-        }));
+        return reply.send(
+          ok({
+            userCode: deviceCode.userCode,
+            verificationUri: deviceCode.verificationUri,
+            deviceCode: deviceCode.deviceCode,
+            interval: deviceCode.interval,
+          }),
+        );
       } catch (err) {
         return reply
           .status((err as GatewayError).statusCode ?? 500)
@@ -89,35 +96,48 @@ export async function codexRoutes(fastify: FastifyInstance) {
   // POST /auth/codex/poll
   // Polls for completion of the device-code flow.
   fastify.post(
-    '/auth/codex/poll',
+    "/auth/codex/poll",
     {
       schema: {
         body: {
-          type: 'object',
-          required: ['deviceCode'],
+          type: "object",
+          required: ["deviceCode"],
           properties: {
-            deviceCode: { type: 'string' },
+            deviceCode: { type: "string" },
           },
         },
       },
     },
-    async (req: FastifyRequest<{ Body: { deviceCode: string } }>, reply: FastifyReply) => {
+    async (
+      req: FastifyRequest<{ Body: { deviceCode: string } }>,
+      reply: FastifyReply,
+    ) => {
       try {
         const { deviceCode } = req.body;
 
         // Get userId from Redis
         const userId = await fastify.redis.get(`codex:device:${deviceCode}`);
         if (!userId) {
-          return reply.status(400).send(fail(
-            new GatewayError('CODEX_AUTH_006', 'Device code expired or invalid', 400),
-          ));
+          return reply
+            .status(400)
+            .send(
+              fail(
+                new GatewayError(
+                  "CODEX_AUTH_006",
+                  "Device code expired or invalid",
+                  400,
+                ),
+              ),
+            );
         }
 
         // Single-shot poll — one call to OpenAI, return immediately
         const result = await codexService.pollDeviceCode(deviceCode);
 
-        if (result.status === 'pending') {
-          return reply.send(ok({ status: 'pending', interval: result.interval ?? 5 }));
+        if (result.status === "pending") {
+          return reply.send(
+            ok({ status: "pending", interval: result.interval ?? 5 }),
+          );
         }
 
         // Authenticated — decode account ID from the ID token
@@ -125,22 +145,35 @@ export async function codexRoutes(fastify: FastifyInstance) {
         if (result.idToken) {
           try {
             const payload = JSON.parse(
-              Buffer.from(result.idToken.split('.')[1]!, 'base64url').toString('utf8'),
+              Buffer.from(result.idToken.split(".")[1]!, "base64url").toString(
+                "utf8",
+              ),
             ) as { sub?: string };
             accountId = payload.sub;
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
         }
 
         // Store tokens
-        await codexService.storeSession(userId, result.accessToken!, result.refreshToken!, result.expiresIn!, accountId);
+        await codexService.storeSession(
+          userId,
+          result.accessToken!,
+          result.refreshToken!,
+          result.expiresIn!,
+          accountId,
+        );
 
         // Clean up Redis device code
         await fastify.redis.del(`codex:device:${deviceCode}`);
         await fastify.redis.del(`codex:device:usercode:${deviceCode}`);
 
-        return reply.send(ok({ status: 'authenticated', accountId }));
+        return reply.send(ok({ status: "authenticated", accountId }));
       } catch (err) {
-        logger.error({ err: (err as Error).message, stack: (err as Error).stack }, 'Codex poll error');
+        logger.error(
+          { err: (err as Error).message, stack: (err as Error).stack },
+          "Codex poll error",
+        );
         return reply
           .status((err as GatewayError).statusCode ?? 500)
           .send(fail(err as GatewayError));
@@ -151,46 +184,52 @@ export async function codexRoutes(fastify: FastifyInstance) {
   // ─── Check Codex Session Status ───────────────────────────────────
   // GET /auth/codex/session
   fastify.get(
-    '/auth/codex/session',
+    "/auth/codex/session",
     {
       schema: {
         headers: {
-          type: 'object',
-          required: ['authorization'],
+          type: "object",
+          required: ["authorization"],
           properties: {
-            authorization: { type: 'string' },
+            authorization: { type: "string" },
           },
         },
       },
     },
     async (req: FastifyRequest, reply: FastifyReply) => {
       try {
-        const authHeader = req.headers['authorization'];
-        if (!authHeader?.startsWith('Bearer ')) {
-          return reply.status(401).send(fail(new GatewayError('AUTH_001', 'Missing token', 401)));
+        const authHeader = req.headers["authorization"];
+        if (!authHeader?.startsWith("Bearer ")) {
+          return reply
+            .status(401)
+            .send(fail(new GatewayError("AUTH_001", "Missing token", 401)));
         }
 
         const token = authHeader.slice(7);
         const validateRes = await fetch(
-          `${process.env['AUTH_SERVICE_URL'] ?? 'http://localhost:3003'}/internal/auth/validate`,
+          `${process.env["AUTH_SERVICE_URL"] ?? "http://localhost:3003"}/internal/auth/validate`,
           {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
-              'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+              "Content-Type": "application/json",
+              "X-Internal-Secret": process.env["INTERNAL_SERVICE_SECRET"] ?? "",
             },
             body: JSON.stringify({ token }),
           },
         );
-        const validateBody = await validateRes.json() as {
+        const validateBody = (await validateRes.json()) as {
           success: boolean;
           data?: { userId: string };
         };
         if (!validateRes.ok || !validateBody.success || !validateBody.data) {
-          return reply.status(401).send(fail(new GatewayError('AUTH_001', 'Invalid token', 401)));
+          return reply
+            .status(401)
+            .send(fail(new GatewayError("AUTH_001", "Invalid token", 401)));
         }
 
-        const sessionInfo = await codexService.getSessionInfo(validateBody.data.userId);
+        const sessionInfo = await codexService.getSessionInfo(
+          validateBody.data.userId,
+        );
         return reply.send(ok(sessionInfo));
       } catch (err) {
         return reply
@@ -203,47 +242,51 @@ export async function codexRoutes(fastify: FastifyInstance) {
   // ─── Disconnect Codex Session ─────────────────────────────────────
   // POST /auth/codex/disconnect
   fastify.post(
-    '/auth/codex/disconnect',
+    "/auth/codex/disconnect",
     {
       schema: {
         headers: {
-          type: 'object',
-          required: ['authorization'],
+          type: "object",
+          required: ["authorization"],
           properties: {
-            authorization: { type: 'string' },
+            authorization: { type: "string" },
           },
         },
       },
     },
     async (req: FastifyRequest, reply: FastifyReply) => {
       try {
-        const authHeader = req.headers['authorization'];
-        if (!authHeader?.startsWith('Bearer ')) {
-          return reply.status(401).send(fail(new GatewayError('AUTH_001', 'Missing token', 401)));
+        const authHeader = req.headers["authorization"];
+        if (!authHeader?.startsWith("Bearer ")) {
+          return reply
+            .status(401)
+            .send(fail(new GatewayError("AUTH_001", "Missing token", 401)));
         }
 
         const token = authHeader.slice(7);
         const validateRes = await fetch(
-          `${process.env['AUTH_SERVICE_URL'] ?? 'http://localhost:3003'}/internal/auth/validate`,
+          `${process.env["AUTH_SERVICE_URL"] ?? "http://localhost:3003"}/internal/auth/validate`,
           {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
-              'X-Internal-Secret': process.env['INTERNAL_SERVICE_SECRET'] ?? '',
+              "Content-Type": "application/json",
+              "X-Internal-Secret": process.env["INTERNAL_SERVICE_SECRET"] ?? "",
             },
             body: JSON.stringify({ token }),
           },
         );
-        const validateBody = await validateRes.json() as {
+        const validateBody = (await validateRes.json()) as {
           success: boolean;
           data?: { userId: string };
         };
         if (!validateRes.ok || !validateBody.success || !validateBody.data) {
-          return reply.status(401).send(fail(new GatewayError('AUTH_001', 'Invalid token', 401)));
+          return reply
+            .status(401)
+            .send(fail(new GatewayError("AUTH_001", "Invalid token", 401)));
         }
 
         await codexService.deleteSession(validateBody.data.userId);
-        return reply.send(ok({ status: 'disconnected' }));
+        return reply.send(ok({ status: "disconnected" }));
       } catch (err) {
         return reply
           .status((err as GatewayError).statusCode ?? 500)
@@ -256,21 +299,21 @@ export async function codexRoutes(fastify: FastifyInstance) {
   // POST /internal/auth/codex/token
   // Used by routing-service to get the token for proxying
   fastify.post(
-    '/internal/auth/codex/token',
+    "/internal/auth/codex/token",
     {
       schema: {
         body: {
-          type: 'object',
-          required: ['userId'],
+          type: "object",
+          required: ["userId"],
           properties: {
-            userId: { type: 'string' },
+            userId: { type: "string" },
           },
         },
         headers: {
-          type: 'object',
-          required: ['x-internal-secret'],
+          type: "object",
+          required: ["x-internal-secret"],
           properties: {
-            'x-internal-secret': { type: 'string' },
+            "x-internal-secret": { type: "string" },
           },
         },
       },
@@ -280,15 +323,31 @@ export async function codexRoutes(fastify: FastifyInstance) {
       reply: FastifyReply,
     ) => {
       // Internal secret check
-      const internalSecret = process.env['INTERNAL_SERVICE_SECRET'] || '';
-      const headerVal = req.headers['x-internal-secret'];
-      const clientSecret = Array.isArray(headerVal) ? headerVal[0] : (headerVal || '');
-      if (!internalSecret || clientSecret !== internalSecret) {
-        return reply.status(403).send(fail(new GatewayError('FORBIDDEN', 'Invalid internal secret', 403)));
+      const internalSecretEnv = process.env["INTERNAL_SERVICE_SECRET"] || "";
+      const internalSecretBuf = Buffer.from(internalSecretEnv, "utf8");
+
+      const headerVal = req.headers["x-internal-secret"];
+      const clientSecretStr = Array.isArray(headerVal)
+        ? headerVal[0]
+        : headerVal || "";
+      const clientSecretBuf = Buffer.from(clientSecretStr, "utf8");
+
+      if (
+        internalSecretBuf.length === 0 ||
+        clientSecretBuf.length !== internalSecretBuf.length ||
+        !timingSafeEqual(clientSecretBuf, internalSecretBuf)
+      ) {
+        return reply
+          .status(403)
+          .send(
+            fail(new GatewayError("FORBIDDEN", "Invalid internal secret", 403)),
+          );
       }
 
       try {
-        const accessToken = await codexService.getValidAccessToken(req.body.userId);
+        const accessToken = await codexService.getValidAccessToken(
+          req.body.userId,
+        );
         return reply.send(ok({ accessToken }));
       } catch (err) {
         return reply
