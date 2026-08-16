@@ -22,3 +22,6 @@
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
 **Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+## 2023-10-27 - [Add Focus States to Console Layout Nav & Footer]
+**Learning:** In the developer console UI (`apps/console`), interactive elements like custom `<Link>`, `<a>`, and `<button>` components in sidebar navigations often miss explicit keyboard focus indicators, breaking keyboard accessibility.
+**Action:** Always include explicit focus styles like `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50` for interactive elements to maintain accessibility standards for keyboard navigation.
