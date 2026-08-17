@@ -2,32 +2,37 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Menu, X, Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
-import { api, getAuthToken, getRefreshToken, type UserProfile } from "@/lib/api";
+import {
+  api,
+  getAuthToken,
+  getRefreshToken,
+} from "@/lib/api";
 import { Button } from "@/components/ui/button";
 
 const isBrowser = typeof window !== "undefined";
-const CONSOLE_URL = process.env.NEXT_PUBLIC_CONSOLE_URL ?? (isBrowser ? `${window.location.origin}/console` : "http://localhost:3009");
+const CONSOLE_URL =
+  process.env.NEXT_PUBLIC_CONSOLE_URL ??
+  (isBrowser ? `${window.location.origin}/console` : "http://localhost:3009");
 
-const navLinks = [
-  { href: "/dashboard", label: "Overview" },
-];
+const navLinks = [{ href: "/dashboard", label: "Overview" }];
 
 import { UserProvider, useUser } from "@/components/UserProvider";
 
-function DashboardLayoutContent({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, isDeveloper, loading: checkingAuth, setIsDeveloper } = useUser();
+  const {
+    user,
+    isDeveloper,
+    loading: checkingAuth,
+    setIsDeveloper,
+  } = useUser();
   const [enrolling, setEnrolling] = useState(false);
 
   const handleLogout = async () => {
@@ -60,7 +65,9 @@ function DashboardLayoutContent({
       <div className="flex min-h-screen items-center justify-center bg-[#09090b] text-white">
         <div className="flex flex-col items-center gap-4">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
-          <div className="text-sm text-white/60 font-mono">Loading dashboard...</div>
+          <div className="text-sm text-white/60 font-mono">
+            Loading dashboard...
+          </div>
         </div>
       </div>
     );
@@ -85,7 +92,9 @@ function DashboardLayoutContent({
             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-xs font-bold text-black">
               AI
             </div>
-            <span className="font-semibold tracking-tight text-white/90">AI Gateway</span>
+            <span className="font-semibold tracking-tight text-white/90">
+              AI Gateway
+            </span>
           </div>
           <button
             className="p-2 text-white/50 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 md:hidden"
@@ -121,7 +130,9 @@ function DashboardLayoutContent({
             <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm">
               <p className="truncate font-medium text-white/90">{user.name}</p>
               <p className="truncate text-xs text-white/50">{user.email}</p>
-              <p className="mt-1 text-xs text-white/70">{user.creditBalance} credits</p>
+              <p className="mt-1 text-xs text-white/70">
+                {user.creditBalance} credits
+              </p>
             </div>
           ) : null}
 
@@ -167,7 +178,11 @@ function DashboardLayoutContent({
           <h1 className="text-sm font-medium text-white/70">Control Center</h1>
           {isDeveloper && (
             <Button asChild className="bg-white text-black hover:bg-white/90">
-              <a href={`${CONSOLE_URL}?token=${encodeURIComponent(getAuthToken() ?? "")}&rt=${encodeURIComponent(getRefreshToken() ?? "")}`} target="_blank" rel="noopener noreferrer">
+              <a
+                href={`${CONSOLE_URL}?token=${encodeURIComponent(getAuthToken() ?? "")}&rt=${encodeURIComponent(getRefreshToken() ?? "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 Dev Console
               </a>
             </Button>

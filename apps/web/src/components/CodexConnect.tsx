@@ -2,10 +2,22 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { api, type CodexSessionInfo } from "@/lib/api";
-import { ExternalLink, CheckCircle, XCircle, Loader2, LogOut } from "lucide-react";
+import {
+  ExternalLink,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  LogOut,
+} from "lucide-react";
 
 export function CodexConnect() {
   const [session, setSession] = useState<CodexSessionInfo | null>(null);
@@ -58,7 +70,7 @@ export function CodexConnect() {
         setTimeout(poll, pollInterval);
       };
       setTimeout(poll, pollInterval);
-    } catch (err) {
+    } catch {
       setError("Failed to start ChatGPT login flow. Please try again.");
       setConnecting(false);
     }
@@ -95,16 +107,27 @@ export function CodexConnect() {
             ChatGPT Connected
           </CardTitle>
           <CardDescription className="text-white/50">
-            Your ChatGPT account is linked. You can use Codex models through AI Gateway.
+            Your ChatGPT account is linked. You can use Codex models through AI
+            Gateway.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between text-sm">
               <span className="text-white/50">Plan</span>
-              <Badge variant="secondary" className="bg-white/10 text-white border-white/20">{session.planTier ?? "Unknown"}</Badge>
+              <Badge
+                variant="secondary"
+                className="bg-white/10 text-white border-white/20"
+              >
+                {session.planTier ?? "Unknown"}
+              </Badge>
             </div>
-            <Button variant="outline" size="sm" onClick={handleDisconnect} className="w-full border-white/20 bg-transparent text-white hover:bg-white/10">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDisconnect}
+              className="w-full border-white/20 bg-transparent text-white hover:bg-white/10"
+            >
               <LogOut className="h-4 w-4 mr-2" />
               Disconnect
             </Button>
@@ -143,9 +166,7 @@ export function CodexConnect() {
               </a>
             </div>
             <div className="text-center">
-              <p className="text-sm text-white/50 mb-2">
-                2. Enter this code:
-              </p>
+              <p className="text-sm text-white/50 mb-2">2. Enter this code:</p>
               <div className="text-3xl font-mono font-bold tracking-[0.3em] bg-black px-8 py-4 rounded-md border border-white/20 text-white">
                 {deviceCode.userCode}
               </div>
@@ -167,15 +188,17 @@ export function CodexConnect() {
           ChatGPT Account
         </CardTitle>
         <CardDescription className="text-white/50">
-          Link your ChatGPT account to use Codex models through AI Gateway — no API key required.
-          Usage is billed to your ChatGPT subscription.
+          Link your ChatGPT account to use Codex models through AI Gateway — no
+          API key required. Usage is billed to your ChatGPT subscription.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
-          <p className="text-sm text-red-400 mb-3">{error}</p>
-        )}
-        <Button onClick={handleConnect} disabled={connecting} className="w-full bg-white text-black hover:bg-white/90">
+        {error && <p className="text-sm text-red-400 mb-3">{error}</p>}
+        <Button
+          onClick={handleConnect}
+          disabled={connecting}
+          className="w-full bg-white text-black hover:bg-white/90"
+        >
           {connecting ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
