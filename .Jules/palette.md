@@ -22,3 +22,6 @@
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
 **Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+## 2024-08-18 - Missing focus-visible on standalone links
+**Learning:** In the `console` app, standalone links (`<Link>` and `<a>` tags) used for navigation or actions often lack the `focus-visible` styles that standard `Button` components receive by default, making keyboard navigation difficult to track.
+**Action:** When adding or auditing standalone links that aren't wrapped in a `Button` component, explicitly add `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50` to ensure they are keyboard accessible.
