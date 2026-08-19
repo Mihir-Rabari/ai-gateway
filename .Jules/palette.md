@@ -25,3 +25,6 @@
 ## 2024-08-05 - Ignore pre-existing test failures for unrelated packages
 **Learning:** In a large monorepo, `pnpm test` might fail due to pre-existing errors in completely unrelated packages (like `apps/worker` missing compiled test files). If your own modifications (e.g. in `apps/console`) successfully compile without errors, these unrelated test failures can be safely ignored.
 **Action:** When a workspace-wide `pnpm test` command fails with errors in untouched packages (e.g., `Could not find 'dist/__tests__/*.test.js'`), proceed with submitting the PR as long as the package you modified builds and functions correctly.
+## 2024-08-05 - JSX Comments escaping
+**Learning:** React/Next.js components might throw `react/jsx-no-comment-textnodes` errors or warnings when literal forward slashes (e.g., `//`) are rendered in JSX because it treats them as potential unescaped JS comments.
+**Action:** When rendering literal `//` comments in code blocks inside JSX, wrap them in a string literal (`{"//"}`) instead of rendering them raw.
