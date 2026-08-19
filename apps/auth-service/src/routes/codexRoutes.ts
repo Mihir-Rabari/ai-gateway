@@ -1,7 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ok, fail, GatewayError, createLogger } from '@ai-gateway/utils';
 import { CodexOAuthService } from '../services/codexOAuthService.js';
-import { timingSafeEqual } from 'crypto';
 
 const logger = createLogger('codex-routes');
 
@@ -281,18 +280,10 @@ export async function codexRoutes(fastify: FastifyInstance) {
       reply: FastifyReply,
     ) => {
       // Internal secret check
-      const internalSecretEnv = process.env['INTERNAL_SERVICE_SECRET'] || '';
-      const internalSecretBuf = Buffer.from(internalSecretEnv, 'utf8');
-
+      const internalSecret = process.env['INTERNAL_SERVICE_SECRET'] || '';
       const headerVal = req.headers['x-internal-secret'];
-      const clientSecretStr = Array.isArray(headerVal) ? headerVal[0] : (headerVal || '');
-      const clientSecretBuf = Buffer.from(clientSecretStr, 'utf8');
-
-      if (
-        internalSecretBuf.length === 0 ||
-        clientSecretBuf.length !== internalSecretBuf.length ||
-        !timingSafeEqual(clientSecretBuf, internalSecretBuf)
-      ) {
+      const clientSecret = Array.isArray(headerVal) ? headerVal[0] : (headerVal || '');
+      if (!internalSecret || clientSecret !== internalSecret) {
         return reply.status(403).send(fail(new GatewayError('FORBIDDEN', 'Invalid internal secret', 403)));
       }
 
