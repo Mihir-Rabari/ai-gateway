@@ -129,14 +129,13 @@ export default function AppDetailsPage() {
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">App ID</p>
                 <div className="mt-3 flex items-center justify-between gap-3 bg-black border border-white/10 rounded px-3 py-2 font-mono text-sm text-white">
                   <span className="min-w-0 flex-1 break-all select-all selection:bg-white/10">{appData.id}</span>
-                  <button
+                  <IconButton
                     onClick={() => copyText(appData.id, "App ID")}
-                    className="text-white/50 hover:text-white transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                     title="Copy App ID"
                     aria-label="Copy App ID"
                   >
                     <Copy className="h-4 w-4" />
-                  </button>
+                  </IconButton>
                 </div>
               </div>
 
@@ -145,14 +144,13 @@ export default function AppDetailsPage() {
                 <div className="mt-3 flex items-center justify-between gap-3 bg-black border border-white/10 rounded px-3 py-2 font-mono text-sm text-white">
                   <span className="min-w-0 flex-1 break-all select-all selection:bg-white/10">{appData.clientId ?? "Unavailable"}</span>
                   {appData.clientId ? (
-                    <button
+                    <IconButton
                       onClick={() => copyText(appData.clientId!, "Client ID")}
-                      className="text-white/50 hover:text-white transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                       title="Copy Client ID"
                       aria-label="Copy Client ID"
                     >
                       <Copy className="h-4 w-4" />
-                    </button>
+                    </IconButton>
                   ) : null}
                 </div>
               </div>
@@ -179,23 +177,22 @@ export default function AppDetailsPage() {
                   {apiKey ? (showKey ? apiKey : "•".repeat(24)) : "Rotate key to generate a fresh visible value"}
                 </span>
                 <div className="flex items-center gap-1.5">
-                  <button
+                  <IconButton
                     onClick={() => setShowKey((current) => !current)}
-                    className="text-white/50 hover:text-white transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                     title={showKey ? "Hide API Key" : "Show API Key"}
                     aria-label={showKey ? "Hide API Key" : "Show API Key"}
                   >
                     {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                  <button
+                  </IconButton>
+                  <IconButton
                     onClick={() => copyText(apiKey, "API Key")}
                     disabled={!apiKey}
-                    className="text-white/50 hover:text-white disabled:opacity-30 transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                    title="Copy API Key"
-                    aria-label="Copy API Key"
+                    className="disabled:opacity-30"
+                    title={!apiKey ? 'Rotate key to generate a visible API key to copy' : 'Copy API Key'}
+                    aria-label={!apiKey ? 'Rotate key to generate a visible API key to copy' : 'Copy API Key'}
                   >
                     <Copy className="h-4 w-4" />
-                  </button>
+                  </IconButton>
                 </div>
               </div>
             </div>
