@@ -153,23 +153,21 @@ function CredentialRow({ label, value, secret = false, onCopy }: { label: string
         </span>
         <div className="flex items-center gap-1.5">
           {secret ? (
-            <button
+            <IconButton
               onClick={() => setRevealed((current) => !current)}
-              className="text-white/50 hover:text-white transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
               title={revealed ? `Hide ${label}` : `Show ${label}`}
               aria-label={revealed ? `Hide ${label}` : `Show ${label}`}
             >
               {revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
+            </IconButton>
           ) : null}
-          <button
+          <IconButton
             onClick={onCopy}
-            className="text-white/50 hover:text-white transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
             title={`Copy ${label}`}
             aria-label={`Copy ${label}`}
           >
             <Copy className="h-4 w-4" />
-          </button>
+          </IconButton>
         </div>
       </div>
     </div>
