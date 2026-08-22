@@ -187,15 +187,19 @@ export default function AppDetailsPage() {
                   >
                     {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
-                  <button
-                    onClick={() => copyText(apiKey, "API Key")}
-                    disabled={!apiKey}
-                    className="text-white/50 hover:text-white disabled:opacity-30 transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                    title="Copy API Key"
-                    aria-label="Copy API Key"
+                  <span
+                    title={!apiKey ? "Rotate key to generate a visible API key to copy" : "Copy API Key"}
+                    className={!apiKey ? "cursor-not-allowed" : ""}
                   >
-                    <Copy className="h-4 w-4" />
-                  </button>
+                    <button
+                      onClick={() => copyText(apiKey, "API Key")}
+                      disabled={!apiKey}
+                      className="text-white/50 hover:text-white disabled:opacity-30 transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                      aria-label={!apiKey ? "Rotate key to generate a visible API key to copy" : "Copy API Key"}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </span>
                 </div>
               </div>
             </div>
