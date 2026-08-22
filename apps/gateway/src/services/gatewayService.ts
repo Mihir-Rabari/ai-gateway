@@ -228,20 +228,25 @@ export class GatewayService {
             const trimmedLine = line.trim();
             if (trimmedLine.startsWith('data: ') && trimmedLine !== 'data: [DONE]') {
               const payload = trimmedLine.slice(6).trim();
-              try {
-                const parsed = JSON.parse(payload) as {
-                  usage?: { tokensInput: number; tokensOutput: number; tokensTotal: number };
-                  provider?: string;
-                };
-                if (parsed.usage) {
-                  tokensInput = parsed.usage.tokensInput;
-                  tokensOutput = parsed.usage.tokensOutput;
-                  tokensTotal = parsed.usage.tokensTotal;
-                  finalProvider = parsed.provider ?? 'unknown';
-                  isUsageEvent = true;
-                  break;
-                }
-              } catch { /* not a usage event, pass through */ }
+              // ⚡ Bolt: Fast path optimization
+              // Added .includes check before expensive JSON.parse in high-volume streaming
+              // Impact: Reduces CPU overhead on the main thread for SSE chunks without usage data
+              if (payload.includes('"usage"')) {
+                try {
+                  const parsed = JSON.parse(payload) as {
+                    usage?: { tokensInput: number; tokensOutput: number; tokensTotal: number };
+                    provider?: string;
+                  };
+                  if (parsed.usage) {
+                    tokensInput = parsed.usage.tokensInput;
+                    tokensOutput = parsed.usage.tokensOutput;
+                    tokensTotal = parsed.usage.tokensTotal;
+                    finalProvider = parsed.provider ?? 'unknown';
+                    isUsageEvent = true;
+                    break;
+                  }
+                } catch { /* not a usage event, pass through */ }
+              }
             }
           }
           if (!isUsageEvent) {
