@@ -22,3 +22,6 @@
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
 **Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+## 2024-08-23 - Explanatory titles for disabled elements
+**Learning:** Screen readers and users hovering over disabled buttons need context on *why* the action is unavailable, not just that it is disabled (e.g. "Export CSV" vs "No transactions to export").
+**Action:** Always conditionally apply `title` and `aria-label` to disabled buttons based on the disabling condition.
