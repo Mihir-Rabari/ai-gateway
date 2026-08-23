@@ -22,3 +22,7 @@
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
 **Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+
+## 2024-05-24 - API Key UX
+**Learning:** The "Copy API Key" button lacks a title that explains *why* it's disabled when there is no `apiKey` available.
+**Action:** When a button is disabled, its `title` and `aria-label` should explain *why* it's disabled or what the user needs to do to enable it.
