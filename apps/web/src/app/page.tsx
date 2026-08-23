@@ -179,7 +179,7 @@ export default function LandingPage() {
                 </div>
                 {/* Code body */}
                 <div className="p-5 text-xs leading-relaxed">
-                  <div className="text-zinc-500">// One endpoint — any model</div>
+                  <div className="text-zinc-500">{"//"} One endpoint — any model</div>
                   <div className="mt-2">
                     <span className="text-purple-400">const</span> <span className="text-zinc-300">res</span> <span className="text-zinc-500">=</span> <span className="text-blue-400">await</span> <span className="text-zinc-300">fetch</span><span className="text-zinc-500">(</span>
                   </div>
@@ -215,12 +215,12 @@ export default function LandingPage() {
 
                   {/* Response */}
                   <div className="mt-4 border-t border-zinc-800 pt-4">
-                    <div className="text-zinc-500">// ↳ Auto-routed to cheapest provider</div>
+                    <div className="text-zinc-500">{"//"} ↳ Auto-routed to cheapest provider</div>
                     <div className="mt-1">
-                      <span className="text-zinc-300">model</span><span className="text-zinc-500">:</span> <span className="text-emerald-400">&quot;gpt-4o&quot;</span> <span className="text-zinc-600">// via OpenAI</span>
+                      <span className="text-zinc-300">model</span><span className="text-zinc-500">:</span> <span className="text-emerald-400">&quot;gpt-4o&quot;</span> <span className="text-zinc-600">{"//"} via OpenAI</span>
                     </div>
                     <div className="mt-1">
-                      <span className="text-zinc-300">tokens</span><span className="text-zinc-500">:</span> <span className="text-amber-400">42</span> <span className="text-zinc-600">// 1 credit deducted</span>
+                      <span className="text-zinc-300">tokens</span><span className="text-zinc-500">:</span> <span className="text-amber-400">42</span> <span className="text-zinc-600">{"//"} 1 credit deducted</span>
                     </div>
                     <div className="mt-1">
                       <span className="text-zinc-300">latency</span><span className="text-zinc-500">:</span> <span className="text-amber-400">842</span><span className="text-zinc-500">ms</span>
