@@ -228,9 +228,6 @@ export class GatewayService {
             const trimmedLine = line.trim();
             if (trimmedLine.startsWith('data: ') && trimmedLine !== 'data: [DONE]') {
               const payload = trimmedLine.slice(6).trim();
-              // ⚡ Bolt: Fast-path filter to skip expensive JSON.parse on every SSE text delta chunk.
-              // Impact: Reduces CPU overhead by avoiding O(N) JSON parses per stream (where N is the number of chunks).
-              if (!payload.includes('"usage"')) continue;
               try {
                 const parsed = JSON.parse(payload) as {
                   usage?: { tokensInput: number; tokensOutput: number; tokensTotal: number };

@@ -1,0 +1,61 @@
+$ turbo run lint
+• turbo 2.10.9
+
+   • Packages in scope: @ai-gateway/analytics-service, @ai-gateway/api, @ai-gateway/auth-service, @ai-gateway/billing-service, @ai-gateway/config, @ai-gateway/credit-service, @ai-gateway/gateway, @ai-gateway/routing-service, @ai-gateway/types, @ai-gateway/ui, @ai-gateway/utils, @ai-gateway/worker, @mihirrabari/ai-gateway, console, web
+   • Running lint in 15 packages
+   • Remote caching disabled
+
+@ai-gateway/types:build: cache hit, replaying logs edc6ae14671e6848
+@ai-gateway/types:build: $ tsc
+console:lint: cache hit, replaying logs 6b6e6fcad21eb238
+console:lint: $ next lint
+console:lint: `next lint` is deprecated and will be removed in Next.js 16.
+console:lint: For new projects, use create-next-app to choose your preferred linter.
+console:lint: For existing projects, migrate to the ESLint CLI:
+console:lint: npx @next/codemod@canary next-lint-to-eslint-cli .
+console:lint:
+console:lint: ✔ No ESLint warnings or errors
+@ai-gateway/config:build: cache hit, replaying logs e66afeec33ac4bc5
+@ai-gateway/config:build: $ tsc
+@ai-gateway/utils:build: cache hit, replaying logs 7013d36d2b0ce7b4
+@ai-gateway/utils:build: $ tsc
+web:lint: cache miss, executing 4bf14ae1eb2e3c6e
+web:lint: $ next lint
+web:lint: `next lint` is deprecated and will be removed in Next.js 16.
+web:lint: For new projects, use create-next-app to choose your preferred linter.
+web:lint: For existing projects, migrate to the ESLint CLI:
+web:lint: npx @next/codemod@canary next-lint-to-eslint-cli .
+web:lint:
+web:lint:
+web:lint: ./src/app/dashboard/layout.tsx
+web:lint: 5:10  Warning: 'useEffect' is defined but never used.  @typescript-eslint/no-unused-vars
+web:lint: 9:51  Warning: 'UserProfile' is defined but never used.  @typescript-eslint/no-unused-vars
+web:lint:
+web:lint: ./src/app/layout.tsx
+web:lint: 4:10  Warning: 'Inter' is defined but never used.  @typescript-eslint/no-unused-vars
+web:lint:
+web:lint: ./src/app/page.tsx
+web:lint: 2:55  Warning: 'Terminal' is defined but never used.  @typescript-eslint/no-unused-vars
+web:lint: 182:50  Error: Comments inside children section of tag should be placed inside braces  react/jsx-no-comment-textnodes
+web:lint: 218:52  Error: Comments inside children section of tag should be placed inside braces  react/jsx-no-comment-textnodes
+web:lint: 220:201  Error: Comments inside children section of tag should be placed inside braces  react/jsx-no-comment-textnodes
+web:lint: 223:184  Error: Comments inside children section of tag should be placed inside braces  react/jsx-no-comment-textnodes
+web:lint:
+web:lint: ./src/app/terms/page.tsx
+web:lint: 39:81  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+web:lint: 39:87  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+web:lint:
+web:lint: ./src/components/CodexConnect.tsx
+web:lint: 61:14  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+web:lint:
+web:lint: info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+web:lint: [ELIFECYCLE] Command failed with exit code 1.
+web#lint:  ERROR  command (/app/apps/web) /home/jules/.local/share/pnpm/.tools/pnpm/11.21.0/bin/pnpm run lint exited (1)
+
+ Tasks:    4 successful, 5 total
+Cached:    4 cached, 5 total
+  Time:    3.455s
+Failed:    web#lint
+
+ ERROR  run failed: command  exited (1)
+[ELIFECYCLE] Command failed with exit code 1.
