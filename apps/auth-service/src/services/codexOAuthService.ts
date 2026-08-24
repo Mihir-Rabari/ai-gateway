@@ -453,31 +453,29 @@ export class CodexOAuthService {
             return;
           }
 
-          try {
-            const parsed = JSON.parse(payload) as {
-              type?: string;
-              delta?: { text?: string };
-              output_text?: string;
-              usage?: { input_tokens: number; output_tokens: number; total_tokens: number };
-            };
+          // Forward the event as-is without redundantly parsing/stringifying
+          yield `${trimmed}\n\n`;
 
-            // Forward the event as-is
-            yield `data: ${JSON.stringify(parsed)}\n\n`;
+          if (payload.includes('"usage"')) {
+            try {
+              const parsed = JSON.parse(payload) as {
+                usage?: { input_tokens: number; output_tokens: number; total_tokens: number };
+              };
 
-            // Also emit usage as our own event if it has usage data
-            if (parsed.usage) {
-              yield `data: ${JSON.stringify({
-                usage: {
-                  tokensInput: parsed.usage.input_tokens,
-                  tokensOutput: parsed.usage.output_tokens,
-                  tokensTotal: parsed.usage.total_tokens,
-                },
-                provider: 'codex',
-              })}\n\n`;
+              // Also emit usage as our own event if it has usage data
+              if (parsed.usage) {
+                yield `data: ${JSON.stringify({
+                  usage: {
+                    tokensInput: parsed.usage.input_tokens,
+                    tokensOutput: parsed.usage.output_tokens,
+                    tokensTotal: parsed.usage.total_tokens,
+                  },
+                  provider: 'codex',
+                })}\n\n`;
+              }
+            } catch {
+              // Ignore parse errors for malformed chunks
             }
-          } catch {
-            // Forward raw
-            yield `${trimmed}\n\n`;
           }
         }
       }
