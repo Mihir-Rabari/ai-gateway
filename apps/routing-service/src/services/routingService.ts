@@ -261,7 +261,7 @@ export class RoutingService {
   }
 
   async getProvidersHealth() {
-    const { modelProvider } = this.modelConfig;
+    const modelProvider = this.modelConfig?.modelProvider || {};
     const providers = [...new Set(Object.values(modelProvider))];
 
     if (providers.length === 0) return [];
