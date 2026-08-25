@@ -228,20 +228,25 @@ export class GatewayService {
             const trimmedLine = line.trim();
             if (trimmedLine.startsWith('data: ') && trimmedLine !== 'data: [DONE]') {
               const payload = trimmedLine.slice(6).trim();
-              try {
-                const parsed = JSON.parse(payload) as {
-                  usage?: { tokensInput: number; tokensOutput: number; tokensTotal: number };
-                  provider?: string;
-                };
-                if (parsed.usage) {
-                  tokensInput = parsed.usage.tokensInput;
-                  tokensOutput = parsed.usage.tokensOutput;
-                  tokensTotal = parsed.usage.tokensTotal;
-                  finalProvider = parsed.provider ?? 'unknown';
-                  isUsageEvent = true;
-                  break;
-                }
-              } catch { /* not a usage event, pass through */ }
+
+              // PERFORMANCE OPTIMIZATION: Only parse JSON if the payload likely contains usage data.
+              // This avoids expensive JSON.parse() on high-volume text generation events.
+              if (payload.includes('"usage"')) {
+                try {
+                  const parsed = JSON.parse(payload) as {
+                    usage?: { tokensInput: number; tokensOutput: number; tokensTotal: number };
+                    provider?: string;
+                  };
+                  if (parsed.usage) {
+                    tokensInput = parsed.usage.tokensInput;
+                    tokensOutput = parsed.usage.tokensOutput;
+                    tokensTotal = parsed.usage.tokensTotal;
+                    finalProvider = parsed.provider ?? 'unknown';
+                    isUsageEvent = true;
+                    break;
+                  }
+                } catch { /* not a usage event, pass through */ }
+              }
             }
           }
           if (!isUsageEvent) {
