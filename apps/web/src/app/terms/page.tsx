@@ -36,7 +36,7 @@ export default function TermsPage() {
           </section>
           <section>
             <h2 className="text-xl font-semibold text-zinc-100 mb-3">5. Limitation of Liability</h2>
-            <p className="text-zinc-400 leading-relaxed">AI Gateway is provided &quot;as is&quot; without warranties of any kind. We are not liable for indirect, incidental, or consequential damages arising from service use.</p>
+            <p className="text-zinc-400 leading-relaxed">AI Gateway is provided "as is" without warranties of any kind. We are not liable for indirect, incidental, or consequential damages arising from service use.</p>
           </section>
           <section>
             <h2 className="text-xl font-semibold text-zinc-100 mb-3">6. Contact</h2>
