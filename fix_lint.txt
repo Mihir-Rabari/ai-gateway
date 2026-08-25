@@ -1,0 +1,14 @@
+I will fix the lint errors in the web package that caused the CI build to fail.
+
+1. apps/web/src/app/dashboard/layout.tsx
+Remove unused `useEffect` and `UserProfile` imports.
+2. apps/web/src/app/layout.tsx
+Remove unused `Inter` import.
+3. apps/web/src/app/page.tsx
+Remove unused `Terminal` import.
+Wrap the comments in the JSX with `{"// ..."}` as required by ESLint for comments inside text nodes.
+Lines 182, 218, 220, 223.
+4. apps/web/src/app/terms/page.tsx
+Escape the double quotes on line 39: `"as is"` -> `&quot;as is&quot;`.
+5. apps/web/src/components/CodexConnect.tsx
+Remove the unused `err` variable in the catch block: `catch (err) {` -> `catch {`.
