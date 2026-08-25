@@ -17,7 +17,7 @@ export function CodexConnect() {
     deviceCode: string;
     interval: number;
   } | null>(null);
-  const [error, setError] = useState("");
+  const [ or, setError] = useState("");
 
   useEffect(() => {
     loadSession();
@@ -58,7 +58,7 @@ export function CodexConnect() {
         setTimeout(poll, pollInterval);
       };
       setTimeout(poll, pollInterval);
-    } catch (err) {
+    } catch {
       setError("Failed to start ChatGPT login flow. Please try again.");
       setConnecting(false);
     }
@@ -135,7 +135,7 @@ export function CodexConnect() {
               <a
                 href={deviceCode.verificationUri}
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noopener noref er"
                 className="text-blue-400 hover:text-blue-300 underline font-mono text-sm flex items-center justify-center gap-1"
               >
                 {deviceCode.verificationUri}
@@ -172,8 +172,8 @@ export function CodexConnect() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
-          <p className="text-sm text-red-400 mb-3">{error}</p>
+        { or && (
+          <p className="text-sm text-red-400 mb-3">{ or}</p>
         )}
         <Button onClick={handleConnect} disabled={connecting} className="w-full bg-white text-black hover:bg-white/90">
           {connecting ? (
