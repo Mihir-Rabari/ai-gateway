@@ -228,6 +228,12 @@ export class GatewayService {
             const trimmedLine = line.trim();
             if (trimmedLine.startsWith('data: ') && trimmedLine !== 'data: [DONE]') {
               const payload = trimmedLine.slice(6).trim();
+
+              // Fast path: skip expensive JSON parse for chunks that clearly aren't usage events
+              if (!payload.includes('"usage"')) {
+                continue;
+              }
+
               try {
                 const parsed = JSON.parse(payload) as {
                   usage?: { tokensInput: number; tokensOutput: number; tokensTotal: number };
