@@ -89,6 +89,7 @@ export default function EarningsPage() {
             variant="secondary"
             onClick={exportCsv}
             disabled={transactions.length === 0}
+            title={transactions.length === 0 ? "No transactions available to export" : "Export CSV"}
           >
             <Download className="h-4 w-4" />
             Export CSV
