@@ -22,3 +22,6 @@
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
 **Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+## 2024-05-01 - Contextual Disabled States
+**Learning:** Icon-only buttons with disabled states (like the API key copy button) can be confusing for screen reader users and visual users alike if the reason for being disabled is not explicitly stated.
+**Action:** Conditionally update the `title` and `aria-label` attributes to explicitly explain why the action is currently unavailable (e.g., `title={!apiKey ? 'Rotate key to generate a visible API key to copy' : 'Copy API Key'}`) to improve UX and accessibility.
