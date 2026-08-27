@@ -453,6 +453,11 @@ export class CodexOAuthService {
             return;
           }
 
+          if (!payload.includes('"usage"')) {
+            yield `${trimmed}\n\n`;
+            continue;
+          }
+
           try {
             const parsed = JSON.parse(payload) as {
               type?: string;
