@@ -10,7 +10,8 @@ function TrendChart({ values, labels }: { values: number[]; labels?: string[] })
     return <div className="h-48 rounded-2xl border border-white/10 bg-black/40" />;
   }
 
-  const max = Math.max(...values, 1);
+  // ⚡ Bolt: Prevent "Maximum call stack size exceeded" errors on large datasets and avoid spread operator overhead by using reduce.
+  const max = values.reduce((m, val) => (val > m ? val : m), 1);
   const linePoints = values
     .map((value, index) => {
       const x = (index / Math.max(values.length - 1, 1)) * 100;
@@ -44,7 +45,8 @@ function TrendChart({ values, labels }: { values: number[]; labels?: string[] })
 }
 
 function MeterList({ items }: { items: Array<{ label: string; value: number; hint?: string }> }) {
-  const max = Math.max(...items.map((i) => i.value), 1);
+  // ⚡ Bolt: Avoid O(N) intermediate array allocation and spread operator overhead by using a single reduce pass.
+  const max = items.reduce((currentMax, item) => (item.value > currentMax ? item.value : currentMax), 1);
   return (
     <div className="space-y-3">
       {items.map((item) => (
