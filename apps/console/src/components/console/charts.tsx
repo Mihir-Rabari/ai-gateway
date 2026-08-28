@@ -9,7 +9,8 @@ export function MiniBarChart({
   values: number[];
   className?: string;
 }) {
-  const max = Math.max(...values, 1);
+  // ⚡ Bolt: Prevent "Maximum call stack size exceeded" errors on large datasets and avoid spread operator overhead by using reduce.
+  const max = values.reduce((m, val) => (val > m ? val : m), 1);
 
   return (
     <div className={cn("flex h-40 items-end gap-2", className)}>
@@ -36,7 +37,8 @@ export function LinePulse({
     return <div className={cn("h-36 rounded-[24px] bg-white/[0.03]", className)} />;
   }
 
-  const max = Math.max(...values, 1);
+  // ⚡ Bolt: Prevent "Maximum call stack size exceeded" errors on large datasets and avoid spread operator overhead by using reduce.
+  const max = values.reduce((m, val) => (val > m ? val : m), 1);
   const points = values
     .map((value, index) => {
       const x = (index / Math.max(values.length - 1, 1)) * 100;
@@ -79,7 +81,8 @@ export function TrendAreaChart({
     return <div className={cn("h-52 rounded-[24px] bg-white/[0.03]", className)} />;
   }
 
-  const max = Math.max(...values, 1);
+  // ⚡ Bolt: Prevent "Maximum call stack size exceeded" errors on large datasets and avoid spread operator overhead by using reduce.
+  const max = values.reduce((m, val) => (val > m ? val : m), 1);
   const linePoints = values
     .map((value, index) => {
       const x = (index / Math.max(values.length - 1, 1)) * 100;
