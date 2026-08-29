@@ -1,0 +1,1 @@
+sed -i 's/"test": "node --experimental-test-isolation=none --test dist\/__tests__\/GatewayService.test.js dist\/__tests__\/gatewayRoutes.integration.test.js"/"test": "tsx --test src\/__tests__\/GatewayService.test.ts src\/__tests__\/gatewayRoutes.integration.test.ts"/g' apps/gateway/package.json
