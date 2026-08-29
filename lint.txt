@@ -1,0 +1,29 @@
+$ next lint
+`next lint` is deprecated and will be removed in Next.js 16.
+For new projects, use create-next-app to choose your preferred linter.
+For existing projects, migrate to the ESLint CLI:
+npx @next/codemod@canary next-lint-to-eslint-cli .
+
+
+./src/app/dashboard/layout.tsx
+5:10  Warning: 'useEffect' is defined but never used.  @typescript-eslint/no-unused-vars
+9:51  Warning: 'UserProfile' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/layout.tsx
+4:10  Warning: 'Inter' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/page.tsx
+2:55  Warning: 'Terminal' is defined but never used.  @typescript-eslint/no-unused-vars
+182:50  Error: Comments inside children section of tag should be placed inside braces  react/jsx-no-comment-textnodes
+
+./src/app/terms/page.tsx
+39:81  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+39:87  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+
+./src/components/CodexConnect.tsx
+61:14  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+/app/apps/web:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] web@0.0.3 lint: `next lint`
+Exit status 1
