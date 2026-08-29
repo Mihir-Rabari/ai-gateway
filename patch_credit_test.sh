@@ -1,0 +1,1 @@
+sed -i "s/eval: vi.fn().mockImplementation(async () => 1)/eval: vi.fn().mockImplementation(async (script, numKeys, key) => { if (store.has(key)) return 0; store.set(key, 'mock'); return 1; })/g" apps/credit-service/src/__tests__/credit.test.ts
