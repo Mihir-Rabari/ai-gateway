@@ -22,3 +22,6 @@
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
 **Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+## 2024-08-29 - Contextual Tooltips for Disabled States
+**Learning:** In the AI Gateway Console, users frequently encounter disabled actions (like copying an API key that hasn't been generated yet). Standard tooltips simply state the action (e.g., "Copy API Key"), which is confusing when the action is unclickable.
+**Action:** When disabling interactive elements, dynamically update the `title` and `aria-label` attributes to explicitly provide context explaining *why* the action is currently unavailable and what the user must do to enable it.
