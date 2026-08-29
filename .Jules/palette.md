@@ -22,3 +22,6 @@
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
 **Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+## 2024-05-24 - Contextual disabled states
+**Learning:** Disabled interactive elements (like icon buttons) can cause confusion if users don't know why they are disabled or what action is needed to enable them.
+**Action:** When implementing or modifying disabled elements, conditionally update the `title` or `aria-label` attributes to explicitly provide context explaining why the action is currently unavailable.
