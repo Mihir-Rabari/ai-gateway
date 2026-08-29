@@ -29,10 +29,15 @@ function DashboardLayoutContent({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, isDeveloper, loading: checkingAuth, setIsDeveloper } = useUser();
   const [enrolling, setEnrolling] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = async () => {
-    await api.auth.logout();
-    router.replace("/login");
+    setLoggingOut(true);
+    try {
+      await api.auth.logout();
+    } finally {
+      router.replace("/login");
+    }
   };
 
   const handleBecomeDeveloper = async () => {
@@ -148,8 +153,10 @@ function DashboardLayoutContent({
             variant="outline"
             className="w-full border-white/20 bg-transparent text-white hover:bg-white/10"
             onClick={handleLogout}
+            disabled={loggingOut}
           >
-            Logout
+            {loggingOut && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {loggingOut ? "Logging out…" : "Logout"}
           </Button>
         </div>
       </aside>
