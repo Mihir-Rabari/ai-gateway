@@ -1,1 +1,1 @@
-sed -i "s/eval: vi.fn().mockImplementation(async () => 1)/eval: vi.fn().mockImplementation(async (script, numKeys, key) => { if (store.has(key)) return 0; store.set(key, 'mock'); return 1; })/g" apps/credit-service/src/__tests__/credit.test.ts
+sed -i 's/"test": "node --test --experimental-test-isolation=none dist\/__tests__\/creditService.test.js"/"test": "tsx --test src\/__tests__\/*.test.ts"/g' apps/credit-service/package.json

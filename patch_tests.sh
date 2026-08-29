@@ -1,0 +1,2 @@
+sed -i 's/"test": "pnpm build && node --experimental-test-isolation=none --test dist\/__tests__\/usageBatch.test.js"/"test": "tsx --test src\/__tests__\/usageBatch.test.ts"/g' apps/analytics-service/package.json
+sed -i 's/"test": "pnpm build && node --test --experimental-test-isolation=none dist\/__tests__\/BillingService.test.js dist\/__tests__\/billingWebhook.integration.test.js"/"test": "tsx --test src\/__tests__\/BillingService.test.ts src\/__tests__\/billingWebhook.integration.test.ts"/g' apps/billing-service/package.json
