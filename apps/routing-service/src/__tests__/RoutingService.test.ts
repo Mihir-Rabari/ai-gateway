@@ -51,6 +51,7 @@ describe('RoutingService', () => {
     const service = new RoutingService(
       async () => undefined,
       createRedisMock(),
+      {},
       { modelProvider: {}, fallbackMap: {} },
     );
 
@@ -69,6 +70,7 @@ describe('RoutingService', () => {
     const service = new RoutingService(
       async () => undefined,
       createRedisMock(),
+      {},
       { modelProvider: {}, fallbackMap: {} },
     );
 
