@@ -8,7 +8,11 @@ function createRedisMock(initialState: Record<string, string> = {}) {
 
   return {
     get: async (key: string) => state.get(key) ?? null,
-    mget: async (keys: string[]) => {
+    mget: async (...keys: any[]) => {
+      // Handle case where keys are passed as an array vs arguments
+      if (Array.isArray(keys[0])) {
+        return keys[0].map((k) => state.get(k) ?? null);
+      }
       return keys.map((k) => state.get(k) ?? null);
     },
     setex: async (key: string, _ttl: number, value: string) => {
@@ -48,6 +52,7 @@ describe('RoutingService', () => {
       async () => undefined,
       createRedisMock(),
       {},
+      { modelProvider: {}, fallbackMap: {} },
     );
 
     await assert.rejects(
@@ -66,6 +71,7 @@ describe('RoutingService', () => {
       async () => undefined,
       createRedisMock(),
       {},
+      { modelProvider: {}, fallbackMap: {} },
     );
 
     const providers = await service.getProvidersHealth();
