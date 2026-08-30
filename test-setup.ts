@@ -115,7 +115,12 @@ export function createRedisMock(initialState: Record<string, string> = {}): Redi
       }
       return 1;
     },
-    mget: async (...keys: string[]) => keys.map((k) => store.get(k) ?? null),
+    mget: async (...keys: any[]) => {
+      if (Array.isArray(keys[0])) {
+        return keys[0].map((k) => store.get(k) ?? null);
+      }
+      return keys.map((k) => store.get(k) ?? null);
+    },
     exists: async (...keys: string[]) => keys.filter((k) => store.has(k)).length,
   };
 }
