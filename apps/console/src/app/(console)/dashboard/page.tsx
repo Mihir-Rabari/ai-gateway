@@ -44,7 +44,8 @@ function TrendChart({ values, labels }: { values: number[]; labels?: string[] })
 }
 
 function MeterList({ items }: { items: Array<{ label: string; value: number; hint?: string }> }) {
-  const max = Math.max(...items.map((i) => i.value), 1);
+  // ⚡ Bolt: Avoid O(N) intermediate array allocation and spread operator overhead by using a single reduce pass.
+  const max = items.reduce((currentMax, item) => (item.value > currentMax ? item.value : currentMax), 1);
   return (
     <div className="space-y-3">
       {items.map((item) => (
@@ -95,8 +96,8 @@ export default function DashboardPage() {
   }, []);
 
   const { earnedCredits, estimatedInr, requests, tokens, latency, successRate, chartValues, chartLabels, topModels } = useMemo(() => {
-    const earned = transactions.reduce((sum, tx) => (tx.type === "debit" ? sum + tx.amount : sum), 0);
-    const { values, labels } = (usage?.last7Days.dailyRequests ?? []).reduce(
+    const earned = (transactions ?? []).reduce((sum, tx) => (tx.type === "debit" ? sum + tx.amount : sum), 0);
+    const { values, labels } = (usage?.last7Days?.dailyRequests ?? []).reduce(
       (acc, entry) => {
         acc.values.push(entry.count);
         acc.labels.push(entry.date.slice(5));
