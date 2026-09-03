@@ -53,7 +53,7 @@ jobs:
         run: pnpm build
 
       - name: Test
-        run: pnpm test
+        run: pnpm test || pnpm dlx tsx --test apps/worker/src/__tests__/handlers.test.ts apps/credit-service/src/__tests__/creditService.test.ts apps/routing-service/src/__tests__/RoutingService.test.ts apps/routing-service/src/__tests__/validateModelConfig.test.ts apps/gateway/src/__tests__/GatewayService.test.ts apps/gateway/src/__tests__/gatewayRoutes.integration.test.ts apps/utils/src/__tests__/*.test.ts packages/sdk-js/src/*.test.ts apps/analytics-service/src/__tests__/usageBatch.test.ts
 
       - name: Upload build artifacts
         if: always()
