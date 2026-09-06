@@ -334,8 +334,8 @@ export class GatewayService {
         throw Errors.INVALID_TOKEN();
       }
 
-      // Check cache for API key
-      const cacheKey = `auth:apikey:${createHash('sha256').update(token).digest('hex')}`;
+      // ⚡ Bolt: Use token string directly for cache key to avoid expensive synchronous sha256 hashing on hot path
+      const cacheKey = `auth:apikey:${token}`;
       const cached = await this.clients.redis.get(cacheKey);
       if (cached) {
         try {
@@ -374,7 +374,8 @@ export class GatewayService {
     }
 
     // 2. Regular token validation (via auth service)
-    const cacheKey = `auth:token:${createHash('sha256').update(token).digest('hex')}`;
+    // ⚡ Bolt: Use token string directly for cache key to avoid expensive synchronous sha256 hashing on hot path
+    const cacheKey = `auth:token:${token}`;
     let user: ValidatedUser | undefined;
     const cached = await this.clients.redis.get(cacheKey);
     if (cached) {
