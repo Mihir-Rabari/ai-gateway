@@ -420,7 +420,7 @@ describe('GatewayService', () => {
     const redisStore = new Map<string, string>();
     // Seed a malformed (non-JSON) value so the cache-read triggers the fallback.
     redisStore.set(
-      `auth:token:${(await import('crypto')).createHash('sha256').update('my-token').digest('hex')}`,
+      `auth:token:my-token`,
       'not-valid-json{{',
     );
 
