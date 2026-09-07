@@ -206,7 +206,7 @@ export function Field({
 }: {
   label: string;
   hint?: string;
-  children: React.ReactElement<{ id?: string; "aria-describedby"?: string }>;
+  children: React.ReactElement<{ id?: string; "aria-describedby"?: string; required?: boolean }>;
 }) {
   const generatedId = useId();
   const id = children.props.id || generatedId;
@@ -217,6 +217,7 @@ export function Field({
       <div className="flex items-center justify-between gap-4">
         <label htmlFor={id} className="text-sm font-medium text-white/80">
           {label}
+          {children.props.required ? <span className="text-red-500 ml-1" aria-hidden="true">*</span> : null}
         </label>
         {hint ? (
           <span id={hintId} className="text-xs text-white/40">
