@@ -113,6 +113,7 @@ function ConsoleLayoutContent({ children }: { children: React.ReactNode }) {
             target="_blank"
             rel="noopener noreferrer"
             className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+            title="Main website"
           >
             Main website
             <ArrowUpRight className="h-4 w-4 text-white/50" />
@@ -121,6 +122,7 @@ function ConsoleLayoutContent({ children }: { children: React.ReactNode }) {
           <button
             onClick={logout}
             className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+            title="Sign out"
           >
             Sign out
             <LogOut className="h-4 w-4 text-white/50" />
