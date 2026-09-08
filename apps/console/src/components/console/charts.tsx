@@ -9,7 +9,7 @@ export function MiniBarChart({
   values: number[];
   className?: string;
 }) {
-  const max = Math.max(...values, 1);
+  const max = (values ?? []).reduce((max, val) => (val > max ? val : max), 1); // ⚡ Bolt: Use reduce instead of spread operator for Math.max to prevent call stack size errors and intermediate array allocation on large datasets
 
   return (
     <div className={cn("flex h-40 items-end gap-2", className)}>
@@ -36,7 +36,7 @@ export function LinePulse({
     return <div className={cn("h-36 rounded-[24px] bg-white/[0.03]", className)} />;
   }
 
-  const max = Math.max(...values, 1);
+  const max = (values ?? []).reduce((max, val) => (val > max ? val : max), 1); // ⚡ Bolt: Use reduce instead of spread operator for Math.max to prevent call stack size errors and intermediate array allocation on large datasets
   const points = values
     .map((value, index) => {
       const x = (index / Math.max(values.length - 1, 1)) * 100;
@@ -79,7 +79,7 @@ export function TrendAreaChart({
     return <div className={cn("h-52 rounded-[24px] bg-white/[0.03]", className)} />;
   }
 
-  const max = Math.max(...values, 1);
+  const max = (values ?? []).reduce((max, val) => (val > max ? val : max), 1); // ⚡ Bolt: Use reduce instead of spread operator for Math.max to prevent call stack size errors and intermediate array allocation on large datasets
   const linePoints = values
     .map((value, index) => {
       const x = (index / Math.max(values.length - 1, 1)) * 100;
