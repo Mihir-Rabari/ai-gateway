@@ -1,4 +1,5 @@
-import { describe, test } from 'node:test';
+import fs from 'fs';
+fs.writeFileSync('apps/routing-service/src/__tests__/RoutingService.test.ts', `import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import type Redis from 'ioredis';
 import { RoutingService } from '../services/routingService.js';
@@ -74,3 +75,4 @@ describe('RoutingService', () => {
     assert.equal(providers.length, 0);
   });
 });
+`);
