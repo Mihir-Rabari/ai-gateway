@@ -190,7 +190,7 @@ export default function AppDetailsPage() {
                   <button
                     onClick={() => copyText(apiKey, "API Key")}
                     disabled={!apiKey}
-                    className="text-white/50 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                    className="text-white/50 hover:text-white disabled:opacity-30 transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                     title="Copy API Key"
                     aria-label="Copy API Key"
                   >

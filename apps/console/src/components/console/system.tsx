@@ -152,7 +152,7 @@ export const Button = forwardRef<
       ref={ref}
       disabled={disabled || busy}
       className={cn(
-        "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-4xl px-3 text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4",
+        "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-4xl px-3 text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4",
         palette,
         className,
       )}
