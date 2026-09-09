@@ -10,7 +10,8 @@ function TrendChart({ values, labels }: { values: number[]; labels?: string[] })
     return <div className="h-48 rounded-2xl border border-white/10 bg-black/40" />;
   }
 
-  const max = Math.max(...values, 1);
+  // ⚡ Bolt: Avoid O(N) array spread overhead and call stack limits by using reduce.
+  const max = (values ?? []).reduce((currentMax, value) => (value > currentMax ? value : currentMax), 1);
   const linePoints = values
     .map((value, index) => {
       const x = (index / Math.max(values.length - 1, 1)) * 100;
