@@ -9,8 +9,7 @@ export function MiniBarChart({
   values: number[];
   className?: string;
 }) {
-  // ⚡ Bolt: Avoid O(N) intermediate array allocation and spread operator overhead by using a single reduce pass.
-  const max = (values ?? []).reduce((currentMax, value) => (value > currentMax ? value : currentMax), 1);
+  const max = Math.max(...values, 1);
 
   return (
     <div className={cn("flex h-40 items-end gap-2", className)}>
@@ -37,8 +36,7 @@ export function LinePulse({
     return <div className={cn("h-36 rounded-[24px] bg-white/[0.03]", className)} />;
   }
 
-  // ⚡ Bolt: Avoid O(N) intermediate array allocation and spread operator overhead by using a single reduce pass.
-  const max = (values ?? []).reduce((currentMax, value) => (value > currentMax ? value : currentMax), 1);
+  const max = Math.max(...values, 1);
   const points = values
     .map((value, index) => {
       const x = (index / Math.max(values.length - 1, 1)) * 100;
@@ -81,8 +79,7 @@ export function TrendAreaChart({
     return <div className={cn("h-52 rounded-[24px] bg-white/[0.03]", className)} />;
   }
 
-  // ⚡ Bolt: Avoid O(N) intermediate array allocation and spread operator overhead by using a single reduce pass.
-  const max = (values ?? []).reduce((currentMax, value) => (value > currentMax ? value : currentMax), 1);
+  const max = Math.max(...values, 1);
   const linePoints = values
     .map((value, index) => {
       const x = (index / Math.max(values.length - 1, 1)) * 100;
