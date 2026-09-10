@@ -262,7 +262,7 @@ export class RoutingService {
 
   async getProvidersHealth() {
     const { modelProvider } = this.modelConfig;
-    const providers = [...new Set(Object.values(modelProvider))];
+    const providers = [...new Set(Object.values(modelProvider || {}))];
 
     if (providers.length === 0) return [];
 
@@ -278,7 +278,7 @@ export class RoutingService {
 
     // ⚡ Bolt: Pre-compute models by provider to avoid O(N * P) array allocations in the .map loop
     const modelsByProvider: Record<string, string[]> = {};
-    for (const [model, prov] of Object.entries(modelProvider)) {
+    for (const [model, prov] of Object.entries(modelProvider || {})) {
       if (!modelsByProvider[prov]) modelsByProvider[prov] = [];
       modelsByProvider[prov].push(model);
     }
