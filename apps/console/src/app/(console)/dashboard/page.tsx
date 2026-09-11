@@ -44,7 +44,8 @@ function TrendChart({ values, labels }: { values: number[]; labels?: string[] })
 }
 
 function MeterList({ items }: { items: Array<{ label: string; value: number; hint?: string }> }) {
-  const max = Math.max(...items.map((i) => i.value), 1);
+  // ⚡ Bolt: Replaced Math.max(...items.map()) with a single .reduce() pass to avoid O(N) intermediate array allocation and spread operator call stack limits
+  const max = (items ?? []).reduce((currentMax, item) => (item.value > currentMax ? item.value : currentMax), 1);
   return (
     <div className="space-y-3">
       {items.map((item) => (
