@@ -7,7 +7,7 @@ import {
   type ModelConfig,
 } from '../services/routingService.js';
 import { Errors } from '@ai-gateway/utils';
-import { createRedisMock, createKafkaMock, createFetchMock } from '../../../test-setup.js';
+import { createRedisMock, createKafkaMock, createFetchMock } from '../../../../test-setup.ts';
 import type Redis from 'ioredis';
 
 // Mock config
