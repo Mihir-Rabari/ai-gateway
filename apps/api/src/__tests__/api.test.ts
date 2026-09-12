@@ -3,7 +3,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { AppService } from '../services/AppService.js';
 import { AppRepository, type AppRow } from '../repositories/AppRepository.js';
 import { requireAuth } from '../middleware/requireAuth.js';
-import { createFetchMock } from '../../../test-setup.js';
+import { createFetchMock } from '../../../../test-setup.ts';
 import type { Pool, PoolClient } from 'pg';
 
 // ───────────────────────────────────────────────────────────────────────────
