@@ -22,3 +22,6 @@
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
 **Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+## 2024-09-20 - Allow native tooltips on disabled buttons
+**Learning:** Using `disabled:pointer-events-none` on interactive elements like buttons suppresses native mouse events, preventing the `title` attribute (native tooltip) from appearing and the cursor from changing when hovered by sighted users, degrading accessibility.
+**Action:** When implementing disabled states for interactive components, prefer `disabled:cursor-not-allowed` over `disabled:pointer-events-none`.
