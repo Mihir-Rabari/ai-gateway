@@ -19,13 +19,18 @@ function createRedisMock() {
     },
     incr: async (key: string) => { const v = (parseInt(store.get(key) ?? '0') + 1).toString(); store.set(key, v); return parseInt(v); },
     expire: async () => 1,
-    eval: async () => 1,
+    eval: vi.fn(async (_script, _numKeys, key, _value, _ttl) => {
+      if (store.has(key as string)) return 0;
+      store.set(key as string, _value as string);
+      return 1;
+    }),
     quit: async () => 'OK',
   };
 }
 function createKafkaMock() {
   const messages: Array<{ topic: string; msg: unknown }> = [];
   return {
+    publish: vi.fn(async (topic: string, msg: unknown) => { messages.push({ topic, msg }); }),
     producer: { connect: async () => {}, send: async (topic: string, msg: unknown) => { messages.push({ topic, msg }); } },
     consumer: { connect: async () => {}, subscribe: async () => {}, run: async () => {} },
     _messages: messages,
