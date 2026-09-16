@@ -28,3 +28,6 @@
 ## 2026-04-10 - Button disabled states accessibility
 **Learning:** The button component used `disabled:pointer-events-none` which suppresses native tooltips (via the `title` attribute) and degrades accessibility.
 **Action:** Prefer `disabled:cursor-not-allowed` over `disabled:pointer-events-none` for interactive components.
+## 2026-04-10 - Passing explicit empty model config for test isolation
+**Learning:** The routing service test `returns empty health when no providers configured` failed because `RoutingService` was falling back to `buildModelConfigFromEnv()` (which loads defaults) instead of using an empty config.
+**Action:** When testing `RoutingService` for empty/no-provider states, explicitly pass `{ modelProvider: {}, fallbackMap: {} }` as the 4th argument to the constructor to ensure true isolation.
