@@ -22,3 +22,9 @@
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
 **Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+## 2026-04-10 - Unescaped quotes and unbracketed comments in JSX
+**Learning:** Found pre-existing lint errors in the codebase: Unescaped `"` characters causing `react/no-unescaped-entities` and unbracketed comments inside JSX causing `react/jsx-no-comment-textnodes`.
+**Action:** Always ensure that quotes are escaped in JSX text using HTML entities (`&quot;`) and comments in JSX block are correctly bracketed (e.g. `{"// comment"}`).
+## 2026-04-10 - Button disabled states accessibility
+**Learning:** The button component used `disabled:pointer-events-none` which suppresses native tooltips (via the `title` attribute) and degrades accessibility.
+**Action:** Prefer `disabled:cursor-not-allowed` over `disabled:pointer-events-none` for interactive components.
