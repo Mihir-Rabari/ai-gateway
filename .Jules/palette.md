@@ -1,24 +1,6 @@
-## 2024-05-27 - Loading state implementation differs across workspaces
-**Learning:** The `console` app implements an elegant built-in `busy={true}` prop on its Button component which automatically handles the loading spinner. The `web` app uses standard shadcn-style Buttons which lack this internal state, leading to inconsistent async UX where forms freeze without visual feedback.
-**Action:** When working in `apps/web`, always manually compose `<Loader2 className="mr-2 h-4 w-4 animate-spin" />` inside `<Button>` for async forms to match the perceived performance of the console app.
-## 2026-06-04 - Add aria-describedby for Field hints
-**Learning:** In reusable form field wrappers that render both a label and a hint/description next to an input child, screen readers often fail to announce the hint unless it is explicitly associated with the input. While `htmlFor` handles labels, `aria-describedby` must be used for hints.
-**Action:** Use `useId()` to generate unique IDs and `React.cloneElement` to dynamically attach both the `id` (for the label) and `aria-describedby` (for the hint) to the wrapped child input. Ensure existing `aria-describedby` props on the child are preserved and appended to.
-## 2024-06-16 - Do not duplicate aria-label and sr-only text
-**Learning:** Adding an `aria-label` to an icon-only button that already contains an inner `<span className="sr-only">` is an accessibility anti-pattern. Screen readers will read the `aria-label` and completely ignore the inner text, making the `sr-only` span dead code.
-**Action:** When improving accessibility for icon-only buttons, either add a `title` attribute for sighted users and leave the existing `sr-only` text alone, or update the `sr-only` text itself if better context is needed. Do not use both on the same element.
-
-## 2024-05-27 - Toaster accessibility enhancements
-**Learning:** When implementing or modifying dynamic notification components (e.g., Toasters), it is crucial to ensure they are accessible to screen readers. Standard visual feedback is not enough for users relying on assistive technologies to understand that a notification has appeared or to locate it.
-**Action:** Always ensure the main container uses `role="region"` and an `aria-label` (e.g., 'Notifications'), and that individual notification elements use `role="status"` or `role="alert"` (for destructive variants) with an appropriate `aria-live` attribute (`polite` for standard, `assertive` for destructive errors) to guarantee screen reader accessibility.
-
-## 2024-06-23 - Improve InlineMessage accessibility
-**Learning:** In `apps/console`, dynamic error/status components like `InlineMessage` were visually distinct using styling but were missing necessary ARIA attributes, meaning screen readers would not proactively announce them when they appeared asynchronously after user actions (e.g., form submissions).
-**Action:** Always map notification components' semantic tones to corresponding accessibility attributes (e.g., warning/danger -> `role="alert"` + `aria-live="assertive"`, success/default -> `role="status"` + `aria-live="polite"`). Ensure that HTML5 validation bypasses are correctly mapped to inputs when testing these backend-driven UI states in Playwright.
-## 2024-07-18 - Prevent layout shifts in busy buttons
-**Learning:** The `<Button>` component in this app automatically renders a loading spinner when `busy={true}` is passed. If explicit child icons are not conditionally hidden, it causes visual conflicts and layout shifts during async operations.
-**Action:** Always conditionally hide explicit child icons (e.g., `{!isBusy && <Icon />}`) when a button is in a busy state to ensure a smooth transition.
-
-## 2024-08-01 - Mobile Focus Styles
-**Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
-**Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+## 2023-10-27 - Disabled Button Accessibility
+**Learning:** Found components using `disabled:pointer-events-none`. This suppresses native tooltips (the `title` attribute) on disabled elements, which hurts accessibility as users can't see *why* a button is disabled.
+**Action:** Replace `disabled:pointer-events-none` with `disabled:cursor-not-allowed` to maintain accessibility while still indicating the disabled state visually.
+## 2024-03-27 - Disabled Button Accessibility
+**Learning:** Found components using `disabled:pointer-events-none`. This suppresses native tooltips (the `title` attribute) on disabled elements, which hurts accessibility as users can't see why a button is disabled.
+**Action:** Replace `disabled:pointer-events-none` with `disabled:cursor-not-allowed` to maintain accessibility while still indicating the disabled state visually.
