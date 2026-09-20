@@ -22,3 +22,6 @@
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
 **Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+## 2025-02-12 - Disabled state pointer events
+**Learning:** Using `disabled:pointer-events-none` on interactive elements suppresses native tooltip visibility via the `title` attribute, severely degrading accessibility.
+**Action:** Prefer `disabled:cursor-not-allowed` over `disabled:pointer-events-none` to implement disabled states without removing standard pointer interactions.
