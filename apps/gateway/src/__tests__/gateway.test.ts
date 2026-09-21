@@ -138,6 +138,7 @@ function makeFetchResponses(options: {
 // ───────────────────────────────────────────────────────────────────────────
 
 describe('GatewayService', () => {
+  beforeEach(() => { redis.flushall(); kafka._messages = []; });
   let redis: ReturnType<typeof createRedisMock>;
   let kafka: ReturnType<typeof createKafkaMock>;
 

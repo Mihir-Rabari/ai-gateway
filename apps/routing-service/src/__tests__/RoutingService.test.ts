@@ -8,7 +8,8 @@ function createRedisMock(initialState: Record<string, string> = {}) {
 
   return {
     get: async (key: string) => state.get(key) ?? null,
-    mget: async (keys: string[]) => {
+    mget: async (...args: any[]) => {
+      const keys = Array.isArray(args[0]) ? args[0] : args;
       return keys.map((k) => state.get(k) ?? null);
     },
     setex: async (key: string, _ttl: number, value: string) => {
@@ -46,8 +47,9 @@ describe('RoutingService', () => {
   test('throws ROUTING_FAILED when no providers are configured', async () => {
     const service = new RoutingService(
       async () => undefined,
-      createRedisMock(),
+      createRedisMock() as any,
       {},
+      { modelProvider: {} } as any
     );
 
     await assert.rejects(
@@ -64,8 +66,9 @@ describe('RoutingService', () => {
   test('returns empty health when no providers configured', async () => {
     const service = new RoutingService(
       async () => undefined,
-      createRedisMock(),
+      createRedisMock() as any,
       {},
+      { modelProvider: {} } as any
     );
 
     const providers = await service.getProvidersHealth();
