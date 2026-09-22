@@ -88,9 +88,17 @@ export class GatewayService {
     const requestId = generateId();
     const startTime = Date.now();
 
-    // Step 1: Validate user token or API key
-    const user = await this.validateToken(input.token, input.appId);
+    // Step 1 & 3: Validate user token and app context concurrently
+    // ⚡ Bolt: Execute independent I/O-bound validation checks concurrently
+    const [user, appAccess] = await Promise.all([
+      this.validateToken(input.token, input.appId),
+      this.validateAppAccess(input.appId, input.appApiKey, input.appJwt),
+    ]);
     logger.info({ requestId, userId: user.userId, model: input.model }, 'Processing request');
+
+    if (appAccess !== 'allowed') {
+      throw appAccess === 'invalid_key' ? Errors.INVALID_APP_KEY() : Errors.FORBIDDEN();
+    }
 
     // Step 2: Rate Limiting
     const limit = this.getRateLimit(user.planId);
@@ -98,12 +106,6 @@ export class GatewayService {
     const currentUsage = await this.clients.redis.eval(RATE_LIMIT_LUA, 1, rateLimitKey, '60') as number;
     if (currentUsage > limit) {
       throw new GatewayError('RATE_LIMIT_EXCEEDED', 'Rate limit exceeded', 429);
-    }
-
-    // Step 3: Validate app context
-    const appAccess = await this.validateAppAccess(input.appId, input.appApiKey, input.appJwt);
-    if (appAccess !== 'allowed') {
-      throw appAccess === 'invalid_key' ? Errors.INVALID_APP_KEY() : Errors.FORBIDDEN();
     }
 
     // Step 4: Estimate cost
@@ -184,18 +186,21 @@ export class GatewayService {
     const requestId = generateId();
     const startTime = Date.now();
 
-    const user = await this.validateToken(input.token, input.appId);
+    // ⚡ Bolt: Execute independent I/O-bound validation checks concurrently
+    const [user, appAccess] = await Promise.all([
+      this.validateToken(input.token, input.appId),
+      this.validateAppAccess(input.appId, input.appApiKey, input.appJwt),
+    ]);
     logger.info({ requestId, userId: user.userId, model: input.model }, 'Processing stream request');
+
+    if (appAccess !== 'allowed') {
+      throw appAccess === 'invalid_key' ? Errors.INVALID_APP_KEY() : Errors.FORBIDDEN();
+    }
 
     const limit = this.getRateLimit(user.planId);
     const rateLimitKey = `ratelimit:gateway:${user.userId}`;
     const currentUsage = await this.clients.redis.eval(RATE_LIMIT_LUA, 1, rateLimitKey, '60') as number;
     if (currentUsage > limit) throw new GatewayError('RATE_LIMIT_EXCEEDED', 'Rate limit exceeded', 429);
-
-    const appAccess = await this.validateAppAccess(input.appId, input.appApiKey, input.appJwt);
-    if (appAccess !== 'allowed') {
-      throw appAccess === 'invalid_key' ? Errors.INVALID_APP_KEY() : Errors.FORBIDDEN();
-    }
 
     const estimatedTokens = input.maxTokens ?? 1000;
     const estimatedCredits = calculateCredits(input.model, estimatedTokens);
