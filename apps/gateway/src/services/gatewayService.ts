@@ -62,6 +62,9 @@ export class GatewayService {
   private readonly creditBreaker = new CircuitBreaker({ serviceName: 'Credit service' });
   private readonly routingBreaker = new CircuitBreaker({ serviceName: 'Routing service' });
 
+  private readonly localTokenCache = new Map<string, { user: ValidatedUser; expiresAt: number }>();
+  private readonly localTokenCacheTtlMs = 5000;
+
   constructor(
     private readonly clients: ServiceClients,
     private readonly deps: GatewayServiceDeps = {},
@@ -328,18 +331,41 @@ export class GatewayService {
   }
 
   private async validateToken(token: string, appId?: string): Promise<ValidatedUser> {
-    // 1. Check for API key (agk_ prefix)
     if (token.startsWith('agk_')) {
       if (!appId || appId === 'unknown') {
         throw Errors.INVALID_TOKEN();
       }
+    }
 
+    const localCacheKey = token.startsWith('agk_') ? `apikey:${appId}:${token}` : token;
+    const now = Date.now();
+    const localCached = this.localTokenCache.get(localCacheKey);
+
+    if (localCached) {
+      if (now < localCached.expiresAt) {
+        if (!localCached.user.clientId || !appId || FIRST_PARTY_APP_IDS.has(appId) || localCached.user.clientId === appId) {
+          return localCached.user;
+        }
+      } else {
+        this.localTokenCache.delete(localCacheKey);
+      }
+    }
+
+    if (this.localTokenCache.size > 1000) {
+      // Basic eviction: clear the entire cache when it gets too large
+      this.localTokenCache.clear();
+    }
+
+    // 1. Check for API key (agk_ prefix)
+    if (token.startsWith('agk_')) {
       // Check cache for API key
       const cacheKey = `auth:apikey:${createHash('sha256').update(token).digest('hex')}`;
       const cached = await this.clients.redis.get(cacheKey);
       if (cached) {
         try {
-          return JSON.parse(cached) as ValidatedUser;
+          const user = JSON.parse(cached) as ValidatedUser;
+          this.localTokenCache.set(localCacheKey, { user, expiresAt: Date.now() + this.localTokenCacheTtlMs });
+          return user;
         } catch {
           await this.clients.redis.del(cacheKey);
         }
@@ -366,6 +392,7 @@ export class GatewayService {
           // Cache the result
           const ttl = this.clients.tokenCacheTtlSeconds ?? 60;
           await this.clients.redis.set(cacheKey, JSON.stringify(user), 'EX', ttl);
+          this.localTokenCache.set(localCacheKey, { user, expiresAt: Date.now() + this.localTokenCacheTtlMs });
           return user;
         }
       }
@@ -453,6 +480,7 @@ export class GatewayService {
       }
     }
 
+    this.localTokenCache.set(localCacheKey, { user, expiresAt: Date.now() + this.localTokenCacheTtlMs });
     return user;
   }
 
