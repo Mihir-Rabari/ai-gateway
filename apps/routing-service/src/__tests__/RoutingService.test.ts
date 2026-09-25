@@ -67,6 +67,7 @@ describe('RoutingService', () => {
       async () => undefined,
       createRedisMock(),
       {},
+      { modelProvider: {}, fallbackMap: {} }
     );
 
     const providers = await service.getProvidersHealth();
