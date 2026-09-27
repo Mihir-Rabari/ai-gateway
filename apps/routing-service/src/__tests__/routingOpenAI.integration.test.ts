@@ -1,4 +1,4 @@
-import { describe, test } from 'node:test';
+import { describe, it } from 'vitest';
 import { RoutingService } from '../services/routingService.js';
 
 function createRedisMock() {
@@ -28,7 +28,6 @@ function createRedisMock() {
 }
 
 describe('RoutingService OpenAI integration', () => {
-  test('is skipped since OpenAI has been removed as a provider', { timeout: 10_000 }, async (t) => {
-    t.skip('All legacy providers (OpenAI, Anthropic, Google) have been removed');
+  it.skip('is skipped since OpenAI has been removed as a provider', async () => {
   });
 });
