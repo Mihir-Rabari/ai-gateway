@@ -3,9 +3,11 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import { getApiConfig } from '@ai-gateway/config';
 import { createLogger, getFastifyLoggerOptions, securityHeadersPlugin } from '@ai-gateway/utils';
 
 const logger = createLogger('api');
+const config = getApiConfig();
 const app = Fastify({ logger: getFastifyLoggerOptions(), disableRequestLogging: true, genReqId: () => `req_${Date.now()}` });
 
 async function bootstrap() {
@@ -15,7 +17,7 @@ async function bootstrap() {
 
   // CORS
   await app.register(cors, {
-    origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000', 'http://localhost:3009'],
+    origin: config.ALLOWED_ORIGINS!.split(','),
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [

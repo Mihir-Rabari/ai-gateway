@@ -15,7 +15,7 @@ const config = getAnalyticsConfig();
 const app = Fastify({ logger: getFastifyLoggerOptions() });
 app.register(securityHeadersPlugin);
 app.register(cors, {
-  origin: process.env['ALLOWED_ORIGINS']?.split(',') ?? ['http://localhost:3000', 'http://localhost:3009'],
+  origin: config.ALLOWED_ORIGINS!.split(','),
   credentials: true,
   methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],

@@ -131,6 +131,8 @@ function loadConfig<T>(schema: z.ZodType<T>, env = process.env): T {
   return result.data;
 }
 
+const apiSchema = baseSchema.extend({ API_PORT: z.coerce.number().default(3001) });
+export const getApiConfig = () => loadConfig(apiSchema);
 export const getAuthConfig = () => loadConfig(authSchema);
 export const getGatewayConfig = () => loadConfig(gatewaySchema);
 export const getCreditConfig = () => loadConfig(creditSchema);
