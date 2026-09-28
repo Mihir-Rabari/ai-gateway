@@ -19,7 +19,7 @@ function createRedisMock() {
     },
     incr: async (key: string) => { const v = (parseInt(store.get(key) ?? '0') + 1).toString(); store.set(key, v); return parseInt(v); },
     expire: async () => 1,
-    eval: async () => 1,
+    eval: vi.fn(async (...args) => { const key = args[2]; if (store.has(key)) return 0; store.set(key, args[3]); return 1; }),
     quit: async () => 'OK',
   };
 }
@@ -99,7 +99,7 @@ describe('CreditService', () => {
     service = new CreditService(
       makePgPool(mockDbQuery, mockConnect),
       redis as unknown as Redis,
-      kafka.publish,
+      kafka.producer.send.bind(kafka.producer),
     );
   });
 
