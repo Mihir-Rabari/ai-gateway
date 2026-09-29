@@ -11,6 +11,7 @@ export function CodexConnect() {
   const [session, setSession] = useState<CodexSessionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
   const [deviceCode, setDeviceCode] = useState<{
     userCode: string;
     verificationUri: string;
@@ -58,18 +59,21 @@ export function CodexConnect() {
         setTimeout(poll, pollInterval);
       };
       setTimeout(poll, pollInterval);
-    } catch (err) {
+    } catch {
       setError("Failed to start ChatGPT login flow. Please try again.");
       setConnecting(false);
     }
   };
 
   const handleDisconnect = async () => {
+    setDisconnecting(true);
     try {
       await api.codex.disconnect();
       setSession(null);
     } catch {
       setError("Failed to disconnect");
+    } finally {
+      setDisconnecting(false);
     }
   };
 
@@ -104,9 +108,13 @@ export function CodexConnect() {
               <span className="text-white/50">Plan</span>
               <Badge variant="secondary" className="bg-white/10 text-white border-white/20">{session.planTier ?? "Unknown"}</Badge>
             </div>
-            <Button variant="outline" size="sm" onClick={handleDisconnect} className="w-full border-white/20 bg-transparent text-white hover:bg-white/10">
-              <LogOut className="h-4 w-4 mr-2" />
-              Disconnect
+            <Button variant="outline" size="sm" onClick={handleDisconnect} disabled={disconnecting} className="w-full border-white/20 bg-transparent text-white hover:bg-white/10">
+              {disconnecting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <LogOut className="h-4 w-4 mr-2" />
+              )}
+              {disconnecting ? "Disconnecting..." : "Disconnect"}
             </Button>
           </div>
         </CardContent>
