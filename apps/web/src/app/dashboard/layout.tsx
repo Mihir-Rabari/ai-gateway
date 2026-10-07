@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Menu, X, Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
-import { api, getAuthToken, getRefreshToken } from "@/lib/api";
+import { api, getAuthToken, getRefreshToken, type UserProfile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 
 const isBrowser = typeof window !== "undefined";
