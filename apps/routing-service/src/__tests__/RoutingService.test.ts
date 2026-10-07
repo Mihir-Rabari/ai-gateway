@@ -8,8 +8,8 @@ function createRedisMock(initialState: Record<string, string> = {}) {
 
   return {
     get: async (key: string) => state.get(key) ?? null,
-    mget: async (keys: string[]) => {
-      return keys.map((k) => state.get(k) ?? null);
+    mget: async (...keys: any[]) => { const normalizedKeys = Array.isArray(keys[0]) ? keys[0] : keys;
+      return normalizedKeys.map((k) => state.get(k) ?? null);
     },
     setex: async (key: string, _ttl: number, value: string) => {
       state.set(key, value);
@@ -43,32 +43,7 @@ function createRedisMock(initialState: Record<string, string> = {}) {
 }
 
 describe('RoutingService', () => {
-  test('throws ROUTING_FAILED when no providers are configured', async () => {
-    const service = new RoutingService(
-      async () => undefined,
-      createRedisMock(),
-      {},
-    );
+  test('throws ROUTING_FAILED when no providers are configured', async () => { const service = new RoutingService(async () => undefined, createRedisMock(), {}, { modelProvider: {}, fallbackMap: {} }); await assert.rejects(() => service.route({ requestId: 'req-empty', model: 'any-model', messages: [{ role: 'user', content: 'hello' }] }), (err: unknown) => (err as { code?: string }).code === 'GATEWAY_002'); });
 
-    await assert.rejects(
-      () =>
-        service.route({
-          requestId: 'req-empty',
-          model: 'any-model',
-          messages: [{ role: 'user', content: 'hello' }],
-        }),
-      (err: unknown) => (err as { code?: string }).code === 'GATEWAY_002',
-    );
-  });
-
-  test('returns empty health when no providers configured', async () => {
-    const service = new RoutingService(
-      async () => undefined,
-      createRedisMock(),
-      {},
-    );
-
-    const providers = await service.getProvidersHealth();
-    assert.equal(providers.length, 0);
-  });
+  test('returns empty health when no providers configured', async () => { const service = new RoutingService(async () => undefined, createRedisMock(), {}, { modelProvider: {}, fallbackMap: {} }); const providers = await service.getProvidersHealth(); assert.deepEqual(providers, []); });
 });
