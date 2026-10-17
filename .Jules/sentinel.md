@@ -1,0 +1,4 @@
+## 2024-10-17 - Fix Timing Attack Vulnerability in Codex Routes
+**Vulnerability:** The `codexRoutes.ts` module in the `auth-service` compared the provided client secret to the internal service secret using a direct string comparison `clientSecret !== internalSecret`. This is susceptible to timing attacks, which could allow an attacker to guess the secret character by character.
+**Learning:** Node.js direct string equality operators (`===` or `!==`) short-circuit upon finding the first mismatched character. The duration of the comparison operations can reveal the prefix length of a valid guess.
+**Prevention:** Use `crypto.timingSafeEqual` to verify sensitive values like secrets or API keys. Ensure both arguments are Buffers (or typed arrays) of the exact same length before calling the function to avoid `RangeError` crashes.
