@@ -22,3 +22,6 @@
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
 **Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+## 2026-10-17 - Sidebar and Navigation Keyboard Accessibility
+**Learning:** Custom sidebar navigation elements (like `Link` and native `<button>` or `<a>` wrappers) frequently omit `focus-visible` styles because they don't inherit them from standard UI component libraries. This renders them invisible to keyboard-only navigation.
+**Action:** Always explicitly apply focus ring classes (e.g., `focus-visible:outline-none focus-visible:ring-2`) to custom navigational links and secondary sidebar actions, not just primary form buttons.
