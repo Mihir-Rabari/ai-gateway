@@ -94,24 +94,25 @@ export function MetricCard({
 // ── IconButton ───────────────────────────────────────────────────
 export const IconButton = forwardRef<
   HTMLButtonElement,
-  ButtonHTMLAttributes<HTMLButtonElement> & { "aria-label": string }
+  ButtonHTMLAttributes<HTMLButtonElement> & { "aria-label": string; busy?: boolean }
 >(function IconButton(
-  { className, children, "aria-label": ariaLabel, title, ...props },
+  { className, children, "aria-label": ariaLabel, title, disabled, busy, ...props },
   ref,
 ) {
   return (
     <button
       ref={ref}
       type="button"
+      disabled={disabled || busy}
       className={cn(
-        "rounded-lg border border-white/10 bg-white/5 p-2.5 text-white/60 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+        "inline-flex shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 p-2.5 text-white/60 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4",
         className,
       )}
       aria-label={ariaLabel}
       title={title ?? ariaLabel}
       {...props}
     >
-      {children}
+      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : children}
     </button>
   );
 });

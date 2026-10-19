@@ -22,3 +22,6 @@
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
 **Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+## 2024-10-20 - Adding disabled state and busy indicators to IconButtons
+**Learning:** Found that `IconButton` component was missing disabled and loading visual feedback compared to standard `Button`. Users wouldn't realize an action (like Copy or Show Password) was processing or unavailable because the component didn't render disabled styles or loading spinners, creating poor UX during API interaction states.
+**Action:** Always ensure that icon-only interactive elements support `disabled` styling (`opacity-50`, `pointer-events-none`) and provide a visual indication (`busy` state) during async operations.
