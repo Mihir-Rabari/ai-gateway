@@ -155,7 +155,7 @@ export default function LoginPage() {
             <div className="mt-8 flex flex-wrap items-center justify-between gap-3 text-sm text-white/40">
               <Link
                 href="/"
-                className="inline-flex items-center gap-2 rounded-lg px-2 py-1 transition hover:text-white/80"
+                className="inline-flex items-center gap-2 rounded-lg px-2 py-1 transition hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back to landing
@@ -164,7 +164,7 @@ export default function LoginPage() {
                 href={`${webUrl}/signup`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-lg px-2 py-1 transition hover:text-white/80"
+                className="rounded-lg px-2 py-1 transition hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
               >
                 Create account
               </a>
