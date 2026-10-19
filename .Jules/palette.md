@@ -22,3 +22,7 @@
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
 **Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+
+## 2026-10-19 - Add focus visible styles for keyboard navigation
+**Learning:** Custom interactive elements (like Link tags and a tags masquerading as buttons) often lose default browser outlines or are invisible on dark backgrounds, causing keyboard users to lose their place.
+**Action:** Always explicitly add focus-visible styles to custom links and buttons that match the design system focus ring.
