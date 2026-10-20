@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, afterEach } from "node:test";
+import assert from "node:assert/strict";
 import {
   RoutingService,
   validateModelConfig,
@@ -10,17 +11,7 @@ import { Errors } from '@ai-gateway/utils';
 import { createRedisMock, createKafkaMock, createFetchMock } from '../../../test-setup.js';
 import type Redis from 'ioredis';
 
-// Mock config
-vi.mock('@ai-gateway/config', () => ({
-  KAFKA_TOPICS: {
-    AUTH: 'auth.events',
-    CREDIT: 'credit.events',
-    BILLING: 'billing.events',
-    USAGE: 'usage.events',
-    ROUTING: 'routing.events',
-    ANALYTICS: 'analytics.events',
-  },
-}));
+
 
 // ───────────────────────────────────────────────────────────────────────────
 // Fixtures
@@ -52,8 +43,8 @@ describe('validateModelConfig', () => {
       fallbackMap: { 'gpt-5.5-codex': 'gpt-5.4-codex' },
     };
     const result = validateModelConfig(config);
-    expect(result.modelProvider).toEqual({ 'gpt-5.5-codex': 'codex' });
-    expect(result.fallbackMap).toEqual({ 'gpt-5.5-codex': 'gpt-5.4-codex' });
+    assert.deepEqual(result.modelProvider, { 'gpt-5.5-codex': 'codex' });
+    assert.deepEqual(result.fallbackMap, { 'gpt-5.5-codex': 'gpt-5.4-codex' });
   });
 
   it('strips entries with unknown provider names', () => {
@@ -62,8 +53,8 @@ describe('validateModelConfig', () => {
       fallbackMap: {},
     };
     const result = validateModelConfig(config);
-    expect(result.modelProvider).not.toHaveProperty('gpt-x');
-    expect(result.modelProvider).toHaveProperty('gpt-5.5-codex');
+    assert.equal(Reflect.has(result.modelProvider, 'gpt-x'), false);
+    assert.equal(Reflect.has(result.modelProvider, 'gpt-5.5-codex'), true);
   });
 
   it('returns empty modelProvider when all providers are unknown', () => {
@@ -72,7 +63,7 @@ describe('validateModelConfig', () => {
       fallbackMap: {},
     };
     const result = validateModelConfig(config);
-    expect(Object.keys(result.modelProvider)).toHaveLength(0);
+    assert.equal(Object.keys(result.modelProvider).length, 0);
   });
 });
 
@@ -90,28 +81,28 @@ describe('buildModelConfigFromEnv', () => {
     delete process.env['MODEL_PROVIDER_JSON'];
     delete process.env['MODEL_FALLBACK_JSON'];
     const config = buildModelConfigFromEnv();
-    expect(config.modelProvider).toEqual(DEFAULT_MODEL_CONFIG.modelProvider);
-    expect(config.fallbackMap).toEqual(DEFAULT_MODEL_CONFIG.fallbackMap);
+    assert.deepEqual(config.modelProvider, DEFAULT_MODEL_CONFIG.modelProvider);
+    assert.deepEqual(config.fallbackMap, DEFAULT_MODEL_CONFIG.fallbackMap);
   });
 
   it('merges MODEL_PROVIDER_JSON overrides on top of defaults', () => {
     process.env['MODEL_PROVIDER_JSON'] = JSON.stringify({ 'custom-model': 'codex' });
     const config = buildModelConfigFromEnv();
-    expect(config.modelProvider['custom-model']).toBe('codex');
+    assert.equal(config.modelProvider['custom-model'], 'codex');
     // Defaults should still be present
-    expect(config.modelProvider['gpt-5.5-codex']).toBe('codex');
+    assert.equal(config.modelProvider['gpt-5.5-codex'], 'codex');
   });
 
   it('falls back to defaults when MODEL_PROVIDER_JSON is invalid JSON', () => {
     process.env['MODEL_PROVIDER_JSON'] = 'not-json{';
     const config = buildModelConfigFromEnv();
-    expect(config.modelProvider).toEqual(DEFAULT_MODEL_CONFIG.modelProvider);
+    assert.deepEqual(config.modelProvider, DEFAULT_MODEL_CONFIG.modelProvider);
   });
 
   it('merges MODEL_FALLBACK_JSON overrides', () => {
     process.env['MODEL_FALLBACK_JSON'] = JSON.stringify({ 'gpt-5.5-codex': 'gpt-5.3-codex' });
     const config = buildModelConfigFromEnv();
-    expect(config.fallbackMap['gpt-5.5-codex']).toBe('gpt-5.3-codex');
+    assert.equal(config.fallbackMap['gpt-5.5-codex'], 'gpt-5.3-codex');
   });
 });
 
