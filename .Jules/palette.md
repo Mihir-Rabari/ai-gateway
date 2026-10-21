@@ -22,3 +22,6 @@
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
 **Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+## 2026-10-21 - Replaced window.confirm with inline confirmation
+**Learning:** Using window.confirm for destructive actions creates a jarring, browser-specific blocking experience that breaks the app's visual language and provides poor accessibility.
+**Action:** Replace window.confirm with inline confirmation states (or design system modals) to keep users in context and maintain consistent UX.
