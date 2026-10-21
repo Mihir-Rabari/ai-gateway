@@ -22,6 +22,7 @@ export default function AppDetailsPage() {
   const [savingUris, setSavingUris] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -76,7 +77,6 @@ export default function AppDetailsPage() {
   };
 
   const deleteApp = async () => {
-    if (!window.confirm("Delete this app? This cannot be undone.")) return;
     setIsDeleting(true);
     try {
       await api.apps.delete(id);
@@ -209,14 +209,35 @@ export default function AppDetailsPage() {
               >
                 {!isRotating && <RotateCw className="h-3.5 w-3.5 mr-1.5" />}Rotate key
               </Button>
-              <Button
-                variant="danger"
-                onClick={deleteApp}
-                busy={isDeleting}
-                className="rounded-lg h-9 px-4 text-xs font-semibold border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-900/20 transition"
-              >
-                {!isDeleting && <Trash2 className="h-3.5 w-3.5 mr-1.5" />}Delete app
-              </Button>
+              {showDeleteConfirm ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-medium text-red-400">Are you sure?</span>
+                  <Button
+                    variant="danger"
+                    onClick={deleteApp}
+                    busy={isDeleting}
+                    className="rounded-lg h-9 px-4 text-xs font-semibold border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-900/20 transition"
+                  >
+                    {!isDeleting && "Yes, delete"}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    disabled={isDeleting}
+                    className="rounded-lg h-9 px-4 text-xs font-semibold border border-white/10 bg-white/5 text-white hover:bg-white/10 transition"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="danger"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="rounded-lg h-9 px-4 text-xs font-semibold border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-900/20 transition"
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />Delete app
+                </Button>
+              )}
             </div>
           </div>
         </Surface>
