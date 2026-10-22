@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ok, fail, GatewayError, createLogger } from '@ai-gateway/utils';
+import { timingSafeEqual } from 'crypto';
 import { CodexOAuthService } from '../services/codexOAuthService.js';
 
 const logger = createLogger('codex-routes');
@@ -283,7 +284,16 @@ export async function codexRoutes(fastify: FastifyInstance) {
       const internalSecret = process.env['INTERNAL_SERVICE_SECRET'] || '';
       const headerVal = req.headers['x-internal-secret'];
       const clientSecret = Array.isArray(headerVal) ? headerVal[0] : (headerVal || '');
-      if (!internalSecret || clientSecret !== internalSecret) {
+      const internalBuf = Buffer.from(internalSecret, 'utf8');
+      const clientBuf = Buffer.from(clientSecret, 'utf8');
+
+      // 🛡️ Sentinel: Prevent timing attacks by using crypto.timingSafeEqual instead of standard string comparison
+      if (
+        !internalSecret ||
+        !clientSecret ||
+        internalBuf.length !== clientBuf.length ||
+        !timingSafeEqual(internalBuf, clientBuf)
+      ) {
         return reply.status(403).send(fail(new GatewayError('FORBIDDEN', 'Invalid internal secret', 403)));
       }
 
