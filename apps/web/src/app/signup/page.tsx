@@ -62,6 +62,7 @@ export default function SignupPage() {
               </label>
               <Input
                 id="name"
+                autoComplete="name"
                 type="text"
                 placeholder="John Doe"
                 value={name}
@@ -76,6 +77,7 @@ export default function SignupPage() {
               </label>
               <Input
                 id="email"
+                autoComplete="email"
                 type="email"
                 placeholder="you@example.com"
                 value={email}
@@ -90,6 +92,7 @@ export default function SignupPage() {
               </label>
               <Input
                 id="password"
+                autoComplete="new-password"
                 type="password"
                 placeholder="••••••••"
                 value={password}
