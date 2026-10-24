@@ -9,12 +9,15 @@ export function MiniBarChart({
   values: number[];
   className?: string;
 }) {
-  const max = Math.max(...values, 1);
+  const max = values.reduce((m, v) => (v > m ? v : m), 1); // ⚡ Bolt: Prevent large array stack overflow
 
   return (
     <div className={cn("flex h-40 items-end gap-2", className)}>
       {values.map((value, index) => (
-        <div key={`${index}-${value}`} className="flex flex-1 flex-col justify-end">
+        <div
+          key={`${index}-${value}`}
+          className="flex flex-1 flex-col justify-end"
+        >
           <div
             className="rounded-t-[18px] bg-gradient-to-t from-white to-white/35 transition-all"
             style={{ height: `${Math.max(10, (value / max) * 100)}%` }}
@@ -33,10 +36,12 @@ export function LinePulse({
   className?: string;
 }) {
   if (values.length === 0) {
-    return <div className={cn("h-36 rounded-[24px] bg-white/[0.03]", className)} />;
+    return (
+      <div className={cn("h-36 rounded-[24px] bg-white/[0.03]", className)} />
+    );
   }
 
-  const max = Math.max(...values, 1);
+  const max = values.reduce((m, v) => (v > m ? v : m), 1); // ⚡ Bolt: Prevent large array stack overflow
   const points = values
     .map((value, index) => {
       const x = (index / Math.max(values.length - 1, 1)) * 100;
@@ -46,7 +51,12 @@ export function LinePulse({
     .join(" ");
 
   return (
-    <div className={cn("rounded-[24px] border border-white/8 bg-white/[0.03] p-4", className)}>
+    <div
+      className={cn(
+        "rounded-[24px] border border-white/8 bg-white/[0.03] p-4",
+        className,
+      )}
+    >
       <svg viewBox="0 0 100 100" className="h-36 w-full overflow-visible">
         <defs>
           <linearGradient id="pulse-line" x1="0" x2="1">
@@ -76,10 +86,12 @@ export function TrendAreaChart({
   className?: string;
 }) {
   if (values.length === 0) {
-    return <div className={cn("h-52 rounded-[24px] bg-white/[0.03]", className)} />;
+    return (
+      <div className={cn("h-52 rounded-[24px] bg-white/[0.03]", className)} />
+    );
   }
 
-  const max = Math.max(...values, 1);
+  const max = values.reduce((m, v) => (v > m ? v : m), 1); // ⚡ Bolt: Prevent large array stack overflow
   const linePoints = values
     .map((value, index) => {
       const x = (index / Math.max(values.length - 1, 1)) * 100;
@@ -90,7 +102,12 @@ export function TrendAreaChart({
   const areaPoints = `0,100 ${linePoints} 100,100`;
 
   return (
-    <div className={cn("rounded-[24px] border border-white/8 bg-white/[0.03] p-4", className)}>
+    <div
+      className={cn(
+        "rounded-[24px] border border-white/8 bg-white/[0.03] p-4",
+        className,
+      )}
+    >
       <svg viewBox="0 0 100 100" className="h-40 w-full overflow-visible">
         <defs>
           <linearGradient id="trend-fill" x1="0" x2="0" y1="0" y2="1">
@@ -132,18 +149,28 @@ export function HorizontalMeterList({
   className?: string;
 }) {
   // ⚡ Bolt: Avoid O(N) intermediate array allocation and spread operator overhead by using a single reduce pass.
-  const max = items.reduce((currentMax, item) => (item.value > currentMax ? item.value : currentMax), 1);
+  const max = items.reduce(
+    (currentMax, item) => (item.value > currentMax ? item.value : currentMax),
+    1,
+  );
 
   return (
     <div className={cn("space-y-3", className)}>
       {items.map((item) => (
-        <div key={item.label} className="rounded-[20px] border border-white/8 bg-white/[0.03] p-4">
+        <div
+          key={item.label}
+          className="rounded-[20px] border border-white/8 bg-white/[0.03] p-4"
+        >
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm text-white">{item.label}</p>
-              {item.hint ? <p className="mt-1 text-xs text-white/40">{item.hint}</p> : null}
+              {item.hint ? (
+                <p className="mt-1 text-xs text-white/40">{item.hint}</p>
+              ) : null}
             </div>
-            <p className="text-sm text-white/64">{item.value.toLocaleString()}</p>
+            <p className="text-sm text-white/64">
+              {item.value.toLocaleString()}
+            </p>
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/8">
             <div
