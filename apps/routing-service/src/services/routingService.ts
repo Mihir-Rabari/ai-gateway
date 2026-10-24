@@ -274,7 +274,7 @@ export class RoutingService {
       `provider:failures:${p}`,
     ]);
 
-    const results = await this.redis.mget(keysToFetch);
+    const results = keysToFetch.length > 0 ? await this.redis.mget(keysToFetch) : [];
 
     // ⚡ Bolt: Pre-compute models by provider to avoid O(N * P) array allocations in the .map loop
     const modelsByProvider: Record<string, string[]> = {};
