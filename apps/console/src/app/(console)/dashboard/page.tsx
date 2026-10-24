@@ -10,7 +10,7 @@ function TrendChart({ values, labels }: { values: number[]; labels?: string[] })
     return <div className="h-48 rounded-2xl border border-white/10 bg-black/40" />;
   }
 
-  const max = Math.max(...values, 1);
+  const max = values.reduce((m, v) => (v > m ? v : m), 1); // ⚡ Bolt: Replaced spread operator with reduce to avoid O(N) array allocation and max call stack errors
   const linePoints = values
     .map((value, index) => {
       const x = (index / Math.max(values.length - 1, 1)) * 100;
@@ -44,7 +44,7 @@ function TrendChart({ values, labels }: { values: number[]; labels?: string[] })
 }
 
 function MeterList({ items }: { items: Array<{ label: string; value: number; hint?: string }> }) {
-  const max = Math.max(...items.map((i) => i.value), 1);
+  const max = items.reduce((m, i) => (i.value > m ? i.value : m), 1); // ⚡ Bolt: Consolidated .map() and spread into a single O(N) .reduce() pass
   return (
     <div className="space-y-3">
       {items.map((item) => (
