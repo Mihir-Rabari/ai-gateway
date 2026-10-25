@@ -28,8 +28,21 @@ function createKafkaMock() {
     _messages: messages,
   };
 }
-function createFetchMock() {
+function createFetchMock(options?: { routes?: Record<string, Function> }) {
   return vi.fn(async (url: string, init?: RequestInit) => {
+    // If the mock was setup with routes, use them.
+    if (options && options.routes) {
+      for (const [route, handler] of Object.entries(options.routes)) {
+        if (url.includes(route)) {
+          const res = await (handler as Function)(url, init);
+          return {
+            ...res,
+            text: async () => res.json ? JSON.stringify(await res.json()) : '',
+            headers: new Headers()
+          };
+        }
+      }
+    }
     const response: Response = {
       ok: true, status: 200,
       json: async () => ({ choices: [{ message: { content: 'test response' } }] }),
@@ -153,7 +166,7 @@ describe('GatewayService', () => {
         authServiceUrl: 'http://auth:3003',
         creditServiceUrl: 'http://credit:3005',
         routingServiceUrl: 'http://routing:3006',
-        kafkaPublish: kafka.publish,
+        kafkaPublish: kafka.producer.send,
         redis: redis as unknown as Redis,
         pgPool: options?.pgPool ?? ({} as never),
         tokenCacheTtlSeconds: 60,
@@ -334,7 +347,7 @@ describe('GatewayService', () => {
 
       // A usage.failed event should have been published
       const failedEvent = kafka._messages.find(
-        (m: { topic: string; msg: { type: string } }) => (m.msg as { type: string }).type === 'usage.request.failed',
+        (m: { topic: string; msg: any }) => (m.msg as { type: string }).type === 'usage.request.failed',
       );
       expect(failedEvent).toBeDefined();
     });
