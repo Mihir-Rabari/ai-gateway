@@ -1,2 +1,2 @@
 #!/bin/bash
-sed -i '57,63d' apps/web/src/app/auth/popup/page.tsx
+git checkout package.json tsconfig.base.json apps/web/package.json 2>/dev/null || true
