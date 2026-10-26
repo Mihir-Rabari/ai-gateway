@@ -108,12 +108,12 @@ describe('AuthService', () => {
       redis as unknown as import('ioredis').default,
     );
 
-    jwtSign.mockImplementation((payload: { type: string }) => {
+    jwtSign.mockImplementation((payload: any) => {
       if (payload.type === 'access') return 'mock_access_token';
       if (payload.type === 'refresh') return 'mock_refresh_token';
       return 'mock_token';
     });
-    jwtVerify.mockImplementation((token: string) => {
+    jwtVerify.mockImplementation((token: string): any => {
       if (token === 'valid_access_token')
         return { userId: 'user-1', type: 'access', email: 'test@example.com', planId: 'free' };
       if (token === 'valid_refresh_token')
@@ -344,7 +344,7 @@ describe('AuthService', () => {
     });
 
     it('throws INVALID_TOKEN when the token type is not "refresh"', async () => {
-      jwtVerify.mockReturnValueOnce({ userId: 'user-1', type: 'access', email: 't@e.com', planId: 'free' });
+      jwtVerify.mockReturnValueOnce({ userId: 'user-1', type: 'access', email: 't@e.com', planId: 'free' } as any);
       await expect(authService.refresh('valid_refresh_token')).rejects.toMatchObject({
         code: 'AUTH_001',
         statusCode: 401,
