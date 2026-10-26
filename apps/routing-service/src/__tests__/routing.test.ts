@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   RoutingService,
   validateModelConfig,
@@ -7,7 +7,60 @@ import {
   type ModelConfig,
 } from '../services/routingService.js';
 import { Errors } from '@ai-gateway/utils';
-import { createRedisMock, createKafkaMock, createFetchMock } from '../../../test-setup.js';
+// Inline mock factories
+function createRedisMock() {
+  const store = new Map<string, string>();
+  return {
+    get: async (key: string) => store.get(key) ?? null,
+    set: async (key: string, value: string) => { store.set(key, value); return 'OK' as const; },
+    setex: async (key: string, _ttl: number, value: string) => { store.set(key, value); return 'OK' as const; },
+    del: async (...keys: string[]) => { let n = 0; keys.forEach(k => { if (store.delete(k)) n++; }); return n; },
+    keys: async (pattern: string) => { const r = new RegExp(pattern.replace(/\*/g, '.*')); return [...store.keys()].filter(k => r.test(k)); },
+    scan: async (_cursor: string, ...args: unknown[]) => {
+      const matchIdx = args.indexOf('MATCH');
+      const pattern = matchIdx >= 0 ? args[matchIdx + 1] as string : '*';
+      const r = new RegExp(String(pattern).replace(/\*/g, '.*'));
+      return ['0', [...store.keys()].filter(k => r.test(k))] as [string, string[]];
+    },
+    incr: async (key: string) => { const v = (parseInt(store.get(key) ?? '0') + 1).toString(); store.set(key, v); return parseInt(v); },
+    expire: async () => 1,
+    eval: async () => 1,
+    quit: async () => 'OK',
+  };
+}
+function createKafkaMock() {
+  const messages: Array<{ topic: string; msg: any }> = [];
+  return {
+    producer: { connect: async () => {}, send: async (topic: string, msg: any) => { messages.push({ topic, msg }); } },
+    consumer: { connect: async () => {}, subscribe: async () => {}, run: async () => {} },
+    _messages: messages,
+  };
+}
+function createFetchMock(options?: { routes: Record<string, () => any> }) {
+  if (options?.routes) {
+    return vi.fn(async (url: string, init?: RequestInit) => {
+      for (const [route, handler] of Object.entries(options.routes)) {
+        if (url.includes(route)) {
+          return handler() as unknown as Response;
+        }
+      }
+      return {
+        ok: true, status: 200,
+        json: async () => ({ choices: [{ message: { content: 'test response' } }] }),
+        text: async () => JSON.stringify({ choices: [{ message: { content: 'test response' } }] }),
+        headers: new Headers(),
+      } as unknown as Response;
+    });
+  }
+  return vi.fn(async (url: string, init?: RequestInit) => {
+    return {
+      ok: true, status: 200,
+      json: async () => ({ choices: [{ message: { content: 'test response' } }] }),
+      text: async () => JSON.stringify({ choices: [{ message: { content: 'test response' } }] }),
+      headers: new Headers(),
+    } as unknown as Response;
+  });
+}
 import type Redis from 'ioredis';
 
 // Mock config

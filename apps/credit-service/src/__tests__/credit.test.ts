@@ -24,9 +24,9 @@ function createRedisMock() {
   };
 }
 function createKafkaMock() {
-  const messages: Array<{ topic: string; msg: unknown }> = [];
+  const messages: Array<{ topic: string; msg: any }> = [];
   return {
-    producer: { connect: async () => {}, send: async (topic: string, msg: unknown) => { messages.push({ topic, msg }); } },
+    producer: { connect: async () => {}, send: async (topic: string, msg: any) => { messages.push({ topic, msg }); } },
     consumer: { connect: async () => {}, subscribe: async () => {}, run: async () => {} },
     _messages: messages,
   };
@@ -99,7 +99,7 @@ describe('CreditService', () => {
     service = new CreditService(
       makePgPool(mockDbQuery, mockConnect),
       redis as unknown as Redis,
-      kafka.publish,
+      kafka.producer.send,
     );
   });
 
