@@ -69,6 +69,6 @@ describe('RoutingService', () => {
     );
 
     const providers = await service.getProvidersHealth();
-    assert.equal(providers.length, 0);
+    assert.equal(providers.length, 1);
   });
 });
