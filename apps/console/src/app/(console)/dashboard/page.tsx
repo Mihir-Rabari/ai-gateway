@@ -10,7 +10,8 @@ function TrendChart({ values, labels }: { values: number[]; labels?: string[] })
     return <div className="h-48 rounded-2xl border border-white/10 bg-black/40" />;
   }
 
-  const max = Math.max(...values, 1);
+  // ⚡ Bolt: Avoid spread operator on arrays to prevent call stack limits and reduce memory allocation
+  const max = values.reduce((a, b) => (a > b ? a : b), 1);
   const linePoints = values
     .map((value, index) => {
       const x = (index / Math.max(values.length - 1, 1)) * 100;
@@ -44,7 +45,8 @@ function TrendChart({ values, labels }: { values: number[]; labels?: string[] })
 }
 
 function MeterList({ items }: { items: Array<{ label: string; value: number; hint?: string }> }) {
-  const max = Math.max(...items.map((i) => i.value), 1);
+  // ⚡ Bolt: Avoid intermediate map allocation and spread operator to improve memory efficiency
+  const max = items.reduce((a, b) => (b.value > a ? b.value : a), 1);
   return (
     <div className="space-y-3">
       {items.map((item) => (
