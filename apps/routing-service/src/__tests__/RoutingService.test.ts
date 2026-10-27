@@ -44,11 +44,7 @@ function createRedisMock(initialState: Record<string, string> = {}) {
 
 describe('RoutingService', () => {
   test('throws ROUTING_FAILED when no providers are configured', async () => {
-    const service = new RoutingService(
-      async () => undefined,
-      createRedisMock(),
-      {},
-    );
+    const service = new RoutingService(async () => undefined, createRedisMock(), {}, { modelProvider: {}, fallbackMap: {} });
 
     await assert.rejects(
       () =>
@@ -62,13 +58,10 @@ describe('RoutingService', () => {
   });
 
   test('returns empty health when no providers configured', async () => {
-    const service = new RoutingService(
-      async () => undefined,
-      createRedisMock(),
-      {},
-    );
+    const service = new RoutingService(async () => undefined, createRedisMock(), {}, { modelProvider: {}, fallbackMap: {} });
 
     const providers = await service.getProvidersHealth();
     assert.equal(providers.length, 0);
+
   });
 });
