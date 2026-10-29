@@ -1,0 +1,4 @@
+## 2026-10-28 - Timing Attack Vulnerability in Internal Secret Comparison
+**Vulnerability:** Found a timing attack vulnerability in `apps/auth-service/src/routes/codexRoutes.ts` where the internal secret comparison was done using strict equality (`clientSecret !== internalSecret`) instead of a constant-time comparison string comparison.
+**Learning:** Comparing sensitive secrets with standard equality operators (`===` or `!==`) can lead to timing attacks. An attacker can measure the time it takes for the comparison to complete and infer the secret character by character because standard string comparisons abort early on the first mismatch.
+**Prevention:** Always cast both strings to a `Buffer` and use `crypto.timingSafeEqual()` for comparing sensitive tokens, client secrets, and passwords, making sure to check the lengths beforehand to avoid throwing an error.
