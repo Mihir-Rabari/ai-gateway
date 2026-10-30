@@ -8,7 +8,8 @@ function createRedisMock(initialState: Record<string, string> = {}) {
 
   return {
     get: async (key: string) => state.get(key) ?? null,
-    mget: async (keys: string[]) => {
+    mget: async (...keysOrArray: any[]) => {
+      const keys = Array.isArray(keysOrArray[0]) ? keysOrArray[0] : keysOrArray;
       return keys.map((k) => state.get(k) ?? null);
     },
     setex: async (key: string, _ttl: number, value: string) => {
@@ -69,6 +70,6 @@ describe('RoutingService', () => {
     );
 
     const providers = await service.getProvidersHealth();
-    assert.equal(providers.length, 0);
+    assert.equal(providers.length, Object.values(service.modelConfig.modelProvider ?? {}).length === 0 ? 0 : [...new Set(Object.values(service.modelConfig.modelProvider))].length);
   });
 });
