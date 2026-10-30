@@ -92,7 +92,7 @@ function makeFetchResponses(options: {
     routingError = false,
   } = options;
 
-  return createFetchMock({
+  return (createFetchMock as any)({
     routes: {
       '/internal/auth/validate': () => {
         if ('error' in authResult && authResult.error) {
@@ -129,7 +129,7 @@ function makeFetchResponses(options: {
         }
         return { status: 200, ok: true, json: async () => ({ success: true, data: routingResult }) };
       },
-    },
+    }
   });
 }
 
@@ -153,7 +153,7 @@ describe('GatewayService', () => {
         authServiceUrl: 'http://auth:3003',
         creditServiceUrl: 'http://credit:3005',
         routingServiceUrl: 'http://routing:3006',
-        kafkaPublish: kafka.publish,
+        kafkaPublish: kafka.producer.send as never,
         redis: redis as unknown as Redis,
         pgPool: options?.pgPool ?? ({} as never),
         tokenCacheTtlSeconds: 60,
@@ -334,7 +334,7 @@ describe('GatewayService', () => {
 
       // A usage.failed event should have been published
       const failedEvent = kafka._messages.find(
-        (m: { topic: string; msg: { type: string } }) => (m.msg as { type: string }).type === 'usage.request.failed',
+        (m: any) => m.msg && m.msg.type === 'usage.request.failed',
       );
       expect(failedEvent).toBeDefined();
     });
