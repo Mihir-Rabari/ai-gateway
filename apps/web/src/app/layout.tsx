@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { Inter, Geist } from "next/font/google";
+import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -19,7 +19,8 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   title: "AI Gateway",
-  description: "Unified AI model gateway with developer apps, usage analytics, and billing.",
+  description:
+    "Unified AI model gateway with developer apps, usage analytics, and billing.",
 };
 
 export default function RootLayout({
