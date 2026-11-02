@@ -17,7 +17,7 @@ function createRedisMock() {
       return ['0', [...store.keys()].filter(k => r.test(k))] as [string, string[]];
     },
     incr: async (k: string) => { const v = (parseInt(store.get(k) ?? '0') + 1).toString(); store.set(k, v); return parseInt(v); },
-    expire: async () => 1, eval: async () => 1, quit: async () => 'OK',
+    expire: async () => 1, eval: async (_script, _numkeys, key) => { const v = (parseInt(store.get(key) ?? '0') + 1).toString(); store.set(key, v); return parseInt(v); }, quit: async () => 'OK',
   };
 }
 function createKafkaMock() {
@@ -28,14 +28,28 @@ function createKafkaMock() {
     _messages: messages,
   };
 }
-function createFetchMock() {
-  return vi.fn(async (url: string, init?: RequestInit) => {
-    const response: Response = {
+function createFetchMock(config) {
+  return vi.fn(async (url, init) => {
+    if (config && config.routes) {
+      for (const [route, handler] of Object.entries(config.routes)) {
+        if (url.includes(route)) {
+          const res = handler();
+          return {
+            ok: res.ok,
+            status: res.status,
+            json: res.json,
+            text: async () => JSON.stringify(await res.json()),
+            headers: new Headers(),
+          };
+        }
+      }
+    }
+    const response = {
       ok: true, status: 200,
       json: async () => ({ choices: [{ message: { content: 'test response' } }] }),
       text: async () => JSON.stringify({ choices: [{ message: { content: 'test response' } }] }),
       headers: new Headers(),
-    } as unknown as Response;
+    };
     return response;
   });
 }
@@ -153,7 +167,7 @@ describe('GatewayService', () => {
         authServiceUrl: 'http://auth:3003',
         creditServiceUrl: 'http://credit:3005',
         routingServiceUrl: 'http://routing:3006',
-        kafkaPublish: kafka.publish,
+        kafkaPublish: kafka.producer.send.bind(kafka.producer),
         redis: redis as unknown as Redis,
         pgPool: options?.pgPool ?? ({} as never),
         tokenCacheTtlSeconds: 60,

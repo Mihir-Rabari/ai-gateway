@@ -467,6 +467,8 @@ export class GatewayService {
         body: JSON.stringify({ userId, requestId, amount }),
       });
       if (!res.ok) {
+        if (res.status === 429) throw new GatewayError('RATE_LIMIT_EXCEEDED', 'Rate limit exceeded', 429);
+        if (res.status === 402) throw Errors.INSUFFICIENT_CREDITS(0, amount);
         throw new Error(`Credit lock failed with status ${res.status}`);
       }
       const json = await res.json() as { success: boolean; error?: { code: string; statusCode: number } };
