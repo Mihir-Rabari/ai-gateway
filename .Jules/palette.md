@@ -22,3 +22,6 @@
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
 **Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+## 2024-05-27 - Consistency in Disconnect UX
+**Learning:** Destructive or semi-destructive buttons, such as "Disconnect" account actions, often lack loading states because they resolve quickly in mock data or local environments, but they freeze during real network conditions, leading to poor UX.
+**Action:** Always ensure symmetry in interaction feedback. If a "Connect" action has a spinner and text change, the corresponding "Disconnect" action must also provide a loading spinner and updated loading text (e.g., "Disconnecting...").
