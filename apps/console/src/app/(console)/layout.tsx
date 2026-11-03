@@ -84,8 +84,9 @@ function ConsoleLayoutContent({ children }: { children: React.ReactNode }) {
               <Link
                 key={link.href}
                 href={link.href}
+                aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
                   active
                     ? "bg-white/10 text-white"
                     : "text-white/60 hover:bg-white/5 hover:text-white",
@@ -112,7 +113,8 @@ function ConsoleLayoutContent({ children }: { children: React.ReactNode }) {
             href={WEB_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+            aria-label="Main website (opens in a new tab)"
+            className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             Main website
             <ArrowUpRight className="h-4 w-4 text-white/50" />
@@ -120,7 +122,7 @@ function ConsoleLayoutContent({ children }: { children: React.ReactNode }) {
 
           <button
             onClick={logout}
-            className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+            className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             Sign out
             <LogOut className="h-4 w-4 text-white/50" />
