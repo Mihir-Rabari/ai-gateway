@@ -82,6 +82,7 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
                       "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
                       active ? "bg-white text-black" : "text-white/64 hover:bg-white/[0.05] hover:text-white",
                     )}
+                    aria-current={active ? "page" : undefined}
                   >
                     <Icon className="h-4 w-4" />
                     <span>{link.label}</span>
@@ -120,7 +121,7 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
                 Exit
               </Button>
             </div>
-            <div className="scrollbar-subtle flex gap-2 overflow-x-auto px-4 pb-4">
+            <nav aria-label="Mobile navigation" className="scrollbar-subtle flex gap-2 overflow-x-auto px-4 pb-4">
               {links.map((link) => {
                 const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
                 return (
@@ -131,12 +132,13 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
                       "whitespace-nowrap rounded-full px-4 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
                       active ? "bg-white text-black" : "bg-white/[0.04] text-white/64",
                     )}
+                    aria-current={active ? "page" : undefined}
                   >
                     {link.label}
                   </Link>
                 );
               })}
-            </div>
+            </nav>
           </Surface>
 
           <main className="min-w-0 flex-1 pb-24 lg:pb-0">

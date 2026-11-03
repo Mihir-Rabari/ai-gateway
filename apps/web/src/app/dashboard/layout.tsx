@@ -109,6 +109,7 @@ function DashboardLayoutContent({
                     ? "bg-white/10 text-white"
                     : "text-white/60 hover:bg-white/5 hover:text-white"
                 }`}
+                aria-current={active ? "page" : undefined}
               >
                 {item.label}
               </Link>

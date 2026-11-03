@@ -22,3 +22,6 @@
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
 **Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+## 2026-10-27 - Missing aria-current on Next.js Links
+**Learning:** Next.js Link components do not automatically add aria-current='page' when active.
+**Action:** Always manually compare pathname to href and add aria-current='page' to active navigation links to ensure screen readers announce the current page.
