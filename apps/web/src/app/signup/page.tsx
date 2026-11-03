@@ -67,6 +67,8 @@ export default function SignupPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                autoFocus
+                disabled={loading}
                 className="bg-black border-zinc-800 text-zinc-100 placeholder:text-zinc-600 rounded-md focus-visible:ring-zinc-700 focus-visible:border-zinc-700"
               />
             </div>
@@ -81,6 +83,7 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={loading}
                 className="bg-black border-zinc-800 text-zinc-100 placeholder:text-zinc-600 rounded-md focus-visible:ring-zinc-700 focus-visible:border-zinc-700"
               />
             </div>
@@ -96,6 +99,7 @@ export default function SignupPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={8}
+                disabled={loading}
                 className="bg-black border-zinc-800 text-zinc-100 placeholder:text-zinc-600 rounded-md focus-visible:ring-zinc-700 focus-visible:border-zinc-700"
               />
             </div>

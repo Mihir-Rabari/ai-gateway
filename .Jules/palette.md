@@ -22,3 +22,6 @@
 ## 2024-08-01 - Mobile Focus Styles
 **Learning:** Responsive layouts often duplicate interactive elements (like navigation or sign-out buttons) for mobile views, and these duplicated elements frequently miss the `focus-visible` styles applied to their desktop counterparts.
 **Action:** When auditing or adding keyboard accessibility to a layout, always check the mobile/responsive variants of headers and menus to ensure focus styles are consistently applied across all viewports.
+## 2026-04-06 - Auto-focus first form input
+**Learning:** Users appreciate when the first logical input is immediately focused upon page load, removing the need for an extra click before they can start typing.
+**Action:** Always add `autoFocus` to the primary input on login/signup forms and creation dialogs to streamline the user flow.
