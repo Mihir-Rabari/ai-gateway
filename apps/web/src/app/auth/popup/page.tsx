@@ -81,6 +81,7 @@ export default function AuthPopupPage() {
             <label htmlFor="email" className="sr-only">Email address</label>
             <Input
               id="email"
+              autoComplete="email"
               type="email"
               placeholder="Email"
               value={email}
@@ -93,6 +94,7 @@ export default function AuthPopupPage() {
             <label htmlFor="password" className="sr-only">Password</label>
             <Input
               id="password"
+              autoComplete="current-password"
               type="password"
               placeholder="Password"
               value={password}

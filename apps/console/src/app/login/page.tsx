@@ -106,6 +106,7 @@ export default function LoginPage() {
                 </label>
                 <input
                   id="email"
+                  autoComplete="email"
                   type="email"
                   placeholder="you@company.com"
                   value={email}
@@ -124,6 +125,7 @@ export default function LoginPage() {
                 </label>
                 <input
                   id="password"
+                  autoComplete="current-password"
                   type="password"
                   placeholder="Enter your password"
                   value={password}
