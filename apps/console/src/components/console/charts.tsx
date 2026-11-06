@@ -44,9 +44,11 @@ export function LinePulse({
 
   // ⚡ Bolt: Avoid O(N) intermediate array allocation and spread operator overhead by using a single reduce pass.
   const max = values.reduce((m, v) => (v > m ? v : m), 1);
+  // ⚡ Bolt: Lift invariant calculation outside of loop to prevent redundant CPU overhead
+  const maxIndex = Math.max(values.length - 1, 1);
   const points = values
     .map((value, index) => {
-      const x = (index / Math.max(values.length - 1, 1)) * 100;
+      const x = (index / maxIndex) * 100;
       const y = 100 - (value / max) * 84;
       return `${x},${y}`;
     })
@@ -95,9 +97,11 @@ export function TrendAreaChart({
 
   // ⚡ Bolt: Avoid O(N) intermediate array allocation and spread operator overhead by using a single reduce pass.
   const max = values.reduce((m, v) => (v > m ? v : m), 1);
+  // ⚡ Bolt: Lift invariant calculation outside of loop to prevent redundant CPU overhead
+  const maxIndex = Math.max(values.length - 1, 1);
   const linePoints = values
     .map((value, index) => {
-      const x = (index / Math.max(values.length - 1, 1)) * 100;
+      const x = (index / maxIndex) * 100;
       const y = 92 - (value / max) * 70;
       return `${x},${y}`;
     })
