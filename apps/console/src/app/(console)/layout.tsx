@@ -8,6 +8,7 @@ import { api, getAuthToken, getRefreshToken } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/console/toaster";
 import { UserProvider, useUser } from "@/components/UserProvider";
+import { IconButton } from "@/components/console/system";
 
 const isBrowser = typeof window !== "undefined";
 const WEB_URL = process.env.NEXT_PUBLIC_WEB_URL ?? (isBrowser ? window.location.origin : "http://localhost:3000");
@@ -65,14 +66,14 @@ function ConsoleLayoutContent({ children }: { children: React.ReactNode }) {
             </div>
             <span className="font-semibold tracking-tight text-white/90">AI Gateway</span>
           </div>
-          <button
-            className="p-2 text-white/50 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 md:hidden"
+          <IconButton
+            className="md:hidden border-none"
             onClick={() => setSidebarOpen(false)}
             aria-label="Close menu"
             title="Close menu"
           >
             <X className="h-5 w-5" />
-          </button>
+          </IconButton>
         </div>
 
         {/* Nav */}
@@ -132,14 +133,14 @@ function ConsoleLayoutContent({ children }: { children: React.ReactNode }) {
       <main className="flex min-w-0 flex-1 flex-col bg-[#09090b]">
         {/* Mobile header */}
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/5 bg-[#09090b]/70 px-4 backdrop-blur md:px-6">
-          <button
-            className="rounded-md p-2 text-white/60 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 md:hidden"
+          <IconButton
+            className="md:hidden border-none"
             onClick={() => setSidebarOpen(true)}
             aria-label="Open menu"
             title="Open menu"
           >
             <Menu className="h-5 w-5" />
-          </button>
+          </IconButton>
           <h1 className="text-sm font-medium text-white/70">Developer Console</h1>
           <div className="w-9 md:hidden" />
         </header>

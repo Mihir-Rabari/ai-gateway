@@ -25,3 +25,7 @@
 ## 2024-09-26 - Prefer disabled:cursor-not-allowed over disabled:pointer-events-none
 **Learning:** Using `pointer-events-none` on disabled interactive elements suppresses native tooltip visibility (via the `title` attribute) and degrades accessibility for users trying to understand why an element is disabled.
 **Action:** Always prefer `disabled:cursor-not-allowed` over `disabled:pointer-events-none` when styling disabled states for interactive components to preserve tooltip visibility.
+
+## 2026-11-08 - [Consistent Icon Buttons]
+**Learning:** Found multiple instances where plain `<button>` tags were used for icon-only buttons instead of the reusable `<IconButton>` component which includes better accessibility standards by requiring an `aria-label`.
+**Action:** Replace plain icon-only buttons with `<IconButton>` to ensure accessibility and design consistency.
