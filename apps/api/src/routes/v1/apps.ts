@@ -7,8 +7,13 @@ import { APP_CACHE_KEYS } from '@ai-gateway/config';
 import { AppRepository } from '../../repositories/AppRepository.js';
 import { AppService } from '../../services/AppService.js';
 
+if (!process.env['DATABASE_URL']) {
+  // 🛡️ Sentinel: Prevent exposure of hardcoded database credentials
+  throw new Error('DATABASE_URL is not defined');
+}
+
 const pool = new pg.Pool({
-  connectionString: process.env['DATABASE_URL'] ?? 'postgresql://gateway_user:gateway_pass@localhost:5432/ai_gateway',
+  connectionString: process.env['DATABASE_URL'],
 });
 const appRepository = new AppRepository(pool);
 const appService = new AppService(appRepository);
