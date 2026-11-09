@@ -25,3 +25,7 @@
 ## 2024-09-26 - Prefer disabled:cursor-not-allowed over disabled:pointer-events-none
 **Learning:** Using `pointer-events-none` on disabled interactive elements suppresses native tooltip visibility (via the `title` attribute) and degrades accessibility for users trying to understand why an element is disabled.
 **Action:** Always prefer `disabled:cursor-not-allowed` over `disabled:pointer-events-none` when styling disabled states for interactive components to preserve tooltip visibility.
+
+## 2026-11-09 - Clean up redundant sr-only text in icon-only buttons
+**Learning:** Adding both an `aria-label` (or `title` passed via `aria-label`) and an inner `<span className="sr-only">...` to the same interactive element causes screen readers to misbehave and creates duplicated hidden content, which is a known accessibility anti-pattern.
+**Action:** When an interactive element (like a Dialog close button) uses `aria-label` or `title` to provide accessible naming, ensure any redundant inner `sr-only` text is removed to maintain a clean accessibility tree.
