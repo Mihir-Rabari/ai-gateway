@@ -7,8 +7,12 @@ import { APP_CACHE_KEYS } from '@ai-gateway/config';
 import { AppRepository } from '../../repositories/AppRepository.js';
 import { AppService } from '../../services/AppService.js';
 
+// 🛡️ Sentinel: Removed hardcoded database credentials to prevent secret leakage
+if (!process.env['DATABASE_URL']) {
+  throw new Error('DATABASE_URL environment variable is required');
+}
 const pool = new pg.Pool({
-  connectionString: process.env['DATABASE_URL'] ?? 'postgresql://gateway_user:gateway_pass@localhost:5432/ai_gateway',
+  connectionString: process.env['DATABASE_URL'],
 });
 const appRepository = new AppRepository(pool);
 const appService = new AppService(appRepository);

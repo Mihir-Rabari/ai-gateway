@@ -1,4 +1,4 @@
-## 2026-11-01 - Fix timing attack vulnerability in secret comparison
-**Vulnerability:** Simple string comparison (`!==`) was used for sensitive internal secret validation in `codexRoutes.ts`, allowing potential timing attacks.
-**Learning:** Node.js applications must use `crypto.timingSafeEqual()` with `Buffer` objects of equal length when comparing sensitive tokens to prevent execution time variations that expose the secret length or content.
-**Prevention:** Ensure both strings are cast to `Buffer` and compared securely using `timingSafeEqual()` in authentication pathways.
+## 2026-11-09 - Hardcoded PostgreSQL Database Credentials
+**Vulnerability:** Found hardcoded fallback database credentials (`postgresql://gateway_user:gateway_pass@localhost:5432/ai_gateway`) in database pool configurations.
+**Learning:** Default fallbacks for local development often leak into production code when an environment variable is unset, creating a risk of unauthorized database access if the code is exposed.
+**Prevention:** Fail fast on missing environment variables instead of providing hardcoded credential fallbacks. For CI and testing environments, inject the required test variables in the workflow configuration (`.github/workflows/ci.yml`).
