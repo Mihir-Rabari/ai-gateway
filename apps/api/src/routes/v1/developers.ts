@@ -3,8 +3,12 @@ import pg from 'pg';
 import { requireAuth } from '../../middleware/requireAuth.js';
 import { ok, fail } from '@ai-gateway/utils';
 
+// 🛡️ Sentinel: Throw an error if DATABASE_URL is missing to prevent fallback to hardcoded credentials
+if (!process.env['DATABASE_URL']) {
+  throw new Error('DATABASE_URL environment variable is required');
+}
 const pool = new pg.Pool({
-  connectionString: process.env['DATABASE_URL'] ?? 'postgresql://gateway_user:gateway_pass@localhost:5432/ai_gateway',
+  connectionString: process.env['DATABASE_URL'],
 });
 
 let developerSchemaReady: Promise<void> | null = null;
