@@ -6,7 +6,17 @@ import { useParams, useRouter } from "next/navigation";
 import { Copy, Eye, EyeOff, RotateCw, Trash2 } from "lucide-react";
 import { api, type AppUsageSummary, type DeveloperApp } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { Badge, Button, Field, IconButton, InlineMessage, ShellSection, SkeletonBlock, Surface, TextArea } from "@/components/console/system";
+import {
+  Badge,
+  Button,
+  Field,
+  IconButton,
+  InlineMessage,
+  ShellSection,
+  SkeletonBlock,
+  Surface,
+  TextArea,
+} from "@/components/console/system";
 
 export default function AppDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -27,12 +37,19 @@ export default function AppDetailsPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const [app, usageRes] = await Promise.all([api.apps.get(id), api.apps.usage(id)]);
+        const [app, usageRes] = await Promise.all([
+          api.apps.get(id),
+          api.apps.usage(id),
+        ]);
         setAppData(app);
         setUsage(usageRes);
         setRedirectUrisRaw(app?.redirectUris?.join("\n") ?? "");
       } catch (err) {
-        toast({ title: "Failed to load app", description: err instanceof Error ? err.message : "Unexpected error", variant: "destructive" });
+        toast({
+          title: "Failed to load app",
+          description: err instanceof Error ? err.message : "Unexpected error",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
@@ -47,29 +64,53 @@ export default function AppDetailsPage() {
   };
 
   const rotateKey = async () => {
-    if (!window.confirm("Rotate the API key now? The previous key will stop working immediately.")) return;
+    if (
+      !window.confirm(
+        "Rotate the API key now? The previous key will stop working immediately.",
+      )
+    )
+      return;
     setIsRotating(true);
     try {
       const result = await api.apps.rotateKey(id);
       setApiKey(result.apiKey);
       setShowKey(true);
-      toast({ title: "API key rotated", description: "The new key is now visible on screen." });
+      toast({
+        title: "API key rotated",
+        description: "The new key is now visible on screen.",
+      });
     } catch (err) {
-      toast({ title: "Key rotation failed", description: err instanceof Error ? err.message : "Unexpected error", variant: "destructive" });
+      toast({
+        title: "Key rotation failed",
+        description: err instanceof Error ? err.message : "Unexpected error",
+        variant: "destructive",
+      });
     } finally {
       setIsRotating(false);
     }
   };
 
   const saveRedirectUris = async () => {
-    const uris = redirectUrisRaw.split("\n").map((entry) => entry.trim()).filter(Boolean);
+    const uris = redirectUrisRaw
+      .split("\n")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
     setSavingUris(true);
     try {
       await api.apps.updateRedirectUris(id, uris);
-      setAppData((current) => (current ? { ...current, redirectUris: uris } : current));
-      toast({ title: "Redirect URIs saved", description: `${uris.length} URI(s) updated.` });
+      setAppData((current) =>
+        current ? { ...current, redirectUris: uris } : current,
+      );
+      toast({
+        title: "Redirect URIs saved",
+        description: `${uris.length} URI(s) updated.`,
+      });
     } catch (err) {
-      toast({ title: "Save failed", description: err instanceof Error ? err.message : "Unexpected error", variant: "destructive" });
+      toast({
+        title: "Save failed",
+        description: err instanceof Error ? err.message : "Unexpected error",
+        variant: "destructive",
+      });
     } finally {
       setSavingUris(false);
     }
@@ -80,21 +121,31 @@ export default function AppDetailsPage() {
     setIsDeleting(true);
     try {
       await api.apps.delete(id);
-      toast({ title: "App deleted", description: "The application has been removed." });
+      toast({
+        title: "App deleted",
+        description: "The application has been removed.",
+      });
       router.push("/apps");
     } catch (err) {
-      toast({ title: "Delete failed", description: err instanceof Error ? err.message : "Unexpected error", variant: "destructive" });
+      toast({
+        title: "Delete failed",
+        description: err instanceof Error ? err.message : "Unexpected error",
+        variant: "destructive",
+      });
       setIsDeleting(false);
     }
   };
 
   const usageRows = usage?.rows ?? [];
   // Bolt: Combined multiple .reduce() operations into a single O(N) pass.
-  const { totalCredits, totalRequests } = usageRows.reduce((acc, row) => {
-    acc.totalCredits += Number(row.total_credits || 0);
-    acc.totalRequests += Number(row.total_requests || 0);
-    return acc;
-  }, { totalCredits: 0, totalRequests: 0 });
+  const { totalCredits, totalRequests } = usageRows.reduce(
+    (acc, row) => {
+      acc.totalCredits += Number(row.total_credits || 0);
+      acc.totalRequests += Number(row.total_requests || 0);
+      return acc;
+    },
+    { totalCredits: 0, totalRequests: 0 },
+  );
 
   return (
     <div className="space-y-6">
@@ -103,20 +154,29 @@ export default function AppDetailsPage() {
         title={appData?.name ?? "Application detail"}
         description="Inspect credentials, edit redirect URIs, and review analytics for this app."
         action={
-          <Button asChild variant="secondary" className="rounded-lg h-9 px-4 text-xs font-semibold border border-white/10 bg-white/5 text-white hover:bg-white/10 transition">
+          <Button
+            asChild
+            variant="secondary"
+            className="rounded-lg h-9 px-4 text-xs font-semibold border border-white/10 bg-white/5 text-white hover:bg-white/10 transition"
+          >
             <Link href="/apps">Back to apps</Link>
           </Button>
         }
       />
       {!loading && !appData ? (
-        <InlineMessage tone="danger" className="rounded-lg border-red-500/30 bg-red-500/10 text-red-300">
+        <InlineMessage
+          tone="danger"
+          className="rounded-lg border-red-500/30 bg-red-500/10 text-red-300"
+        >
           App not found or you no longer have access to it.
         </InlineMessage>
       ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
         <Surface className="rounded-2xl border-white/10 bg-black/40 p-6 md:p-7 shadow-none">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/50">Identity</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/50">
+            Identity
+          </p>
           {loading ? (
             <div className="mt-8 space-y-3">
               <div className="animate-pulse rounded-lg bg-white/10 border border-white/10 h-12" />
@@ -126,33 +186,41 @@ export default function AppDetailsPage() {
           ) : appData ? (
             <div className="mt-8 space-y-4">
               <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">App ID</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">
+                  App ID
+                </p>
                 <div className="mt-3 flex items-center justify-between gap-3 bg-black border border-white/10 rounded px-3 py-2 font-mono text-sm text-white">
-                  <span className="min-w-0 flex-1 break-all select-all selection:bg-white/10">{appData.id}</span>
-                  <button
+                  <span className="min-w-0 flex-1 break-all select-all selection:bg-white/10">
+                    {appData.id}
+                  </span>
+                  <IconButton
                     onClick={() => copyText(appData.id, "App ID")}
-                    className="text-white/50 hover:text-white transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                    className="p-1"
                     title="Copy App ID"
                     aria-label="Copy App ID"
                   >
                     <Copy className="h-4 w-4" />
-                  </button>
+                  </IconButton>
                 </div>
               </div>
 
               <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">Client ID</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">
+                  Client ID
+                </p>
                 <div className="mt-3 flex items-center justify-between gap-3 bg-black border border-white/10 rounded px-3 py-2 font-mono text-sm text-white">
-                  <span className="min-w-0 flex-1 break-all select-all selection:bg-white/10">{appData.clientId ?? "Unavailable"}</span>
+                  <span className="min-w-0 flex-1 break-all select-all selection:bg-white/10">
+                    {appData.clientId ?? "Unavailable"}
+                  </span>
                   {appData.clientId ? (
-                    <button
+                    <IconButton
                       onClick={() => copyText(appData.clientId!, "Client ID")}
-                      className="text-white/50 hover:text-white transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                      className="p-1"
                       title="Copy Client ID"
                       aria-label="Copy Client ID"
                     >
                       <Copy className="h-4 w-4" />
-                    </button>
+                    </IconButton>
                   ) : null}
                 </div>
               </div>
@@ -170,32 +238,44 @@ export default function AppDetailsPage() {
         </Surface>
 
         <Surface className="rounded-2xl border-white/10 bg-black/40 p-6 md:p-7 shadow-none">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/50">Credentials</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/50">
+            Credentials
+          </p>
           <div className="mt-8 space-y-4">
             <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">Visible API key</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">
+                Visible API key
+              </p>
               <div className="mt-3 flex items-center justify-between gap-3 bg-black border border-white/10 rounded px-3 py-2 font-mono text-sm text-white">
                 <span className="min-w-0 flex-1 break-all select-all selection:bg-white/10">
-                  {apiKey ? (showKey ? apiKey : "•".repeat(24)) : "Rotate key to generate a fresh visible value"}
+                  {apiKey
+                    ? showKey
+                      ? apiKey
+                      : "•".repeat(24)
+                    : "Rotate key to generate a fresh visible value"}
                 </span>
                 <div className="flex items-center gap-1.5">
-                  <button
+                  <IconButton
                     onClick={() => setShowKey((current) => !current)}
-                    className="text-white/50 hover:text-white transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                    className="p-1"
                     title={showKey ? "Hide API Key" : "Show API Key"}
                     aria-label={showKey ? "Hide API Key" : "Show API Key"}
                   >
-                    {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                  <button
+                    {showKey ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </IconButton>
+                  <IconButton
                     onClick={() => copyText(apiKey, "API Key")}
                     disabled={!apiKey}
-                    className="text-white/50 hover:text-white disabled:opacity-30 transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                    className="p-1 disabled:opacity-30"
                     title="Copy API Key"
                     aria-label="Copy API Key"
                   >
                     <Copy className="h-4 w-4" />
-                  </button>
+                  </IconButton>
                 </div>
               </div>
             </div>
@@ -207,7 +287,8 @@ export default function AppDetailsPage() {
                 busy={isRotating}
                 className="rounded-lg h-9 px-4 text-xs font-semibold border border-white/10 bg-white/5 text-white hover:bg-white/10 transition"
               >
-                {!isRotating && <RotateCw className="h-3.5 w-3.5 mr-1.5" />}Rotate key
+                {!isRotating && <RotateCw className="h-3.5 w-3.5 mr-1.5" />}
+                Rotate key
               </Button>
               <Button
                 variant="danger"
@@ -215,7 +296,8 @@ export default function AppDetailsPage() {
                 busy={isDeleting}
                 className="rounded-lg h-9 px-4 text-xs font-semibold border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-900/20 transition"
               >
-                {!isDeleting && <Trash2 className="h-3.5 w-3.5 mr-1.5" />}Delete app
+                {!isDeleting && <Trash2 className="h-3.5 w-3.5 mr-1.5" />}Delete
+                app
               </Button>
             </div>
           </div>
@@ -223,13 +305,17 @@ export default function AppDetailsPage() {
       </div>
 
       <Surface className="rounded-2xl border-white/10 bg-black/40 p-6 md:p-7 shadow-none">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/50">OAuth redirect URIs</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/50">
+          OAuth redirect URIs
+        </p>
         <div className="mt-8 space-y-4">
           <Field label="Allowed redirect URIs" hint="One URI per line">
             <TextArea
               value={redirectUrisRaw}
               onChange={(event) => setRedirectUrisRaw(event.target.value)}
-              placeholder={"http://localhost:3000/callback\nhttps://myapp.com/callback"}
+              placeholder={
+                "http://localhost:3000/callback\nhttps://myapp.com/callback"
+              }
               className="rounded-lg border-white/10 bg-black/40 px-3 py-2 text-sm font-mono focus:border-white/20 focus:bg-black/40 focus-visible:ring-white/10"
             />
           </Field>
@@ -246,8 +332,12 @@ export default function AppDetailsPage() {
       <Surface className="rounded-2xl border-white/10 bg-black/40 p-6 md:p-7 shadow-none">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/50">Usage</p>
-            <h2 className="mt-3 font-sans text-3xl font-bold tracking-tight text-white">Traffic summary</h2>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/50">
+              Usage
+            </p>
+            <h2 className="mt-3 font-sans text-3xl font-bold tracking-tight text-white">
+              Traffic summary
+            </h2>
           </div>
           <div className="flex items-center gap-2 text-sm text-white/40 font-mono">
             <span>{totalRequests.toLocaleString()} requests</span>
@@ -263,7 +353,9 @@ export default function AppDetailsPage() {
             <div className="animate-pulse rounded-lg bg-white/10 border border-white/10 h-16" />
           </div>
         ) : usageRows.length === 0 ? (
-          <p className="mt-8 text-sm text-white/40">No usage events have been recorded for this app yet.</p>
+          <p className="mt-8 text-sm text-white/40">
+            No usage events have been recorded for this app yet.
+          </p>
         ) : (
           <div className="mt-8 space-y-3">
             {usageRows.map((row) => (
@@ -272,12 +364,20 @@ export default function AppDetailsPage() {
                 className="flex flex-col gap-3 rounded-lg border border-white/10 bg-black/40 px-4 py-3 md:flex-row md:items-center md:justify-between transition hover:bg-white/5"
               >
                 <div>
-                  <p className="font-mono text-sm font-bold text-white">{row.model}</p>
-                  <p className="mt-1 text-xs text-white/40">Average latency {Math.round(row.avg_latency_ms || 0)} ms</p>
+                  <p className="font-mono text-sm font-bold text-white">
+                    {row.model}
+                  </p>
+                  <p className="mt-1 text-xs text-white/40">
+                    Average latency {Math.round(row.avg_latency_ms || 0)} ms
+                  </p>
                 </div>
                 <div className="text-xs text-white/50 md:text-right">
-                  <p className="font-medium">{Number(row.total_requests || 0).toLocaleString()} requests</p>
-                  <p className="mt-1 font-medium text-white/40">{Number(row.total_credits || 0).toLocaleString()} credits</p>
+                  <p className="font-medium">
+                    {Number(row.total_requests || 0).toLocaleString()} requests
+                  </p>
+                  <p className="mt-1 font-medium text-white/40">
+                    {Number(row.total_credits || 0).toLocaleString()} credits
+                  </p>
                 </div>
               </div>
             ))}
