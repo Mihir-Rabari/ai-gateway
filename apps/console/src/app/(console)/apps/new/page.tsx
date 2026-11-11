@@ -6,7 +6,16 @@ import { useState } from "react";
 import { Copy, Eye, EyeOff } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { Button, Field, IconButton, InlineMessage, ShellSection, Surface, TextArea, TextInput } from "@/components/console/system";
+import {
+  Button,
+  Field,
+  IconButton,
+  InlineMessage,
+  ShellSection,
+  Surface,
+  TextArea,
+  TextInput,
+} from "@/components/console/system";
 
 type CreatedApp = {
   id: string;
@@ -29,12 +38,32 @@ export default function RegisterAppPage() {
     event.preventDefault();
     setLoading(true);
     try {
-      const redirectUris = redirectUrisRaw.split("\n").map((entry) => entry.trim()).filter(Boolean);
-      const result = await api.apps.create(name, description || undefined, redirectUris);
-      setCreated({ id: result.id, name: result.name, apiKey: result.apiKey, clientId: result.clientId, clientSecret: result.clientSecret });
-      toast({ title: "App registered", description: `${result.name} is ready. Store the secret values now because they are only shown once.` });
+      const redirectUris = redirectUrisRaw
+        .split("\n")
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+      const result = await api.apps.create(
+        name,
+        description || undefined,
+        redirectUris,
+      );
+      setCreated({
+        id: result.id,
+        name: result.name,
+        apiKey: result.apiKey,
+        clientId: result.clientId,
+        clientSecret: result.clientSecret,
+      });
+      toast({
+        title: "App registered",
+        description: `${result.name} is ready. Store the secret values now because they are only shown once.`,
+      });
     } catch (err) {
-      toast({ title: "Registration failed", description: err instanceof Error ? err.message : "Unexpected error", variant: "destructive" });
+      toast({
+        title: "Registration failed",
+        description: err instanceof Error ? err.message : "Unexpected error",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -61,8 +90,12 @@ export default function RegisterAppPage() {
             </Button>
           }
         />
-        <InlineMessage tone="warning" className="rounded-lg border-yellow-500/30 bg-yellow-500/10 text-yellow-300">
-          Client secret and API key are write-once display values. Store them in a secret manager before you navigate away.
+        <InlineMessage
+          tone="warning"
+          className="rounded-lg border-yellow-500/30 bg-yellow-500/10 text-yellow-300"
+        >
+          Client secret and API key are write-once display values. Store them in
+          a secret manager before you navigate away.
         </InlineMessage>
         <Surface className="rounded-2xl border-white/10 bg-black/40 p-6 md:p-7 shadow-none">
           <div className="space-y-4">
@@ -91,7 +124,11 @@ export default function RegisterAppPage() {
 
   return (
     <div className="space-y-6">
-      <ShellSection eyebrow="Create" title="Register a new app" description="Issue fresh developer credentials and define the first redirect URIs for your OAuth flow." />
+      <ShellSection
+        eyebrow="Create"
+        title="Register a new app"
+        description="Issue fresh developer credentials and define the first redirect URIs for your OAuth flow."
+      />
       <Surface className="rounded-2xl border-white/10 bg-black/40 p-6 md:p-7 shadow-none">
         <form onSubmit={handleSubmit} className="space-y-6">
           <Field label="App name" hint="Required">
@@ -115,7 +152,9 @@ export default function RegisterAppPage() {
             <TextArea
               value={redirectUrisRaw}
               onChange={(event) => setRedirectUrisRaw(event.target.value)}
-              placeholder={"http://localhost:3000/callback\nhttps://myapp.com/callback"}
+              placeholder={
+                "http://localhost:3000/callback\nhttps://myapp.com/callback"
+              }
               className="rounded-lg border-white/10 bg-black/40 px-3 py-2 text-sm font-mono focus:border-white/20 focus:bg-black/40 focus-visible:ring-white/10"
             />
           </Field>
@@ -141,35 +180,51 @@ export default function RegisterAppPage() {
   );
 }
 
-function CredentialRow({ label, value, secret = false, onCopy }: { label: string; value: string; secret?: boolean; onCopy: () => void; }) {
+function CredentialRow({
+  label,
+  value,
+  secret = false,
+  onCopy,
+}: {
+  label: string;
+  value: string;
+  secret?: boolean;
+  onCopy: () => void;
+}) {
   const [revealed, setRevealed] = useState(!secret);
 
   return (
     <div className="rounded-lg border border-white/10 bg-black/40 p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">{label}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">
+        {label}
+      </p>
       <div className="mt-3 flex items-center justify-between gap-3 bg-black border border-white/10 rounded px-3 py-2 font-mono text-sm text-white">
         <span className="min-w-0 flex-1 break-all select-all selection:bg-white/10">
           {revealed ? value : "•".repeat(24)}
         </span>
         <div className="flex items-center gap-1.5">
           {secret ? (
-            <button
+            <IconButton
               onClick={() => setRevealed((current) => !current)}
-              className="text-white/50 hover:text-white transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+              className="p-1"
               title={revealed ? `Hide ${label}` : `Show ${label}`}
               aria-label={revealed ? `Hide ${label}` : `Show ${label}`}
             >
-              {revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
+              {revealed ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </IconButton>
           ) : null}
-          <button
+          <IconButton
             onClick={onCopy}
-            className="text-white/50 hover:text-white transition p-1 hover:bg-white/5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            className="p-1"
             title={`Copy ${label}`}
             aria-label={`Copy ${label}`}
           >
             <Copy className="h-4 w-4" />
-          </button>
+          </IconButton>
         </div>
       </div>
     </div>

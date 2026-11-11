@@ -25,3 +25,6 @@
 ## 2024-09-26 - Prefer disabled:cursor-not-allowed over disabled:pointer-events-none
 **Learning:** Using `pointer-events-none` on disabled interactive elements suppresses native tooltip visibility (via the `title` attribute) and degrades accessibility for users trying to understand why an element is disabled.
 **Action:** Always prefer `disabled:cursor-not-allowed` over `disabled:pointer-events-none` when styling disabled states for interactive components to preserve tooltip visibility.
+## 2026-11-11 - Replaced icon-only buttons with IconButton
+**Learning:** Native `<button>` elements used for icons often lack `aria-label` or enforce it weakly, leading to missing screen reader labels for icon-only actions (like "Copy API Key").
+**Action:** Always prefer the `IconButton` component for icon-only buttons, as it strictly requires an `aria-label` attribute and handles title fallbacks and consistent focus styles.
