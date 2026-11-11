@@ -8,7 +8,7 @@ import { AppRepository } from '../../repositories/AppRepository.js';
 import { AppService } from '../../services/AppService.js';
 
 const pool = new pg.Pool({
-  connectionString: process.env['DATABASE_URL'] ?? 'postgresql://gateway_user:gateway_pass@localhost:5432/ai_gateway',
+  connectionString: process.env['DATABASE_URL'],
 });
 const appRepository = new AppRepository(pool);
 const appService = new AppService(appRepository);

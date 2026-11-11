@@ -4,7 +4,7 @@ import { requireAuth } from '../../middleware/requireAuth.js';
 import { ok, fail } from '@ai-gateway/utils';
 
 const pool = new pg.Pool({
-  connectionString: process.env['DATABASE_URL'] ?? 'postgresql://gateway_user:gateway_pass@localhost:5432/ai_gateway',
+  connectionString: process.env['DATABASE_URL'],
 });
 
 let developerSchemaReady: Promise<void> | null = null;
